@@ -1,0 +1,731 @@
+{
+  "project": "SmartFuel",
+  "version": "v1",
+  "basePath": "/api/v1",
+  "contentType": "application/json",
+  "status": "fixed-for-greenfield-implementation",
+  "principles": [
+    "Recommendation is based on effective total cost, not fuel price alone.",
+    "Frontend must not recalculate recommendation ranking.",
+    "Backend must include explanation fields for every recommendation result.",
+    "Location-based station filtering must use bounding box before exact distance calculation."
+  ],
+  "chunkPolicy": {
+    "canonicalFullContract": "docs/02_api_blueprint.json",
+    "workerContractDirectory": "docs/api_contracts",
+    "rule": "Worker agents should load only the endpoint-specific contract chunk needed for the current task. The full blueprint is reserved for Architect-level contract updates.",
+    "currentChunks": [
+      "docs/api_contracts/recommendations_quote.json",
+      "docs/api_contracts/stations_nearby.json",
+      "docs/api_contracts/cards_policies.json"
+    ]
+  },
+  "enums": {
+    "fuelType": [
+      "gasoline",
+      "diesel",
+      "lpg",
+      "premium_gasoline"
+    ],
+    "distanceSource": [
+      "haversine",
+      "navigation_api"
+    ],
+    "travelMode": [
+      "round_trip",
+      "one_way"
+    ],
+    "discountType": [
+      "per_liter",
+      "percentage",
+      "fixed_amount"
+    ],
+    "cardBrandScope": [
+      "all",
+      "SK",
+      "GS",
+      "S_OIL",
+      "HD_HYUNDAI",
+      "SELF",
+      "OTHER"
+    ],
+    "cardBenefitSourceType": [
+      "manual",
+      "naver_search",
+      "issuer",
+      "admin_seed"
+    ],
+    "verificationStatus": [
+      "unverified",
+      "user_confirmed",
+      "admin_verified"
+    ]
+  },
+  "schemas": {
+    "Location": {
+      "type": "object",
+      "required": [
+        "latitude",
+        "longitude"
+      ],
+      "properties": {
+        "latitude": {
+          "type": "number",
+          "minimum": -90,
+          "maximum": 90,
+          "example": 37.501
+        },
+        "longitude": {
+          "type": "number",
+          "minimum": -180,
+          "maximum": 180,
+          "example": 127.039
+        }
+      }
+    },
+    "VehicleInput": {
+      "type": "object",
+      "required": [
+        "fuel_efficiency_kmpl"
+      ],
+      "properties": {
+        "fuel_efficiency_kmpl": {
+          "type": "number",
+          "minimum": 1,
+          "maximum": 50,
+          "example": 12.5
+        }
+      }
+    },
+    "CardPolicyInput": {
+      "type": "object",
+      "required": [
+        "card_id",
+        "card_name",
+        "discount_type",
+        "discount_value"
+      ],
+      "properties": {
+        "card_id": {
+          "type": "string",
+          "example": "card_001"
+        },
+        "card_name": {
+          "type": "string",
+          "example": "Smart Oil Card"
+        },
+        "issuer_name": {
+          "type": "string",
+          "example": "Smart Bank"
+        },
+        "discount_type": {
+          "type": "string",
+          "enumRef": "discountType",
+          "example": "per_liter"
+        },
+        "discount_value": {
+          "type": "number",
+          "example": 80
+        },
+        "brand_scope": {
+          "type": "string",
+          "enumRef": "cardBrandScope",
+          "default": "all",
+          "example": "GS"
+        },
+        "min_payment_amount": {
+          "type": "integer",
+          "nullable": true,
+          "example": 30000
+        },
+        "max_discount_amount": {
+          "type": "integer",
+          "nullable": true,
+          "example": 5000
+        },
+        "monthly_remaining_discount": {
+          "type": "integer",
+          "nullable": true,
+          "example": 12000
+        },
+        "source_type": {
+          "type": "string",
+          "enumRef": "cardBenefitSourceType",
+          "default": "manual",
+          "example": "manual"
+        },
+        "verification_status": {
+          "type": "string",
+          "enumRef": "verificationStatus",
+          "default": "user_confirmed",
+          "example": "user_confirmed"
+        },
+        "card_image_url": {
+          "type": "string",
+          "nullable": true,
+          "example": "https://example.com/card.png"
+        },
+        "source_url": {
+          "type": "string",
+          "nullable": true,
+          "example": "https://search.naver.com/search.naver?query=..."
+        },
+        "source_title": {
+          "type": "string",
+          "nullable": true,
+          "example": "Smart Oil Card 주유 할인"
+        },
+        "user_memo": {
+          "type": "string",
+          "nullable": true,
+          "example": "전월 실적 조건은 사용자가 직접 확인함"
+        }
+      }
+    },
+    "StationSummary": {
+      "type": "object",
+      "properties": {
+        "station_id": {
+          "type": "integer",
+          "example": 12
+        },
+        "name": {
+          "type": "string",
+          "example": "스마트주유소 강남점"
+        },
+        "brand": {
+          "type": "string",
+          "example": "GS"
+        },
+        "address": {
+          "type": "string",
+          "example": "서울특별시 강남구 테헤란로 123"
+        },
+        "latitude": {
+          "type": "number",
+          "example": 37.501
+        },
+        "longitude": {
+          "type": "number",
+          "example": 127.039
+        },
+        "distance_km": {
+          "type": "number",
+          "example": 2.8
+        },
+        "distance_source": {
+          "type": "string",
+          "enumRef": "distanceSource",
+          "example": "haversine"
+        },
+        "fuel_type": {
+          "type": "string",
+          "enumRef": "fuelType",
+          "example": "gasoline"
+        },
+        "fuel_price_per_liter": {
+          "type": "integer",
+          "example": 1650
+        }
+      }
+    },
+    "RecommendationCandidate": {
+      "type": "object",
+      "properties": {
+        "station": {
+          "$ref": "#/schemas/StationSummary"
+        },
+        "cost_breakdown": {
+          "type": "object",
+          "properties": {
+            "target_liters": {
+              "type": "number",
+              "example": 50
+            },
+            "refuel_cost": {
+              "type": "integer",
+              "example": 82500
+            },
+            "card_discount_amount": {
+              "type": "integer",
+              "example": 4000
+            },
+            "travel_cost": {
+              "type": "integer",
+              "example": 1200
+            },
+            "effective_total_cost": {
+              "type": "integer",
+              "example": 79700
+            },
+            "estimated_saving": {
+              "type": "integer",
+              "example": 3300
+            }
+          }
+        },
+        "selected_card": {
+          "type": "object",
+          "nullable": true,
+          "properties": {
+            "card_id": {
+              "type": "string",
+              "example": "card_001"
+            },
+            "card_name": {
+              "type": "string",
+              "example": "Smart Oil Card"
+            },
+            "issuer_name": {
+              "type": "string",
+              "example": "Smart Bank"
+            },
+            "discount_type": {
+              "type": "string",
+              "enumRef": "discountType",
+              "example": "per_liter"
+            },
+            "discount_value": {
+              "type": "number",
+              "example": 80
+            },
+            "calculated_discount_amount": {
+              "type": "integer",
+              "example": 4000
+            },
+            "card_image_url": {
+              "type": "string",
+              "nullable": true,
+              "example": "https://example.com/card.png"
+            },
+            "source_type": {
+              "type": "string",
+              "enumRef": "cardBenefitSourceType",
+              "example": "manual"
+            },
+            "verification_status": {
+              "type": "string",
+              "enumRef": "verificationStatus",
+              "example": "user_confirmed"
+            }
+          }
+        },
+        "reason": {
+          "type": "string",
+          "example": "카드 할인과 이동 비용을 반영했을 때 최종 예상 비용이 가장 낮습니다."
+        }
+      }
+    },
+    "ApiError": {
+      "type": "object",
+      "properties": {
+        "code": {
+          "type": "string",
+          "example": "INVALID_LOCATION"
+        },
+        "message": {
+          "type": "string",
+          "example": "위도 또는 경도 값이 올바르지 않습니다."
+        },
+        "details": {
+          "type": "object",
+          "nullable": true
+        }
+      }
+    }
+  },
+  "endpoints": [
+    {
+      "name": "Create recommendation quote",
+      "method": "POST",
+      "path": "/recommendations/quote/",
+      "auth": "optional",
+      "description": "현재 위치, 주유량, 차량 연비, 카드 할인 정보를 기반으로 가장 합리적인 주유소를 추천한다.",
+      "request": {
+        "type": "object",
+        "required": [
+          "location",
+          "fuel_type",
+          "target_liters"
+        ],
+        "properties": {
+          "location": {
+            "$ref": "#/schemas/Location"
+          },
+          "fuel_type": {
+            "type": "string",
+            "enumRef": "fuelType",
+            "example": "gasoline"
+          },
+          "target_liters": {
+            "type": "number",
+            "minimum": 1,
+            "maximum": 150,
+            "example": 50
+          },
+          "radius_km": {
+            "type": "number",
+            "minimum": 1,
+            "maximum": 30,
+            "default": 15,
+            "example": 15
+          },
+          "travel_mode": {
+            "type": "string",
+            "enumRef": "travelMode",
+            "default": "round_trip",
+            "example": "round_trip"
+          },
+          "vehicle": {
+            "$ref": "#/schemas/VehicleInput",
+            "requiredWhen": "anonymous user or no saved vehicle profile"
+          },
+          "cards": {
+            "type": "array",
+            "items": {
+              "$ref": "#/schemas/CardPolicyInput"
+            },
+            "default": []
+          },
+          "include_candidates": {
+            "type": "boolean",
+            "default": true
+          }
+        }
+      },
+      "responses": {
+        "200": {
+          "type": "object",
+          "properties": {
+            "recommendation": {
+              "$ref": "#/schemas/RecommendationCandidate"
+            },
+            "baseline": {
+              "type": "object",
+              "properties": {
+                "station_id": {
+                  "type": "integer",
+                  "example": 8
+                },
+                "effective_cost_without_card": {
+                  "type": "integer",
+                  "example": 83000
+                }
+              }
+            },
+            "candidates": {
+              "type": "array",
+              "items": {
+                "$ref": "#/schemas/RecommendationCandidate"
+              }
+            },
+            "meta": {
+              "type": "object",
+              "properties": {
+                "candidate_count": {
+                  "type": "integer",
+                  "example": 12
+                },
+                "radius_km": {
+                  "type": "number",
+                  "example": 15
+                },
+                "distance_source": {
+                  "type": "string",
+                  "enumRef": "distanceSource",
+                  "example": "haversine"
+                },
+                "algorithm_version": {
+                  "type": "string",
+                  "example": "2026-05-18.v1"
+                }
+              }
+            }
+          }
+        },
+        "400": {
+          "$ref": "#/schemas/ApiError",
+          "errorCodes": [
+            "INVALID_LOCATION",
+            "MISSING_VEHICLE_EFFICIENCY",
+            "UNSUPPORTED_FUEL_TYPE",
+            "INVALID_TARGET_LITERS",
+            "INVALID_RADIUS"
+          ]
+        },
+        "404": {
+          "$ref": "#/schemas/ApiError",
+          "errorCodes": [
+            "NO_STATION_CANDIDATE"
+          ]
+        }
+      }
+    },
+    {
+      "name": "List nearby stations",
+      "method": "GET",
+      "path": "/stations/nearby/",
+      "auth": "optional",
+      "description": "현재 위치 주변의 주유소 후보를 조회한다. 추천 순위 계산은 수행하지 않는다.",
+      "query": {
+        "required": [
+          "latitude",
+          "longitude",
+          "fuel_type"
+        ],
+        "properties": {
+          "latitude": {
+            "type": "number",
+            "example": 37.501
+          },
+          "longitude": {
+            "type": "number",
+            "example": 127.039
+          },
+          "fuel_type": {
+            "type": "string",
+            "enumRef": "fuelType",
+            "example": "gasoline"
+          },
+          "radius_km": {
+            "type": "number",
+            "default": 15,
+            "maximum": 30
+          }
+        }
+      },
+      "responses": {
+        "200": {
+          "type": "object",
+          "properties": {
+            "stations": {
+              "type": "array",
+              "items": {
+                "$ref": "#/schemas/StationSummary"
+              }
+            },
+            "meta": {
+              "type": "object",
+              "properties": {
+                "count": {
+                  "type": "integer",
+                  "example": 12
+                },
+                "radius_km": {
+                  "type": "number",
+                  "example": 15
+                }
+              }
+            }
+          }
+        },
+        "400": {
+          "$ref": "#/schemas/ApiError",
+          "errorCodes": [
+            "INVALID_LOCATION",
+            "UNSUPPORTED_FUEL_TYPE",
+            "INVALID_RADIUS"
+          ]
+        }
+      }
+    },
+    {
+      "name": "Get station detail",
+      "method": "GET",
+      "path": "/stations/{station_id}/",
+      "auth": "optional",
+      "description": "주유소 상세 정보와 현재 저장된 유종별 가격을 조회한다.",
+      "responses": {
+        "200": {
+          "$ref": "#/schemas/StationSummary"
+        },
+        "404": {
+          "$ref": "#/schemas/ApiError",
+          "errorCodes": [
+            "STATION_NOT_FOUND"
+          ]
+        }
+      }
+    },
+    {
+      "name": "Get my vehicle profile",
+      "method": "GET",
+      "path": "/me/vehicle/",
+      "auth": "required",
+      "description": "로그인 사용자의 차량 연비 정보를 조회한다.",
+      "responses": {
+        "200": {
+          "$ref": "#/schemas/VehicleInput"
+        },
+        "404": {
+          "$ref": "#/schemas/ApiError",
+          "errorCodes": [
+            "VEHICLE_PROFILE_NOT_FOUND"
+          ]
+        }
+      }
+    },
+    {
+      "name": "Upsert my vehicle profile",
+      "method": "PUT",
+      "path": "/me/vehicle/",
+      "auth": "required",
+      "description": "로그인 사용자의 차량 연비 정보를 생성 또는 수정한다.",
+      "request": {
+        "$ref": "#/schemas/VehicleInput"
+      },
+      "responses": {
+        "200": {
+          "$ref": "#/schemas/VehicleInput"
+        },
+        "400": {
+          "$ref": "#/schemas/ApiError",
+          "errorCodes": [
+            "INVALID_FUEL_EFFICIENCY"
+          ]
+        }
+      }
+    },
+    {
+      "name": "List my card policies",
+      "method": "GET",
+      "path": "/me/cards/",
+      "auth": "required",
+      "description": "로그인 사용자의 등록 카드 할인 정책을 조회한다.",
+      "responses": {
+        "200": {
+          "type": "object",
+          "properties": {
+            "cards": {
+              "type": "array",
+              "items": {
+                "$ref": "#/schemas/CardPolicyInput"
+              }
+            }
+          }
+        }
+      }
+    },
+    {
+      "name": "Create my card policy",
+      "method": "POST",
+      "path": "/me/cards/",
+      "auth": "required",
+      "description": "로그인 사용자의 카드 할인 정책을 등록한다.",
+      "request": {
+        "$ref": "#/schemas/CardPolicyInput"
+      },
+      "responses": {
+        "201": {
+          "$ref": "#/schemas/CardPolicyInput"
+        },
+        "400": {
+          "$ref": "#/schemas/ApiError",
+          "errorCodes": [
+            "INVALID_CARD_POLICY"
+          ]
+        }
+      }
+    },
+    {
+      "name": "Delete my card policy",
+      "method": "DELETE",
+      "path": "/me/cards/{card_id}/",
+      "auth": "required",
+      "description": "로그인 사용자의 카드 할인 정책을 삭제한다.",
+      "responses": {
+        "204": {
+          "description": "No content"
+        },
+        "404": {
+          "$ref": "#/schemas/ApiError",
+          "errorCodes": [
+            "CARD_POLICY_NOT_FOUND"
+          ]
+        }
+      }
+    },
+    {
+      "name": "Discover card benefit candidates",
+      "method": "GET",
+      "path": "/cards/discovery/",
+      "auth": "required",
+      "description": "네이버 기반 검색 결과에서 카드 혜택 후보를 조회한다. 조회 결과는 사용자가 확인하기 전까지 추천 계산에 사용하지 않는다.",
+      "query": {
+        "required": [
+          "query"
+        ],
+        "properties": {
+          "query": {
+            "type": "string",
+            "example": "GS칼텍스 주유 할인 카드"
+          },
+          "issuer_name": {
+            "type": "string",
+            "nullable": true,
+            "example": "신한카드"
+          }
+        }
+      },
+      "responses": {
+        "200": {
+          "type": "object",
+          "properties": {
+            "candidates": {
+              "type": "array",
+              "items": {
+                "$ref": "#/schemas/CardPolicyInput"
+              }
+            },
+            "meta": {
+              "type": "object",
+              "properties": {
+                "source_type": {
+                  "type": "string",
+                  "example": "naver_search"
+                },
+                "requires_user_confirmation": {
+                  "type": "boolean",
+                  "example": true
+                }
+              }
+            }
+          }
+        },
+        "400": {
+          "$ref": "#/schemas/ApiError",
+          "errorCodes": [
+            "INVALID_CARD_DISCOVERY_QUERY"
+          ]
+        }
+      }
+    },
+    {
+      "name": "Health check",
+      "method": "GET",
+      "path": "/health/",
+      "auth": "optional",
+      "description": "배포 및 Docker 환경에서 API 서버 상태를 확인한다.",
+      "responses": {
+        "200": {
+          "type": "object",
+          "properties": {
+            "status": {
+              "type": "string",
+              "example": "ok"
+            }
+          }
+        }
+      }
+    }
+  ],
+  "fixedDecisions": {
+    "recommendationEndpoint": "POST /api/v1/recommendations/quote/",
+    "defaultRadiusKm": 15,
+    "maxRadiusKm": 30,
+    "defaultTravelMode": "round_trip",
+    "initialDistanceSource": "haversine",
+    "algorithmVersion": "2026-05-18.v1",
+    "recommendationOwner": "backend/stations/services.py"
+  }
+}

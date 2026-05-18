@@ -1,0 +1,191 @@
+{
+  "project": "SmartFuel",
+  "version": "v1",
+  "basePath": "/api/v1",
+  "purpose": "Card policy APIs for Slice 4 card discount calculation.",
+  "schemas": {
+    "CardPolicy": {
+      "type": "object",
+      "required": [
+        "card_name",
+        "issuer_name",
+        "discount_type",
+        "discount_value"
+      ],
+      "properties": {
+        "card_id": {
+          "type": "string",
+          "nullable": true
+        },
+        "card_name": {
+          "type": "string"
+        },
+        "issuer_name": {
+          "type": "string"
+        },
+        "discount_type": {
+          "type": "string",
+          "enum": [
+            "per_liter",
+            "percentage",
+            "fixed_amount"
+          ]
+        },
+        "discount_value": {
+          "type": "number"
+        },
+        "brand_scope": {
+          "type": "string",
+          "default": "all"
+        },
+        "min_payment_amount": {
+          "type": "integer",
+          "nullable": true
+        },
+        "max_discount_amount": {
+          "type": "integer",
+          "nullable": true
+        },
+        "monthly_discount_limit": {
+          "type": "integer",
+          "nullable": true
+        },
+        "monthly_remaining_discount": {
+          "type": "integer",
+          "nullable": true
+        },
+        "source_type": {
+          "type": "string",
+          "enum": [
+            "manual",
+            "naver_search",
+            "issuer",
+            "admin_seed"
+          ],
+          "default": "manual"
+        },
+        "verification_status": {
+          "type": "string",
+          "enum": [
+            "unverified",
+            "user_confirmed",
+            "admin_verified"
+          ],
+          "default": "user_confirmed"
+        },
+        "card_image_url": {
+          "type": "string",
+          "nullable": true
+        },
+        "source_url": {
+          "type": "string",
+          "nullable": true
+        },
+        "source_title": {
+          "type": "string",
+          "nullable": true
+        },
+        "user_memo": {
+          "type": "string",
+          "nullable": true
+        }
+      }
+    }
+  },
+  "endpoints": [
+    {
+      "name": "List my card policies",
+      "method": "GET",
+      "path": "/me/cards/",
+      "auth": "required",
+      "response200": {
+        "type": "object",
+        "properties": {
+          "cards": {
+            "type": "array",
+            "items": {
+              "$ref": "#/schemas/CardPolicy"
+            }
+          }
+        }
+      }
+    },
+    {
+      "name": "Create manual card policy",
+      "method": "POST",
+      "path": "/me/cards/",
+      "auth": "required",
+      "request": {
+        "$ref": "#/schemas/CardPolicy"
+      },
+      "response201": {
+        "$ref": "#/schemas/CardPolicy"
+      },
+      "rules": [
+        "Manual user input sets source_type=manual.",
+        "Manual user input sets verification_status=user_confirmed by default.",
+        "No payment credentials or full card numbers are accepted."
+      ]
+    },
+    {
+      "name": "Delete my card policy",
+      "method": "DELETE",
+      "path": "/me/cards/{card_id}/",
+      "auth": "required",
+      "response204": {
+        "description": "No content"
+      }
+    },
+    {
+      "name": "Discover card benefit candidates",
+      "method": "GET",
+      "path": "/cards/discovery/",
+      "auth": "required",
+      "query": {
+        "required": [
+          "query"
+        ],
+        "properties": {
+          "query": {
+            "type": "string"
+          },
+          "issuer_name": {
+            "type": "string",
+            "nullable": true
+          }
+        }
+      },
+      "response200": {
+        "type": "object",
+        "properties": {
+          "candidates": {
+            "type": "array",
+            "items": {
+              "$ref": "#/schemas/CardPolicy"
+            }
+          },
+          "meta": {
+            "type": "object",
+            "properties": {
+              "source_type": {
+                "type": "string",
+                "example": "naver_search"
+              },
+              "requires_user_confirmation": {
+                "type": "boolean",
+                "example": true
+              }
+            }
+          }
+        }
+      },
+      "rules": [
+        "Discovery results must use source_type=naver_search.",
+        "Discovery results must use verification_status=unverified.",
+        "Unverified results must not affect recommendation ranking.",
+        "The user must confirm or edit a discovered policy before it becomes active."
+      ]
+    }
+  ]
+}
+

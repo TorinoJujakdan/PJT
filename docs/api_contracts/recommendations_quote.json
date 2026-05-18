@@ -1,0 +1,332 @@
+{
+  "project": "SmartFuel",
+  "version": "v1",
+  "basePath": "/api/v1",
+  "endpoint": {
+    "name": "Create recommendation quote",
+    "method": "POST",
+    "path": "/recommendations/quote/",
+    "auth": "optional",
+    "description": "Recommend the station with the lowest effective total cost."
+  },
+  "request": {
+    "type": "object",
+    "required": [
+      "location",
+      "fuel_type",
+      "target_liters"
+    ],
+    "properties": {
+      "location": {
+        "type": "object",
+        "required": [
+          "latitude",
+          "longitude"
+        ],
+        "properties": {
+          "latitude": {
+            "type": "number",
+            "minimum": -90,
+            "maximum": 90
+          },
+          "longitude": {
+            "type": "number",
+            "minimum": -180,
+            "maximum": 180
+          }
+        }
+      },
+      "fuel_type": {
+        "type": "string",
+        "enum": [
+          "gasoline",
+          "diesel",
+          "lpg",
+          "premium_gasoline"
+        ]
+      },
+      "target_liters": {
+        "type": "number",
+        "minimum": 1,
+        "maximum": 150
+      },
+      "radius_km": {
+        "type": "number",
+        "minimum": 1,
+        "maximum": 30,
+        "default": 15
+      },
+      "travel_mode": {
+        "type": "string",
+        "enum": [
+          "round_trip",
+          "one_way"
+        ],
+        "default": "round_trip"
+      },
+      "vehicle": {
+        "type": "object",
+        "requiredWhen": "anonymous user or no saved vehicle profile",
+        "properties": {
+          "fuel_efficiency_kmpl": {
+            "type": "number",
+            "minimum": 1,
+            "maximum": 50
+          }
+        }
+      },
+      "cards": {
+        "type": "array",
+        "default": [],
+        "items": {
+          "type": "object",
+          "required": [
+            "card_id",
+            "card_name",
+            "issuer_name",
+            "discount_type",
+            "discount_value"
+          ],
+          "properties": {
+            "card_id": {
+              "type": "string"
+            },
+            "card_name": {
+              "type": "string"
+            },
+            "issuer_name": {
+              "type": "string"
+            },
+            "discount_type": {
+              "type": "string",
+              "enum": [
+                "per_liter",
+                "percentage",
+                "fixed_amount"
+              ]
+            },
+            "discount_value": {
+              "type": "number"
+            },
+            "brand_scope": {
+              "type": "string",
+              "default": "all"
+            },
+            "min_payment_amount": {
+              "type": "integer",
+              "nullable": true
+            },
+            "max_discount_amount": {
+              "type": "integer",
+              "nullable": true
+            },
+            "monthly_remaining_discount": {
+              "type": "integer",
+              "nullable": true
+            },
+            "source_type": {
+              "type": "string",
+              "enum": [
+                "manual",
+                "naver_search",
+                "issuer",
+                "admin_seed"
+              ],
+              "default": "manual"
+            },
+            "verification_status": {
+              "type": "string",
+              "enum": [
+                "unverified",
+                "user_confirmed",
+                "admin_verified"
+              ],
+              "default": "user_confirmed"
+            },
+            "card_image_url": {
+              "type": "string",
+              "nullable": true
+            },
+            "source_url": {
+              "type": "string",
+              "nullable": true
+            }
+          }
+        }
+      },
+      "include_candidates": {
+        "type": "boolean",
+        "default": true
+      }
+    }
+  },
+  "response200": {
+    "type": "object",
+    "properties": {
+      "recommendation": {
+        "$ref": "#/schemas/RecommendationCandidate"
+      },
+      "baseline": {
+        "type": "object",
+        "properties": {
+          "station_id": {
+            "type": "integer"
+          },
+          "effective_cost_without_card": {
+            "type": "integer"
+          }
+        }
+      },
+      "candidates": {
+        "type": "array",
+        "items": {
+          "$ref": "#/schemas/RecommendationCandidate"
+        }
+      },
+      "meta": {
+        "type": "object",
+        "properties": {
+          "candidate_count": {
+            "type": "integer"
+          },
+          "radius_km": {
+            "type": "number"
+          },
+          "distance_source": {
+            "type": "string",
+            "enum": [
+              "haversine",
+              "navigation_api"
+            ]
+          },
+          "algorithm_version": {
+            "type": "string"
+          }
+        }
+      }
+    }
+  },
+  "schemas": {
+    "RecommendationCandidate": {
+      "type": "object",
+      "properties": {
+        "station": {
+          "$ref": "#/schemas/StationSummary"
+        },
+        "cost_breakdown": {
+          "type": "object",
+          "properties": {
+            "target_liters": {
+              "type": "number"
+            },
+            "refuel_cost": {
+              "type": "integer"
+            },
+            "card_discount_amount": {
+              "type": "integer"
+            },
+            "travel_cost": {
+              "type": "integer"
+            },
+            "effective_total_cost": {
+              "type": "integer"
+            },
+            "estimated_saving": {
+              "type": "integer"
+            }
+          }
+        },
+        "selected_card": {
+          "type": "object",
+          "nullable": true,
+          "properties": {
+            "card_id": {
+              "type": "string"
+            },
+            "card_name": {
+              "type": "string"
+            },
+            "issuer_name": {
+              "type": "string"
+            },
+            "discount_type": {
+              "type": "string"
+            },
+            "discount_value": {
+              "type": "number"
+            },
+            "calculated_discount_amount": {
+              "type": "integer"
+            },
+            "card_image_url": {
+              "type": "string",
+              "nullable": true
+            },
+            "source_type": {
+              "type": "string"
+            },
+            "verification_status": {
+              "type": "string"
+            }
+          }
+        },
+        "reason": {
+          "type": "string"
+        }
+      }
+    },
+    "StationSummary": {
+      "type": "object",
+      "properties": {
+        "station_id": {
+          "type": "integer"
+        },
+        "name": {
+          "type": "string"
+        },
+        "brand": {
+          "type": "string"
+        },
+        "address": {
+          "type": "string"
+        },
+        "latitude": {
+          "type": "number"
+        },
+        "longitude": {
+          "type": "number"
+        },
+        "distance_km": {
+          "type": "number"
+        },
+        "distance_source": {
+          "type": "string"
+        },
+        "fuel_type": {
+          "type": "string"
+        },
+        "fuel_price_per_liter": {
+          "type": "integer"
+        }
+      }
+    }
+  },
+  "errors": {
+    "400": [
+      "INVALID_LOCATION",
+      "MISSING_VEHICLE_EFFICIENCY",
+      "UNSUPPORTED_FUEL_TYPE",
+      "INVALID_TARGET_LITERS",
+      "INVALID_RADIUS"
+    ],
+    "404": [
+      "NO_STATION_CANDIDATE"
+    ]
+  },
+  "implementationNotes": [
+    "Use docs/03_recommendation_algorithm.md for the exact calculation rules.",
+    "Frontend must not recompute recommendation ranking.",
+    "Slice 1 and 2 may omit vehicle and card calculations only when the task explicitly limits scope.",
+    "Slice 4 may use manual, user_confirmed, or admin_verified card policies. It must not use unverified Naver discovery results in ranking."
+  ]
+}

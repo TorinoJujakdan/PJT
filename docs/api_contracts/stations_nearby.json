@@ -1,0 +1,121 @@
+{
+  "project": "SmartFuel",
+  "version": "v1",
+  "basePath": "/api/v1",
+  "endpoint": {
+    "name": "List nearby stations",
+    "method": "GET",
+    "path": "/stations/nearby/",
+    "auth": "optional",
+    "description": "Return nearby station candidates without recommendation ranking."
+  },
+  "query": {
+    "required": [
+      "latitude",
+      "longitude",
+      "fuel_type"
+    ],
+    "properties": {
+      "latitude": {
+        "type": "number",
+        "minimum": -90,
+        "maximum": 90
+      },
+      "longitude": {
+        "type": "number",
+        "minimum": -180,
+        "maximum": 180
+      },
+      "fuel_type": {
+        "type": "string",
+        "enum": [
+          "gasoline",
+          "diesel",
+          "lpg",
+          "premium_gasoline"
+        ]
+      },
+      "radius_km": {
+        "type": "number",
+        "minimum": 1,
+        "maximum": 30,
+        "default": 15
+      }
+    }
+  },
+  "response200": {
+    "type": "object",
+    "properties": {
+      "stations": {
+        "type": "array",
+        "items": {
+          "$ref": "#/schemas/StationSummary"
+        }
+      },
+      "meta": {
+        "type": "object",
+        "properties": {
+          "count": {
+            "type": "integer"
+          },
+          "radius_km": {
+            "type": "number"
+          }
+        }
+      }
+    }
+  },
+  "schemas": {
+    "StationSummary": {
+      "type": "object",
+      "properties": {
+        "station_id": {
+          "type": "integer"
+        },
+        "name": {
+          "type": "string"
+        },
+        "brand": {
+          "type": "string"
+        },
+        "address": {
+          "type": "string"
+        },
+        "latitude": {
+          "type": "number"
+        },
+        "longitude": {
+          "type": "number"
+        },
+        "distance_km": {
+          "type": "number"
+        },
+        "distance_source": {
+          "type": "string",
+          "enum": [
+            "haversine",
+            "navigation_api"
+          ]
+        },
+        "fuel_type": {
+          "type": "string"
+        },
+        "fuel_price_per_liter": {
+          "type": "integer"
+        }
+      }
+    }
+  },
+  "errors": {
+    "400": [
+      "INVALID_LOCATION",
+      "UNSUPPORTED_FUEL_TYPE",
+      "INVALID_RADIUS"
+    ]
+  },
+  "implementationNotes": [
+    "Use this chunk for recommendation slice 1: station candidate search.",
+    "This endpoint does not calculate card discounts, travel cost, or final ranking."
+  ]
+}
+
