@@ -3,14 +3,17 @@ from rest_framework.permissions import IsAuthenticated
 from rest_framework.response import Response
 from rest_framework.views import APIView
 
-from .models import CardCatalog, CardPolicy
+from concurrent.futures import ThreadPoolExecutor
+from django.db import close_old_connections
+from .models import CardCatalog, CardPolicy, CardIngestionTask
 from .serializers import (
     CardCatalogSerializer,
     CardDiscoveryQuerySerializer,
     CardFromCatalogSerializer,
     CardPolicySerializer,
 )
-from .selenium_ingestion import discover_card_benefits
+from .selenium_ingestion import discover_card_benefits, scrape_card_search_candidates, save_candidates
+
 
 
 ERROR_MESSAGES = {
@@ -128,6 +131,39 @@ class CardCatalogListAPIView(APIView):
         return Response({"cards": serializer.data})
 
 
+# 전역 백그라운드 스레드 풀 생성 (가벼운 동시성 유지)
+executor = ThreadPoolExecutor(max_workers=2)
+
+
+def run_background_ingestion(task_id, query):
+    """백그라운드 스레드에서 실제 Selenium 수집을 돌리고 DB를 갱신합니다."""
+    close_old_connections()
+    try:
+        task = CardIngestionTask.objects.get(id=task_id)
+        task.status = CardIngestionTask.Status.PROCESSING
+        task.save()
+
+        # 1. 셀레니움 수집 구동 (최대 10개 수집 제한으로 빠르게 응답)
+        candidates = scrape_card_search_candidates(limit=10)
+
+        # 2. 자동 검증 및 DB 저장
+        saved_cards = save_candidates(candidates, "https://card-search.naver.com/list")
+
+        # 3. 태스크 결과 매핑 및 완료 처리
+        task.results.add(*saved_cards)
+        task.status = CardIngestionTask.Status.SUCCESS
+    except Exception as e:
+        try:
+            task = CardIngestionTask.objects.get(id=task_id)
+            task.status = CardIngestionTask.Status.FAILED
+            task.error_message = str(e)
+            task.save()
+        except Exception:
+            pass
+    finally:
+        close_old_connections()
+
+
 class CardDiscoveryAPIView(APIView):
     permission_classes = [IsAuthenticated]
 
@@ -153,3 +189,51 @@ class CardDiscoveryAPIView(APIView):
                 },
             }
         )
+
+    def post(self, request):
+        query = request.data.get("query", "").strip()
+        if not query:
+            return Response(
+                {
+                    "code": "MISSING_QUERY",
+                    "message": "검색어(query)가 필요합니다."
+                },
+                status=status.HTTP_400_BAD_REQUEST
+            )
+
+        # 1. 태스크 레코드 생성
+        task = CardIngestionTask.objects.create(query=query)
+
+        # 2. 스레드 풀에 작업 위임 (즉시 리턴)
+        executor.submit(run_background_ingestion, task.id, query)
+
+        return Response(
+            {
+                "task_id": task.id,
+                "status": task.status,
+                "message": "백그라운드 카드 수집이 시작되었습니다."
+            },
+            status=status.HTTP_202_ACCEPTED
+        )
+
+
+
+class CardDiscoveryTaskStatusAPIView(APIView):
+    permission_classes = [IsAuthenticated]
+
+    def get(self, request, task_id):
+        from django.shortcuts import get_object_or_404
+        task = get_object_or_404(CardIngestionTask, id=task_id)
+        response_data = {
+            "task_id": task.id,
+            "status": task.status,
+            "error_message": task.error_message,
+            "candidates": []
+        }
+
+        if task.status == CardIngestionTask.Status.SUCCESS:
+            cards = task.results.all()
+            response_data["candidates"] = CardCatalogSerializer(cards, many=True).data
+
+        return Response(response_data)
+

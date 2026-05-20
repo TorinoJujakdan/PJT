@@ -151,3 +151,24 @@ class RecommendationQuoteAPIView(APIView):
         if "radius_km" in errors:
             return error_response("INVALID_RADIUS", status.HTTP_400_BAD_REQUEST, errors)
         return error_response("INVALID_LOCATION", status.HTTP_400_BAD_REQUEST, errors)
+
+
+class GeocodeAPIView(APIView):
+    authentication_classes = []
+    permission_classes = []
+
+    def get(self, request):
+        query = request.query_params.get("query", "").strip()
+        if not query:
+            return Response(
+                {
+                    "code": "MISSING_QUERY",
+                    "message": "검색어(query) 파라미터가 누락되었습니다."
+                },
+                status=status.HTTP_400_BAD_REQUEST
+            )
+
+        from .geocoding_service import geocode_query
+        results = geocode_query(query)
+        return Response({"results": results})
+

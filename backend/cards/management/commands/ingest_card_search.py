@@ -1,5 +1,6 @@
 from django.core.management.base import BaseCommand, CommandError
 
+from cards.models import CardPolicy
 from cards.selenium_ingestion import (
     DEFAULT_CARD_SEARCH_URL,
     CardIngestionError,
@@ -61,4 +62,15 @@ class Command(BaseCommand):
             return
 
         saved = save_candidates(candidates, source_url=options["url"])
-        self.stdout.write(self.style.SUCCESS(f"Saved {len(saved)} unverified card catalog candidates."))
+        verified_count = sum(
+            1
+            for candidate in saved
+            if candidate.verification_status == CardPolicy.VerificationStatus.ADMIN_VERIFIED
+        )
+        unverified_count = len(saved) - verified_count
+        self.stdout.write(
+            self.style.SUCCESS(
+                f"Saved {len(saved)} card catalog candidates "
+                f"({verified_count} admin verified, {unverified_count} unverified)."
+            )
+        )

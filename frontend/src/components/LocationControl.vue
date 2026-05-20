@@ -2,6 +2,7 @@
 import { LocateFixed, MapPin, Search, X } from "@lucide/vue";
 import { ref, watch, onMounted } from "vue";
 import { geocode, presets } from "../utils/geocoder";
+import { apiRequest } from "../api/client";
 
 const model = defineModel({ required: true });
 const loading = ref(false);
@@ -34,14 +35,39 @@ function applyPreset(preset) {
   message.value = `출발지가 '${preset.name}'(으)로 변경되었습니다.`;
 }
 
+let debounceTimer = null;
+
 function handleInput() {
-  if (!searchQuery.value.trim()) {
+  if (debounceTimer) {
+    clearTimeout(debounceTimer);
+  }
+
+  const query = searchQuery.value.trim();
+  if (!query) {
     searchResults.value = [];
     showDropdown.value = false;
     return;
   }
-  searchResults.value = geocode(searchQuery.value);
+
+  // Pre-populate with local geocode search results immediately for instant feedback
+  searchResults.value = geocode(query);
   showDropdown.value = searchResults.value.length > 0;
+
+  loading.value = true;
+  debounceTimer = setTimeout(async () => {
+    try {
+      const response = await apiRequest(`/stations/geocode/?query=${encodeURIComponent(query)}`);
+      if (response && Array.isArray(response.results)) {
+        searchResults.value = response.results;
+        showDropdown.value = searchResults.value.length > 0;
+      }
+    } catch (err) {
+      console.error("Geocoding proxy search failed:", err);
+      // Fallback is already loaded via geocode(query)
+    } finally {
+      loading.value = false;
+    }
+  }, 300);
 }
 
 function clearSearch() {

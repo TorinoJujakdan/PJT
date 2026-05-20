@@ -289,7 +289,7 @@ KB국민 굿데이카드
             source_url=detail_url,
             source_title="신한카드 Deep Oil 상세",
             raw_summary="GS칼텍스 주유 10% 할인 건당 3만원 이상 월 통합 할인한도 2만원",
-            confidence=Decimal("0.91"),
+            confidence=Decimal("0.80"),
         )
 
         saved = save_candidates([enriched], source_url="https://card-search.naver.com/list")

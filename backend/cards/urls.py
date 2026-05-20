@@ -3,6 +3,7 @@ from django.urls import path
 from .views import (
     CardCatalogListAPIView,
     CardDiscoveryAPIView,
+    CardDiscoveryTaskStatusAPIView,
     MyCardPolicyDetailAPIView,
     MyCardPolicyFromCatalogAPIView,
     MyCardPolicyListCreateAPIView,
@@ -15,4 +16,5 @@ urlpatterns = [
     path("me/cards/<int:card_id>/", MyCardPolicyDetailAPIView.as_view(), name="my-card-policy-detail"),
     path("cards/catalog/", CardCatalogListAPIView.as_view(), name="card-catalog"),
     path("cards/discovery/", CardDiscoveryAPIView.as_view(), name="card-discovery"),
+    path("cards/discovery/tasks/<int:task_id>/", CardDiscoveryTaskStatusAPIView.as_view(), name="card-discovery-task-status"),
 ]
