@@ -1,0 +1,86 @@
+{
+  "project": "SmartFuel",
+  "version": "v1.2",
+  "basePath": "/api/v1",
+  "purpose": "Opinet fuel price synchronization contract for backend-only fuel price ingestion.",
+  "environment": {
+    "OPINET_API_KEY": {
+      "required_for": "Opinet synchronization",
+      "location": "backend process environment",
+      "client_visible": false
+    }
+  },
+  "commands": [
+    {
+      "name": "sync_opinet_prices",
+      "path": "backend/stations/management/commands/sync_opinet_prices.py",
+      "description": "Reads OPINET_API_KEY from the backend environment and synchronizes public fuel price data into FuelPrice rows with source=opinet.",
+      "arguments": {
+        "--dry-run": "Validate OPINET_API_KEY configuration without writing fuel price rows.",
+        "--health-check": "Call the official avgAllPrice.do endpoint and report the returned row count without writing fuel price rows."
+      },
+      "rules": [
+        "The command must fail fast with a clear message when OPINET_API_KEY is missing.",
+        "The --health-check path may call avgAllPrice.do only to validate key/API reachability and must not write FuelPrice rows.",
+        "External API failure must not block local development or dummy station loading.",
+        "Fetched rows must be stored as FuelPrice(source=opinet).",
+        "Recommendation code must continue to use the latest stored FuelPrice row and must not call Opinet directly during recommendation requests."
+      ]
+    }
+  ],
+  "stationLevelMapping": {
+    "status": "contract-only; no FuelPrice writes until coordinate conversion and station identity matching are verified",
+    "officialReferences": [
+      {
+        "name": "Opinet station detail by ID",
+        "endpoint": "https://www.opinet.co.kr/api/detailById.do",
+        "documentation": "https://www.opinet.co.kr/user/custapi/openApiInfoDtl.do?apiId=1",
+        "purpose": "Fetch one station by Opinet UNI_ID with station metadata and OIL_PRICE rows."
+      },
+      {
+        "name": "Opinet stations within radius",
+        "endpoint": "https://www.opinet.co.kr/api/aroundAll.do",
+        "documentation": "https://www.opinet.co.kr/user/custapi/openApiInfoDtl.do?apiId=3",
+        "purpose": "Discover nearby Opinet station UNI_ID values by KATEC coordinate, radius, product code, and sort option."
+      }
+    ],
+    "fieldMapping": {
+      "GasStation.external_station_id": "UNI_ID",
+      "GasStation.name": "OS_NM",
+      "GasStation.address": "NEW_ADR, falling back to VAN_ADR",
+      "GasStation.brand": {
+        "SKE": "SK",
+        "GSC": "GS",
+        "HDO": "HD_HYUNDAI",
+        "SOL": "S_OIL",
+        "RTE": "OTHER",
+        "RTX": "OTHER",
+        "NHO": "OTHER",
+        "ETC": "OTHER",
+        "E1G": "OTHER",
+        "SKG": "OTHER"
+      },
+      "coordinates": {
+        "sourceFields": ["GIS_X_COOR", "GIS_Y_COOR"],
+        "sourceCrs": "KATEC",
+        "targetFields": ["GasStation.latitude", "GasStation.longitude"],
+        "rule": "Do not write GasStation coordinates from Opinet until KATEC-to-WGS84 conversion is implemented and verified."
+      },
+      "FuelPrice.fuel_type": {
+        "B027": "gasoline",
+        "D047": "diesel",
+        "B034": "premium_gasoline",
+        "K015": "lpg",
+        "C004": "unsupported for SmartFuel vehicle fuel recommendation"
+      },
+      "FuelPrice.price_per_liter": "PRICE",
+      "FuelPrice.source": "opinet",
+      "FuelPrice.collected_at": "TRADE_DT and TRADE_TM when available; otherwise command execution time in a later writing slice"
+    },
+    "requestTimeBoundary": [
+      "Recommendation quote requests must not call Opinet endpoints.",
+      "The frontend must not call Opinet endpoints or receive OPINET_API_KEY.",
+      "Station-level Opinet synchronization may run only through backend synchronization commands."
+    ]
+  }
+}

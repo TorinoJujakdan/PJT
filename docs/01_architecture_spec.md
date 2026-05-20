@@ -101,13 +101,14 @@ Required fields:
 
 ### 4.4 `cards`
 
-Owns card discount policies and user's selected cards.
+Owns card discount policies, verified card catalog, and scraped benefit sources.
 
 Primary models:
 
 ```text
 CardPolicy
-UserCard
+CardCatalog
+CardBenefitSource
 ```
 
 Required policy fields:

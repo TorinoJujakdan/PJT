@@ -21,6 +21,8 @@ Responsibilities:
 - get current location or accept manual location
 - choose fuel type
 - enter target liters
+- show saved vehicle and active card context for authenticated users
+- provide entry points to vehicle and card settings without changing recommendation math
 - call recommendation API
 - show recommended station
 - show cost breakdown and candidate comparison
@@ -39,6 +41,7 @@ Responsibilities:
 - list user's registered cards
 - add card policy
 - remove card policy
+- show loading, empty, success, and error states for catalog search and card save/delete actions
 
 ### `ProfileView.vue`
 
@@ -47,6 +50,7 @@ Responsibilities:
 - show account state
 - login/logout entry
 - link to vehicle and card settings
+- show loading, success, and error feedback for profile updates
 
 ## 3. Components
 
@@ -60,6 +64,11 @@ Inputs:
 Emits:
 
 - normalized location object
+
+States:
+
+- loading while browser geolocation is pending
+- field-level message when geolocation is unavailable, denied, or fails
 
 ### `FuelTargetControl.vue`
 
@@ -99,6 +108,20 @@ Displays:
 Displays alternative candidates returned by the API.
 
 Sorting is already decided by the backend.
+
+### `RecommendationContextPanel.vue`
+
+Displays:
+
+- whether the recommendation request can use a saved vehicle profile
+- active saved card count
+- quick actions to open vehicle and card management
+
+Rules:
+
+- The panel is a workflow aid only.
+- It must not calculate recommendation ranking, distance, discounts, or costs.
+- The recommendation request still decides whether to include request vehicle fields or rely on backend saved-profile fallback.
 
 ### `VehicleProfileForm.vue`
 

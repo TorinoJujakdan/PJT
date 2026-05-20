@@ -1,0 +1,58 @@
+{
+  "project": "SmartFuel",
+  "version": "v1.1",
+  "basePath": "/api/v1",
+  "purpose": "Authenticated user's default vehicle profile.",
+  "schemas": {
+    "VehicleProfile": {
+      "type": "object",
+      "required": ["fuel_type", "fuel_efficiency_kmpl"],
+      "properties": {
+        "id": { "type": "integer" },
+        "fuel_type": {
+          "type": "string",
+          "enum": ["gasoline", "diesel", "lpg", "premium_gasoline"]
+        },
+        "fuel_efficiency_kmpl": {
+          "type": "number",
+          "minimum": 1.0,
+          "maximum": 50.0
+        },
+        "is_default": { "type": "boolean" },
+        "created_at": { "type": "string" },
+        "updated_at": { "type": "string" }
+      }
+    }
+  },
+  "endpoints": [
+    {
+      "method": "GET",
+      "path": "/me/vehicle/",
+      "auth": "required",
+      "response200": {
+        "properties": {
+          "vehicle": { "$ref": "#/schemas/VehicleProfile" }
+        }
+      },
+      "errors": {
+        "404": ["VEHICLE_PROFILE_NOT_FOUND"]
+      }
+    },
+    {
+      "method": "PUT",
+      "path": "/me/vehicle/",
+      "auth": "required",
+      "request": {
+        "$ref": "#/schemas/VehicleProfile"
+      },
+      "response200": {
+        "properties": {
+          "vehicle": { "$ref": "#/schemas/VehicleProfile" }
+        }
+      },
+      "errors": {
+        "400": ["INVALID_VEHICLE_PROFILE"]
+      }
+    }
+  ]
+}

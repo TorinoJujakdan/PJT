@@ -1,0 +1,198 @@
+{
+  "project": "SmartFuel",
+  "version": "v1.2",
+  "basePath": "/api/v1",
+  "purpose": "Controlled card benefit ingestion contract for Selenium-based public card benefit collection.",
+  "schemas": {
+    "CardCatalog": {
+      "type": "object",
+      "properties": {
+        "catalog_card_id": { "type": "integer" },
+        "card_name": { "type": "string" },
+        "issuer_name": { "type": "string" },
+        "discount_type": {
+          "type": "string",
+          "enum": ["per_liter", "percentage", "fixed_amount"]
+        },
+        "discount_value": { "type": "number" },
+        "brand_scope": { "type": "string" },
+        "min_payment_amount": { "type": "integer", "nullable": true },
+        "max_discount_amount": { "type": "integer", "nullable": true },
+        "monthly_discount_limit": { "type": "integer", "nullable": true },
+        "monthly_remaining_discount": { "type": "integer", "nullable": true },
+        "card_image_url": { "type": "string", "nullable": true },
+        "source_url": { "type": "string", "nullable": true },
+        "source_title": { "type": "string", "nullable": true },
+        "source_type": { "type": "string", "enum": ["selenium"] },
+        "verification_status": { "type": "string", "enum": ["unverified", "admin_verified"] },
+        "raw_summary": { "type": "string", "nullable": true },
+        "confidence": { "type": "number", "nullable": true },
+        "collected_at": { "type": "string", "nullable": true }
+      }
+    },
+    "CardIngestionCandidate": {
+      "type": "object",
+      "properties": {
+        "card_id": { "type": "string", "nullable": true },
+        "card_name": { "type": "string" },
+        "issuer_name": { "type": "string" },
+        "discount_type": {
+          "type": "string",
+          "enum": ["per_liter", "percentage", "fixed_amount"]
+        },
+        "discount_value": { "type": "number" },
+        "brand_scope": { "type": "string" },
+        "min_payment_amount": { "type": "integer", "nullable": true },
+        "max_discount_amount": { "type": "integer", "nullable": true },
+        "monthly_discount_limit": { "type": "integer", "nullable": true },
+        "monthly_remaining_discount": { "type": "integer", "nullable": true },
+        "source_type": {
+          "type": "string",
+          "enum": ["selenium"]
+        },
+        "verification_status": {
+          "type": "string",
+          "enum": ["unverified"]
+        },
+        "card_image_url": { "type": "string", "nullable": true },
+        "source_url": { "type": "string", "nullable": true },
+        "source_title": { "type": "string", "nullable": true },
+        "user_memo": { "type": "string", "nullable": true }
+      }
+    }
+  },
+  "endpoints": [
+    {
+      "name": "Search card catalog",
+      "method": "GET",
+      "path": "/cards/catalog/",
+      "auth": "required",
+      "query": {
+        "properties": {
+          "query": { "type": "string", "nullable": true },
+          "issuer_name": { "type": "string", "nullable": true },
+          "brand_scope": { "type": "string", "nullable": true }
+        }
+      },
+      "response200": {
+        "type": "object",
+        "properties": {
+          "cards": {
+            "type": "array",
+            "items": { "$ref": "#/schemas/CardCatalog" }
+          }
+        }
+      },
+      "rules": [
+        "Catalog search can return unverified Selenium candidates.",
+        "Catalog results are not user-owned cards until the user confirms one through /me/cards/from-catalog/."
+      ]
+    },
+    {
+      "name": "Create my card from catalog",
+      "method": "POST",
+      "path": "/me/cards/from-catalog/",
+      "auth": "required",
+      "request": {
+        "required": ["catalog_card_id"],
+        "properties": {
+          "catalog_card_id": { "type": "integer" },
+          "discount_type": {
+            "type": "string",
+            "enum": ["per_liter", "percentage", "fixed_amount"],
+            "nullable": true
+          },
+          "discount_value": { "type": "number", "nullable": true },
+          "brand_scope": { "type": "string", "nullable": true },
+          "min_payment_amount": { "type": "integer", "nullable": true },
+          "max_discount_amount": { "type": "integer", "nullable": true },
+          "monthly_discount_limit": { "type": "integer", "nullable": true },
+          "monthly_remaining_discount": { "type": "integer", "nullable": true },
+          "user_memo": { "type": "string", "nullable": true }
+        }
+      },
+      "response201": {
+        "$ref": "#/schemas/CardIngestionCandidate"
+      },
+      "rules": [
+        "The user must explicitly confirm a catalog card before it becomes a CardPolicy.",
+        "The created CardPolicy must use source_type=selenium.",
+        "The created CardPolicy must use verification_status=user_confirmed.",
+        "The created CardPolicy is owned by the authenticated user.",
+        "The user may override discount and limit fields before saving."
+      ]
+    },
+    {
+      "name": "Discover card benefit candidates from allowed public domain",
+      "method": "GET",
+      "path": "/cards/discovery/",
+      "auth": "required",
+      "query": {
+        "required": ["query"],
+        "properties": {
+          "query": { "type": "string" },
+          "issuer_name": { "type": "string", "nullable": true },
+          "domain": {
+            "type": "string",
+            "nullable": true,
+            "description": "Optional domain selected from backend allowlist. The backend must not invent domains."
+          }
+        }
+      },
+      "response200": {
+        "type": "object",
+        "properties": {
+          "candidates": {
+            "type": "array",
+            "items": { "$ref": "#/schemas/CardIngestionCandidate" }
+          },
+          "meta": {
+            "type": "object",
+            "properties": {
+              "source_type": { "type": "string", "example": "selenium" },
+              "requires_user_confirmation": { "type": "boolean", "example": true },
+              "provider_status": {
+                "type": "string",
+                "enum": ["allowlist_required", "domain_not_allowed", "not_implemented", "ready"]
+              },
+              "allowed_domains": {
+                "type": "array",
+                "items": { "type": "string" }
+              }
+            }
+          }
+        }
+      },
+      "rules": [
+        "Selenium ingestion only targets the user-approved default domain card-search.naver.com or domains explicitly present in CARD_INGESTION_ALLOWED_DOMAINS.",
+        "The first approved source URL is https://card-search.naver.com/list?companyCode=&brandNames=&benefitCategoryIds=1&sortMethod=ri&isRefetch=true&bizType=CPC.",
+        "If no domain is configured or provided, return an empty candidate list with provider_status=allowlist_required.",
+        "If the requested domain is outside the allowlist, return an empty candidate list with provider_status=domain_not_allowed.",
+        "Candidates from Selenium ingestion must use source_type=selenium and verification_status=unverified.",
+        "Unverified candidates must not affect recommendation ranking.",
+        "Do not collect payment credentials, card numbers, CVC, resident registration numbers, or private account data."
+      ]
+    }
+  ],
+  "commands": [
+    {
+      "name": "ingest_card_search",
+      "path": "backend/cards/management/commands/ingest_card_search.py",
+      "description": "Uses Selenium to collect public card benefit candidates from an allowlisted card-search domain into CardCatalog as unverified records.",
+      "arguments": {
+        "--url": "Required. Must resolve to card-search.naver.com or another allowlisted domain.",
+        "--limit": "Optional maximum number of candidates to save.",
+        "--detail": "Optional. Visit each candidate detail URL and enrich CardCatalog fields from public benefit text.",
+        "--dry-run": "Collect and print candidates without saving."
+      },
+      "rules": [
+        "The command must reject domains outside the allowlist.",
+        "The --detail option must only visit candidate detail URLs on an allowlisted domain.",
+        "Detail parsing results must be saved only to CardCatalog.",
+        "The command must save candidates as source_type=selenium and verification_status=unverified.",
+        "The command must not collect payment credentials or private account data.",
+        "The command must not run from recommendation request handling."
+      ]
+    }
+  ]
+}

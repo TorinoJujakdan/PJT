@@ -58,6 +58,7 @@
           "type": "string",
           "enum": [
             "manual",
+            "selenium",
             "naver_search",
             "issuer",
             "admin_seed"
@@ -137,6 +138,23 @@
       }
     },
     {
+      "name": "Update my card policy",
+      "method": "PATCH",
+      "path": "/me/cards/{card_id}/",
+      "auth": "required",
+      "request": {
+        "$ref": "#/schemas/CardPolicy"
+      },
+      "response200": {
+        "$ref": "#/schemas/CardPolicy"
+      },
+      "rules": [
+        "Only the owner can update a card policy.",
+        "Inactive card policies are treated as not found.",
+        "Percentage discounts greater than 100 are rejected."
+      ]
+    },
+    {
       "name": "Discover card benefit candidates",
       "method": "GET",
       "path": "/cards/discovery/",
@@ -180,7 +198,7 @@
         }
       },
       "rules": [
-        "Discovery results must use source_type=naver_search.",
+        "Discovery results must use source_type=selenium for the v1.2 Selenium ingestion path.",
         "Discovery results must use verification_status=unverified.",
         "Unverified results must not affect recommendation ranking.",
         "The user must confirm or edit a discovered policy before it becomes active."
@@ -188,4 +206,3 @@
     }
   ]
 }
-

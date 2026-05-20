@@ -129,6 +129,7 @@
               "enum": [
                 "manual",
                 "naver_search",
+                "selenium",
                 "issuer",
                 "admin_seed"
               ],
@@ -201,6 +202,30 @@
           },
           "algorithm_version": {
             "type": "string"
+          },
+          "map_display": {
+            "type": "object",
+            "description": "Presentation-only metadata for frontend map rendering. It must not change recommendation ranking, distance, or cost calculations.",
+            "properties": {
+              "coordinate_source": {
+                "type": "string",
+                "enum": [
+                  "station_summary"
+                ],
+                "default": "station_summary"
+              },
+              "rank_source": {
+                "type": "string",
+                "enum": [
+                  "backend_recommendation_order"
+                ],
+                "default": "backend_recommendation_order"
+              },
+              "frontend_recalculation_allowed": {
+                "type": "boolean",
+                "default": false
+              }
+            }
           }
         }
       }
@@ -326,7 +351,11 @@
   "implementationNotes": [
     "Use docs/03_recommendation_algorithm.md for the exact calculation rules.",
     "Frontend must not recompute recommendation ranking.",
+    "Anonymous users must send vehicle.fuel_efficiency_kmpl.",
+    "Authenticated users may omit vehicle when a saved VehicleProfile exists.",
+    "Authenticated users' active saved CardPolicy records are included automatically.",
     "Slice 1 and 2 may omit vehicle and card calculations only when the task explicitly limits scope.",
-    "Slice 4 may use manual, user_confirmed, or admin_verified card policies. It must not use unverified Naver discovery results in ranking."
+    "Slice 4 may use manual, user_confirmed, or admin_verified card policies. It must not use unverified Naver discovery results in ranking.",
+    "Map display must use recommendation.station and candidates[].station latitude/longitude only for presentation. Frontend map rendering must not recompute rank, distance, or cost."
   ]
 }

@@ -12,6 +12,9 @@ def health_check(_request):
 urlpatterns = [
     path("admin/", admin.site.urls),
     path("api/v1/health/", health_check, name="health-check"),
+    path("api/v1/", include("accounts.urls")),
+    path("api/v1/", include("cards.urls")),
+    path("api/v1/", include("vehicles.urls")),
     path("api/v1/stations/", include("stations.urls")),
     path("api/v1/recommendations/quote/", RecommendationQuoteAPIView.as_view(), name="recommendations-quote"),
 ]

@@ -1,0 +1,124 @@
+{
+  "project": "SmartFuel",
+  "version": "v1.2",
+  "basePath": "/api/v1",
+  "purpose": "Card catalog search and user-confirmed save-from-catalog contract.",
+  "schemas": {
+    "CardCatalog": {
+      "type": "object",
+      "properties": {
+        "catalog_card_id": { "type": "integer" },
+        "card_name": { "type": "string" },
+        "issuer_name": { "type": "string" },
+        "discount_type": {
+          "type": "string",
+          "enum": ["per_liter", "percentage", "fixed_amount"]
+        },
+        "discount_value": { "type": "number" },
+        "brand_scope": { "type": "string" },
+        "min_payment_amount": { "type": "integer", "nullable": true },
+        "max_discount_amount": { "type": "integer", "nullable": true },
+        "monthly_discount_limit": { "type": "integer", "nullable": true },
+        "monthly_remaining_discount": { "type": "integer", "nullable": true },
+        "card_image_url": { "type": "string", "nullable": true },
+        "source_url": { "type": "string", "nullable": true },
+        "source_title": { "type": "string", "nullable": true },
+        "source_type": { "type": "string", "enum": ["selenium"] },
+        "verification_status": { "type": "string", "enum": ["unverified", "admin_verified"] },
+        "raw_summary": { "type": "string", "nullable": true },
+        "confidence": { "type": "number", "nullable": true },
+        "collected_at": { "type": "string", "nullable": true }
+      }
+    },
+    "SavedCardPolicy": {
+      "type": "object",
+      "properties": {
+        "card_id": { "type": "string" },
+        "card_name": { "type": "string" },
+        "issuer_name": { "type": "string" },
+        "discount_type": {
+          "type": "string",
+          "enum": ["per_liter", "percentage", "fixed_amount"]
+        },
+        "discount_value": { "type": "number" },
+        "brand_scope": { "type": "string" },
+        "min_payment_amount": { "type": "integer", "nullable": true },
+        "max_discount_amount": { "type": "integer", "nullable": true },
+        "monthly_discount_limit": { "type": "integer", "nullable": true },
+        "monthly_remaining_discount": { "type": "integer", "nullable": true },
+        "source_type": { "type": "string", "enum": ["selenium"] },
+        "verification_status": { "type": "string", "enum": ["user_confirmed"] },
+        "card_image_url": { "type": "string", "nullable": true },
+        "source_url": { "type": "string", "nullable": true },
+        "user_memo": { "type": "string", "nullable": true }
+      }
+    }
+  },
+  "endpoints": [
+    {
+      "name": "Search card catalog",
+      "method": "GET",
+      "path": "/cards/catalog/",
+      "auth": "required",
+      "query": {
+        "properties": {
+          "query": { "type": "string", "nullable": true },
+          "issuer_name": { "type": "string", "nullable": true },
+          "brand_scope": { "type": "string", "nullable": true }
+        }
+      },
+      "response200": {
+        "type": "object",
+        "properties": {
+          "cards": {
+            "type": "array",
+            "items": { "$ref": "#/schemas/CardCatalog" }
+          }
+        }
+      },
+      "rules": [
+        "Catalog search can return unverified Selenium candidates.",
+        "Catalog results are not user-owned cards until the user confirms one through /me/cards/from-catalog/.",
+        "Unverified catalog candidates must not affect recommendation ranking."
+      ]
+    },
+    {
+      "name": "Create my card from catalog",
+      "method": "POST",
+      "path": "/me/cards/from-catalog/",
+      "auth": "required",
+      "request": {
+        "required": ["catalog_card_id"],
+        "properties": {
+          "catalog_card_id": { "type": "integer" },
+          "discount_type": {
+            "type": "string",
+            "enum": ["per_liter", "percentage", "fixed_amount"],
+            "nullable": true
+          },
+          "discount_value": { "type": "number", "nullable": true },
+          "brand_scope": { "type": "string", "nullable": true },
+          "min_payment_amount": { "type": "integer", "nullable": true },
+          "max_discount_amount": { "type": "integer", "nullable": true },
+          "monthly_discount_limit": { "type": "integer", "nullable": true },
+          "monthly_remaining_discount": { "type": "integer", "nullable": true },
+          "user_memo": { "type": "string", "nullable": true }
+        }
+      },
+      "response201": {
+        "$ref": "#/schemas/SavedCardPolicy"
+      },
+      "errors": {
+        "404": ["CARD_CATALOG_NOT_FOUND"],
+        "400": ["INVALID_CARD_POLICY"]
+      },
+      "rules": [
+        "The user must explicitly confirm a catalog card before it becomes a CardPolicy.",
+        "The created CardPolicy must use source_type=selenium.",
+        "The created CardPolicy must use verification_status=user_confirmed.",
+        "The created CardPolicy is owned by the authenticated user.",
+        "The user may override discount and limit fields before saving."
+      ]
+    }
+  ]
+}

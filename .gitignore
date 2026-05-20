@@ -10,6 +10,8 @@ db.sqlite3
 .env
 media/
 static/
+*.log
+*.pid
 
 # Frontend (Node/Vue)
 node_modules/

@@ -1,0 +1,98 @@
+{
+  "project": "SmartFuel",
+  "version": "v1.2",
+  "basePath": "/api/v1",
+  "purpose": "Account session APIs for signup, login, logout, current user state, and CSRF bootstrap.",
+  "schemas": {
+    "User": {
+      "type": "object",
+      "properties": {
+        "id": {
+          "type": "integer"
+        },
+        "username": {
+          "type": "string"
+        },
+        "email": {
+          "type": "string"
+        }
+      }
+    }
+  },
+  "endpoints": [
+    {
+      "method": "POST",
+      "path": "/accounts/signup/",
+      "auth": "optional",
+      "request": {
+        "required": ["username", "password", "email"],
+        "properties": {
+          "username": { "type": "string" },
+          "password": { "type": "string" },
+          "email": { "type": "string" }
+        }
+      },
+      "response201": {
+        "properties": {
+          "user": { "$ref": "#/schemas/User" }
+        }
+      }
+    },
+    {
+      "method": "POST",
+      "path": "/accounts/login/",
+      "auth": "optional",
+      "request": {
+        "required": ["username", "password"],
+        "properties": {
+          "username": { "type": "string" },
+          "password": { "type": "string" }
+        }
+      },
+      "response200": {
+        "properties": {
+          "user": { "$ref": "#/schemas/User" }
+        }
+      }
+    },
+    {
+      "method": "POST",
+      "path": "/accounts/logout/",
+      "auth": "required",
+      "response204": {
+        "description": "No content"
+      }
+    },
+    {
+      "method": "GET",
+      "path": "/accounts/me/",
+      "auth": "optional",
+      "rules": [
+        "This endpoint must ensure a csrftoken cookie is available to the browser.",
+        "Frontend clients call this endpoint before unsafe session-authenticated requests when the csrftoken cookie is missing."
+      ],
+      "response200": {
+        "properties": {
+          "authenticated": { "type": "boolean" },
+          "user": { "$ref": "#/schemas/User", "nullable": true }
+        }
+      }
+    },
+    {
+      "method": "PATCH",
+      "path": "/accounts/me/",
+      "auth": "required",
+      "request": {
+        "properties": {
+          "username": { "type": "string" },
+          "email": { "type": "string" }
+        }
+      },
+      "response200": {
+        "properties": {
+          "user": { "$ref": "#/schemas/User" }
+        }
+      }
+    }
+  ]
+}

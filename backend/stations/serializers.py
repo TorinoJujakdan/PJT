@@ -1,5 +1,7 @@
 from rest_framework import serializers
 
+from cards.models import CardPolicy
+
 from .models import FuelPrice
 
 
@@ -15,6 +17,35 @@ class LocationSerializer(serializers.Serializer):
     longitude = serializers.FloatField(min_value=-180, max_value=180)
 
 
+class RecommendationCardPolicySerializer(serializers.Serializer):
+    card_id = serializers.CharField(required=False, allow_blank=True)
+    card_name = serializers.CharField()
+    issuer_name = serializers.CharField()
+    discount_type = serializers.ChoiceField(choices=CardPolicy.DiscountType.choices)
+    discount_value = serializers.FloatField(min_value=0)
+    brand_scope = serializers.CharField(required=False, allow_blank=True, default="all")
+    min_payment_amount = serializers.IntegerField(required=False, allow_null=True, min_value=0)
+    max_discount_amount = serializers.IntegerField(required=False, allow_null=True, min_value=0)
+    monthly_remaining_discount = serializers.IntegerField(required=False, allow_null=True, min_value=0)
+    source_type = serializers.ChoiceField(
+        choices=CardPolicy.SourceType.choices,
+        required=False,
+        default=CardPolicy.SourceType.MANUAL,
+    )
+    verification_status = serializers.ChoiceField(
+        choices=CardPolicy.VerificationStatus.choices,
+        required=False,
+        default=CardPolicy.VerificationStatus.USER_CONFIRMED,
+    )
+    card_image_url = serializers.URLField(required=False, allow_blank=True, allow_null=True)
+    source_url = serializers.URLField(required=False, allow_blank=True, allow_null=True)
+
+    def validate(self, attrs):
+        if attrs["discount_type"] == CardPolicy.DiscountType.PERCENTAGE and attrs["discount_value"] > 100:
+            raise serializers.ValidationError({"discount_value": "percentage discount cannot exceed 100."})
+        return attrs
+
+
 class RecommendationQuoteRequestSerializer(serializers.Serializer):
     location = LocationSerializer()
     fuel_type = serializers.ChoiceField(choices=FuelPrice.FuelType.choices)
@@ -25,7 +56,8 @@ class RecommendationQuoteRequestSerializer(serializers.Serializer):
         required=False,
         default="round_trip",
     )
-    vehicle = serializers.DictField(required=True)
+    vehicle = serializers.DictField(required=False)
+    cards = RecommendationCardPolicySerializer(many=True, required=False, default=list)
     include_candidates = serializers.BooleanField(required=False, default=True)
 
     def validate_vehicle(self, value):

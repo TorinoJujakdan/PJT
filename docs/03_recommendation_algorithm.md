@@ -99,6 +99,23 @@ Unverified Naver-discovered policies must be shown as suggestions only and must 
 
 ## 3. Station Candidate Search
 
+### 3.0 Stored Price Data Boundary
+
+Recommendation requests use station and fuel price rows already stored in the SmartFuel database.
+
+Rules:
+
+- The recommendation quote path must not call Opinet or any other external fuel-price API at request time.
+- Opinet synchronization is a backend-only management-command boundary.
+- Opinet station identifiers map to `GasStation.external_station_id` from official `UNI_ID` values.
+- Opinet `PRODCD` values map to SmartFuel fuel types as:
+  - `B027` -> `gasoline`
+  - `D047` -> `diesel`
+  - `B034` -> `premium_gasoline`
+  - `K015` -> `lpg`
+- Opinet station coordinates are documented as KATEC (`GIS_X_COOR`, `GIS_Y_COOR`). They must not be written into `GasStation.latitude` or `GasStation.longitude` until KATEC-to-WGS84 conversion is implemented and verified.
+- `FuelPrice(source=opinet)` rows may be written only after station identity, product-code mapping, and coordinate conversion decisions are verified in a dedicated synchronization slice.
+
 ### 3.1 Bounding Box First Filter
 
 The server must not calculate Haversine distance against every station row.

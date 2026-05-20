@@ -7,7 +7,7 @@ This document defines the card-benefit requirements added before Slice 4.
 The goal is to support both:
 
 - user-entered card benefits
-- card benefit discovery through Naver-domain search data
+- card benefit discovery through controlled Selenium ingestion from user-approved public domains
 
 without breaking the existing harness structure.
 
@@ -37,24 +37,32 @@ Optional fields:
 
 Manual policies are treated as valid user-owned policies, but the response must expose that the policy source is `manual`.
 
-### 2.2 Naver-Based Card Benefit Discovery
+### 2.2 Selenium-Based Card Benefit Discovery
 
-SmartFuel may use Naver-domain search data to discover card benefit candidates.
+SmartFuel may use Selenium to discover card benefit candidates from public domains explicitly provided by the user and allowlisted by the backend.
+
+The first user-approved source is:
+
+```text
+https://card-search.naver.com/list?companyCode=&brandNames=&benefitCategoryIds=1&sortMethod=ri&isRefetch=true&bizType=CPC
+```
 
 Allowed approach:
 
-- Use official Naver Developers Search API when available.
-- Use Naver search result metadata as discovery input.
+- Treat `card-search.naver.com` as the first user-approved default domain.
+- Use `CARD_INGESTION_ALLOWED_DOMAINS` for any additional backend allowlist entries.
+- Use Selenium only in a separate ingestion worker or management command, not during recommendation requests.
 - Store source URL, title, summary, image URL, and collected time.
 - Let the user confirm or edit the discovered benefit before it becomes an active user card.
 
 Disallowed approach:
 
 - Do not scrape private pages or bypass access controls.
+- Do not bypass CAPTCHA, anti-bot controls, login walls, or payment authentication.
 - Do not store card numbers, CVC, resident registration numbers, or payment credentials.
 - Do not silently activate an unverified discovered benefit.
 
-Naver search data is discovery data, not authoritative financial advice.
+Selenium ingestion data is discovery data, not authoritative financial advice.
 
 ### 2.3 Card Physical Image Display
 
@@ -64,7 +72,7 @@ Image priority:
 
 1. user-provided image URL
 2. issuer-provided image URL
-3. Naver image search result URL
+3. Selenium-discovered public image URL
 4. default local card placeholder
 
 Each image should keep its source metadata.
@@ -100,14 +108,14 @@ GS 할인카드가 리터당 80원을 할인해 주고, 왕복 이동 비용을 
 | API contract | Card policy schema and card discovery endpoint required |
 | ERD | Card source and image metadata required |
 | Use Case | Card entry, discovery, image display, and confirmation required |
-| QA | Manual input, Naver discovery, card image fallback, and reason quality scenarios required |
+| QA | Manual input, Selenium discovery, card image fallback, and reason quality scenarios required |
 
 ## 4. Data Source Confidence
 
 Card policy records should expose:
 
 ```text
-source_type = manual | naver_search | issuer | admin_seed
+source_type = manual | selenium | naver_search | issuer | admin_seed
 verification_status = unverified | user_confirmed | admin_verified
 ```
 
@@ -117,7 +125,7 @@ Recommendation can use:
 - `user_confirmed` discovered policies
 - `admin_verified` seeded policies
 
-Recommendation must not silently use `unverified` Naver-discovered policies.
+Recommendation must not silently use `unverified` Selenium-discovered policies.
 
 ## 5. Implementation Order
 
@@ -132,19 +140,16 @@ During Slice 4 implementation:
 
 1. Implement manual card policy model/API.
 2. Implement card image fields.
-3. Implement Naver discovery as a separate service boundary.
+3. Implement Selenium discovery as a separate service boundary.
 4. Require user confirmation before using discovered benefits.
 5. Apply confirmed card policies to recommendation ranking.
 
-## 6. External API Note
+## 6. Selenium Ingestion Note
 
-As of 2026-05-18, Naver Developers documents a Search API that can return search results for categories such as web documents, blogs, news, shopping, images, encyclopedia, and local results. It also documents a daily processing limit of 25,000 calls for the Search API product page.
-
-SmartFuel should treat this as an external dependency behind a service boundary:
+SmartFuel should treat Selenium as an external ingestion dependency behind a service boundary:
 
 ```text
-backend/cards/naver_discovery.py
+backend/cards/selenium_ingestion.py
 ```
 
-The application should continue to work when Naver credentials are missing by falling back to manual card input.
-
+The application should continue to work when no allowed ingestion domain is configured by falling back to manual card input.

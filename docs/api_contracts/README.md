@@ -10,4 +10,9 @@ The full blueprint remains the canonical index, but day-to-day coding should use
 
 - `recommendations_quote.json`: `POST /api/v1/recommendations/quote/`
 - `stations_nearby.json`: `GET /api/v1/stations/nearby/`
+- `accounts_auth.json`: signup, login, logout, and current-user APIs
+- `vehicles_profile.json`: `GET`/`PUT /api/v1/me/vehicle/`
 - `cards_policies.json`: manual card policy and Naver-based card discovery APIs
+- `cards_catalog.json`: card catalog search and save-from-catalog APIs
+- `cards_ingestion.json`: controlled Selenium card ingestion contract
+- `stations_opinet.json`: Opinet synchronization boundary
