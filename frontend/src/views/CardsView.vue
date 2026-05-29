@@ -1,7 +1,7 @@
 <script setup>
 import { computed, reactive, ref } from "vue";
-import { Check, CreditCard, Plus, Search, Trash2, X } from "@lucide/vue";
-import { createMyCard, createMyCardFromCatalog, deleteMyCard, searchCardCatalog } from "../api/cards";
+import { Check, CreditCard, Pencil, Plus, Save, Search, Trash2, X } from "@lucide/vue";
+import { createMyCard, createMyCardFromCatalog, deleteMyCard, searchCardCatalog, updateMyCard } from "../api/cards";
 
 defineProps({
   cards: {
@@ -50,9 +50,25 @@ const catalogQuery = ref("");
 const catalogCards = ref([]);
 const selectedCatalogCard = ref(null);
 const failedImages = ref(new Set());
+const editingCardId = ref(null);
+const editCardForm = reactive({
+  card_name: "",
+  issuer_name: "",
+  discount_type: "per_liter",
+  discount_value: 0,
+  brand_scope: "all",
+  min_payment_amount: null,
+  max_discount_amount: null,
+  monthly_discount_limit: null,
+  monthly_remaining_discount: null,
+  user_memo: ""
+});
+const editCardError = ref(null);
+const editCardLoading = ref(false);
 
 const discountMax = computed(() => (form.discount_type === "percentage" ? 100 : undefined));
 const draftDiscountMax = computed(() => (catalogDraft.discount_type === "percentage" ? 100 : undefined));
+const editDiscountMax = computed(() => (editCardForm.discount_type === "percentage" ? 100 : undefined));
 
 function discountUnit(type) {
   if (type === "percentage") return "%";
@@ -213,6 +229,61 @@ async function remove(card) {
     error.value = err.payload || { message: err.message };
   } finally {
     deletingId.value = null;
+  }
+}
+
+function startEditCard(card) {
+  editingCardId.value = card.card_id;
+  editCardError.value = null;
+  Object.assign(editCardForm, {
+    card_name: card.card_name || "",
+    issuer_name: card.issuer_name || "",
+    discount_type: card.discount_type || "per_liter",
+    discount_value: Number(card.discount_value || 0),
+    brand_scope: card.brand_scope || "all",
+    min_payment_amount: card.min_payment_amount,
+    max_discount_amount: card.max_discount_amount,
+    monthly_discount_limit: card.monthly_discount_limit,
+    monthly_remaining_discount: card.monthly_remaining_discount,
+    user_memo: card.user_memo || ""
+  });
+}
+
+function cancelEditCard() {
+  editingCardId.value = null;
+  editCardError.value = null;
+}
+
+async function saveCardEdit(cardId) {
+  if (!editCardForm.issuer_name.trim() || !editCardForm.card_name.trim()) {
+    editCardError.value = { message: "카드사와 카드명을 모두 입력해 주세요." };
+    return;
+  }
+  const validationMessage = validateDiscountPayload(editCardForm);
+  if (validationMessage) {
+    editCardError.value = { message: validationMessage };
+    return;
+  }
+
+  editCardLoading.value = true;
+  editCardError.value = null;
+  success.value = false;
+  try {
+    await updateMyCard(cardId, {
+      ...editCardForm,
+      discount_value: Number(editCardForm.discount_value || 0),
+      min_payment_amount: optionalNumber(editCardForm.min_payment_amount),
+      max_discount_amount: optionalNumber(editCardForm.max_discount_amount),
+      monthly_discount_limit: optionalNumber(editCardForm.monthly_discount_limit),
+      monthly_remaining_discount: optionalNumber(editCardForm.monthly_remaining_discount)
+    });
+    editingCardId.value = null;
+    success.value = true;
+    emit("changed");
+  } catch (err) {
+    editCardError.value = err.payload || { message: err.message };
+  } finally {
+    editCardLoading.value = false;
   }
 }
 
@@ -463,6 +534,15 @@ function markImageFailed(url) {
               <span>{{ card.discount_type }} · {{ card.discount_value }} · {{ card.brand_scope }}</span>
             </div>
             <button
+              class="iconButton"
+              type="button"
+              title="카드 수정"
+              :disabled="editingCardId === card.card_id"
+              @click="startEditCard(card)"
+            >
+              <Pencil :size="18" />
+            </button>
+            <button
               class="iconButton danger"
               type="button"
               title="카드 삭제"
@@ -471,6 +551,80 @@ function markImageFailed(url) {
             >
               <Trash2 :size="18" />
             </button>
+            <form v-if="editingCardId === card.card_id" class="cardEditForm" @submit.prevent="saveCardEdit(card.card_id)">
+              <div class="fieldGrid two">
+                <label>
+                  <span>카드사</span>
+                  <input v-model.trim="editCardForm.issuer_name" required />
+                </label>
+                <label>
+                  <span>카드명</span>
+                  <input v-model.trim="editCardForm.card_name" required />
+                </label>
+              </div>
+              <div class="fieldGrid two">
+                <label>
+                  <span>할인 방식</span>
+                  <select v-model="editCardForm.discount_type">
+                    <option value="per_liter">리터당 할인</option>
+                    <option value="percentage">결제 금액 비율</option>
+                    <option value="fixed_amount">정액 할인</option>
+                  </select>
+                </label>
+                <label>
+                  <span>할인값({{ discountUnit(editCardForm.discount_type) }})</span>
+                  <input v-model.number="editCardForm.discount_value" type="number" min="0" :max="editDiscountMax" step="0.1" required />
+                </label>
+              </div>
+              <label>
+                <span>적용 주유소</span>
+                <select v-model="editCardForm.brand_scope">
+                  <option value="all">전체</option>
+                  <option value="SK">SK</option>
+                  <option value="GS">GS</option>
+                  <option value="S_OIL">S-OIL</option>
+                  <option value="HD_HYUNDAI">HD현대오일뱅크</option>
+                </select>
+              </label>
+              <div class="fieldGrid two">
+                <label>
+                  <span>최소 결제액</span>
+                  <input v-model.number="editCardForm.min_payment_amount" type="number" min="0" step="1000" />
+                </label>
+                <label>
+                  <span>최대 할인액</span>
+                  <input v-model.number="editCardForm.max_discount_amount" type="number" min="0" step="1000" />
+                </label>
+              </div>
+              <div class="fieldGrid two">
+                <label>
+                  <span>월 할인 한도</span>
+                  <input v-model.number="editCardForm.monthly_discount_limit" type="number" min="0" step="1000" />
+                </label>
+                <label>
+                  <span>이번 달 남은 할인액</span>
+                  <input v-model.number="editCardForm.monthly_remaining_discount" type="number" min="0" step="1000" />
+                </label>
+              </div>
+              <label>
+                <span>메모</span>
+                <input v-model.trim="editCardForm.user_memo" />
+              </label>
+              <div v-if="editCardError" class="errorPanel compact">
+                <strong>{{ editCardError.code || "CARD_UPDATE_FAILED" }}</strong>
+                <span>{{ editCardError.message }}</span>
+              </div>
+              <div class="editActions">
+                <button class="primaryButton" type="submit" :disabled="editCardLoading">
+                  <Save :size="18" />
+                  <span>{{ editCardLoading ? "저장 중" : "수정 저장" }}</span>
+                </button>
+                <button class="secondaryButton" type="button" :disabled="editCardLoading" @click="cancelEditCard">
+                  <X :size="18" />
+                  <span>취소</span>
+                </button>
+              </div>
+            </form>
           </article>
           <p v-if="cards.length === 0" class="summaryText">등록된 카드가 없습니다.</p>
         </div>
@@ -478,3 +632,20 @@ function markImageFailed(url) {
     </section>
   </main>
 </template>
+
+<style scoped>
+.cardEditForm {
+  border-top: 1px solid var(--slate-200);
+  display: grid;
+  gap: 12px;
+  grid-column: 1 / -1;
+  margin-top: 12px;
+  padding-top: 12px;
+}
+
+.editActions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+</style>

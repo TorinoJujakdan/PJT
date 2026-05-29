@@ -1,0 +1,68 @@
+{
+  "name": "Reverse geocode location coordinate",
+  "method": "GET",
+  "path": "/stations/reverse-geocode/",
+  "auth": "optional",
+  "description": "브라우저 현재 위치 또는 지도 클릭으로 얻은 WGS84 좌표를 네이버 Reverse Geocoding API로 주소 라벨링한다.",
+  "query": {
+    "required": [
+      "latitude",
+      "longitude"
+    ],
+    "properties": {
+      "latitude": {
+        "type": "number",
+        "example": 37.5665
+      },
+      "longitude": {
+        "type": "number",
+        "example": 126.978
+      }
+    }
+  },
+  "responses": {
+    "200": {
+      "type": "object",
+      "properties": {
+        "result": {
+          "type": ["object", "null"],
+          "properties": {
+            "name": {
+              "type": "string",
+              "example": "서울특별시 중구 세종대로 110"
+            },
+            "address": {
+              "type": "string",
+              "example": "서울특별시 중구 세종대로 110"
+            },
+            "latitude": {
+              "type": "number",
+              "example": 37.5665
+            },
+            "longitude": {
+              "type": "number",
+              "example": 126.978
+            },
+            "source": {
+              "type": "string",
+              "example": "naver_reverse_geocode"
+            }
+          }
+        },
+        "meta": {
+          "type": "object",
+          "properties": {
+            "source": {
+              "type": "string",
+              "example": "naver_reverse_geocode"
+            },
+            "status": {
+              "type": "string",
+              "example": "ok"
+            }
+          }
+        }
+      }
+    }
+  }
+}

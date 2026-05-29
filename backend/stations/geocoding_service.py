@@ -1,92 +1,408 @@
-import os
-import urllib.request
-import urllib.parse
 import json
+import logging
+import os
+import re
+from urllib.error import HTTPError
+import urllib.parse
+import urllib.request
 
-PRESETS = [
-    { "name": "서울시청", "address": "서울특별시 중구 세종대로 110", "latitude": 37.5665, "longitude": 126.9780 },
-    { "name": "강남역", "address": "서울특별시 강남구 강남대로 396", "latitude": 37.4979, "longitude": 127.0276 },
-    { "name": "판교역 / 테크노밸리", "address": "경기도 성남시 분당구 판교역로 150", "latitude": 37.3948, "longitude": 127.1112 },
-    { "name": "대전시청", "address": "대전광역시 서구 둔산로 100", "latitude": 36.3504, "longitude": 127.3848 },
-    { "name": "부산역", "address": "부산광역시 동구 중앙대로 206", "latitude": 35.1152, "longitude": 129.0422 },
-    { "name": "홍대입구역", "address": "서울특별시 마포구 양화로 160", "latitude": 37.5575, "longitude": 126.9244 },
-    { "name": "신촌역", "address": "서울특별시 마포구 신촌로 90", "latitude": 37.5552, "longitude": 126.9369 },
-    { "name": "건대입구역", "address": "서울특별시 광진구 아차산로 272", "latitude": 37.5404, "longitude": 127.0692 },
-    { "name": "명동역", "address": "서울특별시 중구 퇴계로 126", "latitude": 37.5609, "longitude": 126.9863 },
-    { "name": "여의도역", "address": "서울특별시 영등포구 여의도동 3", "latitude": 37.5216, "longitude": 126.9242 },
-    { "name": "잠실역", "address": "서울특별시 송파구 올림픽로 265", "latitude": 37.5133, "longitude": 127.1001 },
-    { "name": "삼성역", "address": "서울특별시 강남구 테헤란로 538", "latitude": 37.5088, "longitude": 127.0631 },
-    { "name": "신도림역", "address": "서울특별시 구로구 새말로 117-21", "latitude": 37.5089, "longitude": 126.8913 },
-    { "name": "혜화역 (대학로)", "address": "서울특별시 종로구 대학로 120", "latitude": 37.5822, "longitude": 127.0019 },
-    { "name": "종로3가역", "address": "서울특별시 종로구 돈화문로 30", "latitude": 37.5704, "longitude": 126.9922 },
-    { "name": "광화문역 (세종문화회관)", "address": "서울특별시 종로구 세종대로 172", "latitude": 37.5716, "longitude": 126.9765 },
-    { "name": "이태원역", "address": "서울특별시 용산구 이태원로 177", "latitude": 37.5345, "longitude": 126.9946 },
-    { "name": "인천역", "address": "인천광역시 중구 제물량로 269", "latitude": 37.4764, "longitude": 126.6171 },
-    { "name": "부평역", "address": "인천광역시 부평구 광장로 16", "latitude": 37.4895, "longitude": 126.7248 },
-    { "name": "수원역", "address": "경기도 수원시 팔달구 덕영대로 924", "latitude": 37.2662, "longitude": 127.0001 },
-    { "name": "분당 정자역", "address": "경기도 성남시 분당구 성남대로 333", "latitude": 37.3674, "longitude": 127.1082 },
-    { "name": "일산시청", "address": "경기도 고양시 덕양구 고양시청로 10", "latitude": 37.6584, "longitude": 126.8320 },
-    { "name": "의정부역", "address": "경기도 의정부시 평화로 525", "latitude": 37.7396, "longitude": 127.0423 },
-    { "name": "춘천시청", "address": "강원특별자치도 춘천시 시청길 11", "latitude": 37.8813, "longitude": 127.7298 },
-    { "name": "청주시청", "address": "충청북도 청주시 상당구 상당로 155", "latitude": 36.6424, "longitude": 127.4890 },
-    { "name": "천안역", "address": "충청남도 천안시 동남구 대흥로 239", "latitude": 36.8100, "longitude": 127.1462 },
-    { "name": "대구역", "address": "대구광역시 북구 태평로 161", "latitude": 35.8767, "longitude": 128.5971 },
-    { "name": "동대구역", "address": "대구광역시 동구 동대구로 550", "latitude": 35.8822, "longitude": 128.6293 },
-    { "name": "경북대 대구캠퍼스", "address": "대구광역시 북구 대학로 80", "latitude": 35.8906, "longitude": 128.6121 },
-    { "name": "울산시청", "address": "울산광역시 남구 중앙로 201", "latitude": 35.5396, "longitude": 129.3115 },
-    { "name": "창원시청", "address": "경상남도 창원시 성산구 중앙대로 151", "latitude": 35.2281, "longitude": 128.6811 },
-    { "name": "광주시청", "address": "광주광역시 서구 내방로 111", "latitude": 35.1601, "longitude": 126.8514 },
-    { "name": "전주시청", "address": "전북특별자치도 전주시 완산구 노송광장로 10", "latitude": 35.8242, "longitude": 127.1480 },
-    { "name": "목포역", "address": "전라남도 목포시 영산로 98", "latitude": 34.7912, "longitude": 126.3865 },
-    { "name": "여수시청", "address": "전라남도 여수시 시청로 1", "latitude": 34.7604, "longitude": 127.6622 },
-    { "name": "제주도청", "address": "제주특별자치도 제주시 문송길 5", "latitude": 33.4890, "longitude": 126.4983 },
-    { "name": "서귀포시청", "address": "제주특별자치도 서귀포시 중앙로 105", "latitude": 33.2541, "longitude": 126.5601 }
-]
 
-def geocode_query_fallback(query: str):
-    """Fallback geocoding matching local presets (string search)."""
-    normalized_query = query.replace(" ", "").lower()
-    results = []
-    for preset in PRESETS:
-        normalized_name = preset["name"].replace(" ", "").lower()
-        normalized_address = preset["address"].replace(" ", "").lower()
-        if normalized_query in normalized_name or normalized_query in normalized_address:
-            results.append(preset)
-    return results
+logger = logging.getLogger(__name__)
 
-def geocode_query(query: str):
-    """Query location coordinates from Naver Map API with a resilient fallback."""
-    if not query or not query.strip():
-        return []
+GEOCODING_URL = "https://maps.apigw.ntruss.com/map-geocode/v2/geocode"
+REVERSE_GEOCODING_URL = "https://maps.apigw.ntruss.com/map-reversegeocode/v2/gc"
+DIRECTIONS_URL = "https://maps.apigw.ntruss.com/map-direction/v1/driving"
+LOCAL_SEARCH_URL = "https://openapi.naver.com/v1/search/local.json"
+REQUEST_TIMEOUT_SECONDS = 5
 
-    client_id = os.getenv("NAVER_CLIENT_ID", "").strip()
-    client_secret = os.getenv("NAVER_CLIENT_SECRET", "").strip()
 
+def _naver_credentials():
+    client_id = (
+        os.getenv("NAVER_GEOCODING_CLIENT_ID", "").strip()
+        or os.getenv("NAVER_CLIENT_ID", "").strip()
+    )
+    client_secret = (
+        os.getenv("NAVER_GEOCODING_CLIENT_SECRET", "").strip()
+        or os.getenv("NAVER_CLIENT_SECRET", "").strip()
+    )
+    return client_id, client_secret
+
+
+def _naver_local_credentials():
+    client_id = (
+        os.getenv("NAVER_LOCAL_CLIENT_ID", "").strip()
+        or os.getenv("NAVER_SEARCH_CLIENT_ID", "").strip()
+        or os.getenv("NAVER_OPENAPI_CLIENT_ID", "").strip()
+        or os.getenv("NAVER_CLIENT_ID", "").strip()
+    )
+    client_secret = (
+        os.getenv("NAVER_LOCAL_CLIENT_SECRET", "").strip()
+        or os.getenv("NAVER_SEARCH_CLIENT_SECRET", "").strip()
+        or os.getenv("NAVER_OPENAPI_CLIENT_SECRET", "").strip()
+        or os.getenv("NAVER_CLIENT_SECRET", "").strip()
+    )
+    return client_id, client_secret
+
+
+def _request_naver_json(url):
+    client_id, client_secret = _naver_credentials()
     if not client_id or not client_secret:
-        # Fallback if API keys are not provided (resilient local dev)
-        return geocode_query_fallback(query)
+        return None, "NAVER_GEOCODING_KEY_MISSING"
+
+    request = urllib.request.Request(url)
+    request.add_header("x-ncp-apigw-api-key-id", client_id)
+    request.add_header("x-ncp-apigw-api-key", client_secret)
+    request.add_header("Accept", "application/json")
 
     try:
-        url = "https://naveropenapi.apigw.ntruss.com/map-geocode/v2/geocode?query=" + urllib.parse.quote(query)
-        req = urllib.request.Request(url)
-        req.add_header("X-NCP-APIGW-API-KEY-ID", client_id)
-        req.add_header("X-NCP-APIGW-API-KEY", client_secret)
+        with urllib.request.urlopen(request, timeout=REQUEST_TIMEOUT_SECONDS) as response:
+            if response.status != 200:
+                return None, f"NAVER_GEOCODING_HTTP_{response.status}"
+            return json.loads(response.read().decode("utf-8")), None
+    except HTTPError as exc:
+        return None, f"NAVER_GEOCODING_HTTP_{exc.code}"
+    except Exception as exc:
+        logger.warning("Naver geocoding request failed: %s", exc, exc_info=True)
+        return None, "NAVER_GEOCODING_REQUEST_FAILED"
 
-        with urllib.request.urlopen(req, timeout=5) as response:
-            if response.status == 200:
-                data = json.loads(response.read().decode("utf-8"))
-                addresses = data.get("addresses", [])
-                results = []
-                for addr in addresses:
-                    results.append({
-                        "name": addr.get("roadAddress") or addr.get("jibunAddress") or query,
-                        "address": addr.get("roadAddress") or addr.get("jibunAddress") or "",
-                        "latitude": float(addr.get("y")),
-                        "longitude": float(addr.get("x")),
-                    })
-                return results
-    except Exception:
-        # Fallback to local search if external API request fails
-        pass
 
-    return geocode_query_fallback(query)
+def _request_naver_local_json(url):
+    client_id, client_secret = _naver_local_credentials()
+    if not client_id or not client_secret:
+        return None, "NAVER_LOCAL_KEY_MISSING"
+
+    request = urllib.request.Request(url)
+    request.add_header("X-Naver-Client-Id", client_id)
+    request.add_header("X-Naver-Client-Secret", client_secret)
+
+    try:
+        with urllib.request.urlopen(request, timeout=REQUEST_TIMEOUT_SECONDS) as response:
+            if response.status != 200:
+                return None, f"NAVER_LOCAL_HTTP_{response.status}"
+            return json.loads(response.read().decode("utf-8")), None
+    except HTTPError as exc:
+        return None, f"NAVER_LOCAL_HTTP_{exc.code}"
+    except Exception as exc:
+        logger.warning("Naver local search request failed: %s", exc, exc_info=True)
+        return None, "NAVER_LOCAL_REQUEST_FAILED"
+
+
+def _safe_float(value):
+    try:
+        return float(value)
+    except (TypeError, ValueError):
+        return None
+
+
+def _clean_html(value):
+    return re.sub(r"<[^>]+>", "", value or "").strip()
+
+
+def _normalize_geocode_address(address, fallback_name):
+    latitude = _safe_float(address.get("y"))
+    longitude = _safe_float(address.get("x"))
+    if latitude is None or longitude is None:
+        return None
+
+    road_address = address.get("roadAddress") or ""
+    jibun_address = address.get("jibunAddress") or ""
+    display_address = road_address or jibun_address
+    return {
+        "name": display_address or fallback_name,
+        "address": display_address,
+        "road_address": road_address,
+        "jibun_address": jibun_address,
+        "latitude": latitude,
+        "longitude": longitude,
+        "source": "naver_geocode",
+    }
+
+
+def geocode_query_with_meta(query):
+    query = (query or "").strip()
+    if not query:
+        return {
+            "results": [],
+            "meta": {
+                "source": "naver_geocode",
+                "status": "empty_query",
+            },
+        }
+
+    url = f"{GEOCODING_URL}?query={urllib.parse.quote(query)}"
+    payload, reason = _request_naver_json(url)
+    if payload is None:
+        local_payload = local_search_query_with_meta(query)
+        if local_payload["results"]:
+            local_payload["meta"]["fallback_from"] = "naver_geocode"
+            local_payload["meta"]["fallback_reason"] = reason
+            return local_payload
+        return {
+            "results": [],
+            "meta": {
+                "source": "naver_geocode",
+                "status": "unavailable",
+                "reason": reason,
+                "fallback_source": local_payload["meta"].get("source"),
+                "fallback_status": local_payload["meta"].get("status"),
+                "fallback_reason": local_payload["meta"].get("reason"),
+            },
+        }
+
+    results = [
+        normalized
+        for normalized in (
+            _normalize_geocode_address(item, query)
+            for item in payload.get("addresses", [])
+        )
+        if normalized is not None
+    ]
+    if not results:
+        local_payload = local_search_query_with_meta(query)
+        if local_payload["results"]:
+            return local_payload
+        return {
+            "results": [],
+            "meta": {
+                "source": "naver_geocode",
+                "status": "ok",
+                "count": 0,
+                "fallback_source": local_payload["meta"].get("source"),
+                "fallback_status": local_payload["meta"].get("status"),
+                "fallback_reason": local_payload["meta"].get("reason"),
+            },
+        }
+
+    return {
+        "results": results,
+        "meta": {
+            "source": "naver_geocode",
+            "status": "ok",
+            "count": len(results),
+        },
+    }
+
+
+def geocode_query(query):
+    return geocode_query_with_meta(query)["results"]
+
+
+def _normalize_local_search_item(item, fallback_name):
+    latitude = _safe_float(item.get("mapy"))
+    longitude = _safe_float(item.get("mapx"))
+    if latitude is None or longitude is None:
+        return None
+
+    # Naver Local Search returns longitude/latitude scaled by 10,000,000.
+    if abs(latitude) > 90 or abs(longitude) > 180:
+        latitude = latitude / 10000000
+        longitude = longitude / 10000000
+
+    if latitude < -90 or latitude > 90 or longitude < -180 or longitude > 180:
+        return None
+
+    road_address = item.get("roadAddress") or ""
+    jibun_address = item.get("address") or ""
+    display_address = road_address or jibun_address
+    return {
+        "name": _clean_html(item.get("title")) or display_address or fallback_name,
+        "address": display_address,
+        "road_address": road_address,
+        "jibun_address": jibun_address,
+        "latitude": latitude,
+        "longitude": longitude,
+        "source": "naver_local_search",
+        "category": item.get("category") or "",
+    }
+
+
+def local_search_query_with_meta(query):
+    params = urllib.parse.urlencode({"query": query, "display": 5, "sort": "random"})
+    payload, reason = _request_naver_local_json(f"{LOCAL_SEARCH_URL}?{params}")
+    if payload is None:
+        return {
+            "results": [],
+            "meta": {
+                "source": "naver_local_search",
+                "status": "unavailable",
+                "reason": reason,
+            },
+        }
+
+    results = [
+        normalized
+        for normalized in (
+            _normalize_local_search_item(item, query)
+            for item in payload.get("items", [])
+        )
+        if normalized is not None
+    ]
+    return {
+        "results": results,
+        "meta": {
+            "source": "naver_local_search",
+            "status": "ok",
+            "count": len(results),
+        },
+    }
+
+
+def _region_parts(region):
+    if not region:
+        return []
+    parts = []
+    for key in ["area1", "area2", "area3", "area4"]:
+        name = region.get(key, {}).get("name")
+        if name:
+            parts.append(name)
+    return parts
+
+
+def _land_number(land):
+    number1 = land.get("number1")
+    number2 = land.get("number2")
+    if number1 and number2:
+        return f"{number1}-{number2}"
+    return number1 or ""
+
+
+def _format_reverse_address(result):
+    region_parts = _region_parts(result.get("region"))
+    land = result.get("land") or {}
+    land_number = _land_number(land)
+
+    if result.get("name") == "roadaddr":
+        road_name = land.get("name")
+        road_tail = " ".join(item for item in [road_name, land_number] if item)
+        return " ".join([*region_parts, road_tail]).strip()
+
+    return " ".join([*region_parts, land_number]).strip()
+
+
+def reverse_geocode_with_meta(latitude, longitude):
+    lat = _safe_float(latitude)
+    lon = _safe_float(longitude)
+    if lat is None or lon is None:
+        return {
+            "result": None,
+            "meta": {
+                "source": "naver_reverse_geocode",
+                "status": "invalid_location",
+            },
+        }
+
+    params = urllib.parse.urlencode(
+        {
+            "coords": f"{lon},{lat}",
+            "orders": "roadaddr,addr",
+            "output": "json",
+        }
+    )
+    payload, reason = _request_naver_json(f"{REVERSE_GEOCODING_URL}?{params}")
+    if payload is None:
+        return {
+            "result": None,
+            "meta": {
+                "source": "naver_reverse_geocode",
+                "status": "unavailable",
+                "reason": reason,
+            },
+        }
+
+    road_address = ""
+    jibun_address = ""
+    for item in payload.get("results", []):
+        formatted = _format_reverse_address(item)
+        if item.get("name") == "roadaddr" and formatted:
+            road_address = formatted
+        elif item.get("name") == "addr" and formatted:
+            jibun_address = formatted
+
+    address = road_address or jibun_address
+    result = {
+        "name": address or f"{lat:.6f}, {lon:.6f}",
+        "address": address,
+        "road_address": road_address,
+        "jibun_address": jibun_address,
+        "latitude": lat,
+        "longitude": lon,
+        "source": "naver_reverse_geocode",
+    }
+    return {
+        "result": result,
+        "meta": {
+            "source": "naver_reverse_geocode",
+            "status": "ok",
+            "has_address": bool(address),
+        },
+    }
+
+
+def reverse_geocode(latitude, longitude):
+    return reverse_geocode_with_meta(latitude, longitude)["result"]
+
+
+def _normalize_route_path(raw_path):
+    normalized = []
+    for point in raw_path or []:
+        if not isinstance(point, (list, tuple)) or len(point) < 2:
+            continue
+        longitude = _safe_float(point[0])
+        latitude = _safe_float(point[1])
+        if latitude is None or longitude is None:
+            continue
+        normalized.append({"latitude": latitude, "longitude": longitude})
+    return normalized
+
+
+def get_driving_route_with_path(start_lat, start_lng, goal_lat, goal_lng):
+    """
+    Naver Directions 5 API? ???? ?? ?? ?? ??(m), ?? ??(ms), ?? ??? ????.
+    (distance_meters, duration_ms, route_path, error_code) ??? ?????.
+    """
+    client_id, client_secret = _naver_credentials()
+    if not client_id or not client_secret:
+        return None, None, [], "NAVER_KEYS_MISSING"
+
+    params = urllib.parse.urlencode({
+        "start": f"{start_lng},{start_lat}",
+        "goal": f"{goal_lng},{goal_lat}",
+        "option": "traoptimal"
+    })
+
+    url = f"{DIRECTIONS_URL}?{params}"
+
+    request = urllib.request.Request(url)
+    request.add_header("x-ncp-apigw-api-key-id", client_id)
+    request.add_header("x-ncp-apigw-api-key", client_secret)
+    request.add_header("Accept", "application/json")
+
+    try:
+        with urllib.request.urlopen(request, timeout=REQUEST_TIMEOUT_SECONDS) as response:
+            if response.status != 200:
+                return None, None, [], f"NAVER_DIRECTIONS_HTTP_{response.status}"
+            data = json.loads(response.read().decode("utf-8"))
+
+            if "route" in data and "traoptimal" in data["route"] and len(data["route"]["traoptimal"]) > 0:
+                route = data["route"]["traoptimal"][0]
+                summary = route.get("summary", {})
+                distance = summary.get("distance")  # meters
+                duration = summary.get("duration")  # milliseconds
+                route_path = _normalize_route_path(route.get("path", []))
+                return distance, duration, route_path, None
+            return None, None, [], "INVALID_RESPONSE_FORMAT"
+    except HTTPError as exc:
+        return None, None, [], f"NAVER_DIRECTIONS_HTTP_{exc.code}"
+    except Exception as exc:
+        logger.warning("Naver directions API request failed: %s", exc, exc_info=True)
+        return None, None, [], "REQUEST_FAILED"
+
+
+def get_driving_route(start_lat, start_lng, goal_lat, goal_lng):
+    distance, duration, _route_path, error = get_driving_route_with_path(
+        start_lat,
+        start_lng,
+        goal_lat,
+        goal_lng,
+    )
+    return distance, duration, error

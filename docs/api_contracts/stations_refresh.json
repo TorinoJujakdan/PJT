@@ -1,0 +1,84 @@
+{
+  "name": "Refresh nearby station prices",
+  "method": "POST",
+  "path": "/stations/refresh/",
+  "auth": "optional",
+  "description": "확정된 출발지 좌표를 기준으로 백엔드가 Opinet aroundAll API를 호출해 주변 주유소와 가격을 DB에 반영한다. 프론트엔드는 Opinet API 키를 절대 받지 않는다.",
+  "request": {
+    "required": [
+      "location"
+    ],
+    "properties": {
+      "location": {
+        "type": "object",
+        "required": [
+          "latitude",
+          "longitude"
+        ],
+        "properties": {
+          "latitude": {
+            "type": "number",
+            "example": 37.5665
+          },
+          "longitude": {
+            "type": "number",
+            "example": 126.978
+          }
+        }
+      },
+      "fuel_type": {
+        "type": "string",
+        "enum": ["gasoline", "diesel", "lpg", "premium_gasoline"],
+        "example": "gasoline"
+      },
+      "radius_km": {
+        "type": "number",
+        "minimum": 1,
+        "maximum": 5,
+        "default": 5
+      }
+    }
+  },
+  "responses": {
+    "200": {
+      "type": "object",
+      "properties": {
+        "status": {
+          "type": "string",
+          "enum": ["ok", "empty", "skipped"]
+        },
+        "summary": {
+          "type": "object",
+          "properties": {
+            "stations_created": {
+              "type": "number"
+            },
+            "prices_created": {
+              "type": "number"
+            },
+            "rows_skipped": {
+              "type": "number"
+            }
+          }
+        },
+        "meta": {
+          "type": "object",
+          "properties": {
+            "source": {
+              "type": "string",
+              "example": "opinet"
+            },
+            "rows": {
+              "type": "number",
+              "example": 12
+            },
+            "radius_km": {
+              "type": "number",
+              "example": 5
+            }
+          }
+        }
+      }
+    }
+  }
+}

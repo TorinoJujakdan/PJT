@@ -1,7 +1,7 @@
 <script setup>
 import { reactive, ref } from "vue";
-import { Car, CheckCircle2, Plus, Save, Trash2 } from "@lucide/vue";
-import { addVehicle, deleteVehicle, setDefaultVehicle } from "../api/vehicles";
+import { Car, CheckCircle2, Pencil, Plus, Save, Trash2, X } from "@lucide/vue";
+import { addVehicle, deleteVehicle, setDefaultVehicle, updateVehicle } from "../api/vehicles";
 
 const props = defineProps({
   vehicles: {
@@ -22,6 +22,14 @@ const form = reactive({
 const loading = ref(false);
 const error = ref(null);
 const saved = ref(false);
+const editingId = ref(null);
+const editForm = reactive({
+  fuel_type: "gasoline",
+  fuel_efficiency_kmpl: 10,
+  is_default: false
+});
+const editError = ref(null);
+const editLoading = ref(false);
 
 function validateForm() {
   if (!form.fuel_type || !form.fuel_efficiency_kmpl) {
@@ -81,6 +89,57 @@ async function handleDelete(id) {
   }
 }
 
+function startEdit(vehicle) {
+  editingId.value = vehicle.id;
+  editError.value = null;
+  Object.assign(editForm, {
+    fuel_type: vehicle.fuel_type,
+    fuel_efficiency_kmpl: Number(vehicle.fuel_efficiency_kmpl),
+    is_default: Boolean(vehicle.is_default)
+  });
+}
+
+function cancelEdit() {
+  editingId.value = null;
+  editError.value = null;
+}
+
+async function handleUpdateVehicle(id) {
+  const validationMessage = validateFormFor(editForm);
+  if (validationMessage) {
+    editError.value = { message: validationMessage };
+    return;
+  }
+
+  editLoading.value = true;
+  editError.value = null;
+  try {
+    await updateVehicle(id, {
+      fuel_type: editForm.fuel_type,
+      fuel_efficiency_kmpl: Number(editForm.fuel_efficiency_kmpl),
+      is_default: editForm.is_default
+    });
+    editingId.value = null;
+    emit("changed");
+  } catch (err) {
+    editError.value = err.payload || { message: err.message };
+  } finally {
+    editLoading.value = false;
+  }
+}
+
+function validateFormFor(target) {
+  if (!target.fuel_type || !target.fuel_efficiency_kmpl) {
+    return "연료 타입과 연비를 모두 입력해 주세요.";
+  }
+
+  if (target.fuel_efficiency_kmpl < 1 || target.fuel_efficiency_kmpl > 50) {
+    return "연비는 1.0km/L 이상 50.0km/L 이하로 입력해 주세요.";
+  }
+
+  return null;
+}
+
 function getFuelTypeName(type) {
   const names = {
     gasoline: "휘발유",
@@ -127,6 +186,40 @@ function getFuelTypeName(type) {
               </div>
             </div>
 
+            <form v-if="editingId === v.id" class="inlineEditForm" @submit.prevent="handleUpdateVehicle(v.id)">
+              <label>
+                <span>연료 타입</span>
+                <select v-model="editForm.fuel_type" required>
+                  <option value="gasoline">휘발유</option>
+                  <option value="diesel">경유</option>
+                  <option value="lpg">LPG</option>
+                  <option value="premium_gasoline">고급 휘발유</option>
+                </select>
+              </label>
+              <label>
+                <span>연비(km/L)</span>
+                <input v-model.number="editForm.fuel_efficiency_kmpl" type="number" min="1" max="50" step="0.1" required />
+              </label>
+              <label class="checkboxRow">
+                <input v-model="editForm.is_default" type="checkbox" />
+                <span>대표 차량으로 설정</span>
+              </label>
+              <div v-if="editError" class="errorPanel compact">
+                <strong>{{ editError.code || "UPDATE_FAILED" }}</strong>
+                <span>{{ editError.message }}</span>
+              </div>
+              <div class="inlineEditActions">
+                <button class="actionBtn setBtn" type="submit" :disabled="editLoading">
+                  <Save :size="16" />
+                  <span>{{ editLoading ? "저장 중" : "저장" }}</span>
+                </button>
+                <button class="actionBtn deleteBtn" type="button" :disabled="editLoading" @click="cancelEdit">
+                  <X :size="16" />
+                  <span>취소</span>
+                </button>
+              </div>
+            </form>
+
             <div class="cardActions">
               <button
                 v-if="!v.is_default"
@@ -142,6 +235,16 @@ function getFuelTypeName(type) {
                 <CheckCircle2 :size="16" />
                 <span>대표 차량</span>
               </div>
+
+              <button
+                class="actionBtn setBtn"
+                type="button"
+                title="차량 수정"
+                @click="startEdit(v)"
+              >
+                <Pencil :size="16" />
+                <span>수정</span>
+              </button>
 
               <button
                 class="actionBtn deleteBtn"
@@ -323,6 +426,41 @@ function getFuelTypeName(type) {
   align-items: center;
   border-top: 1px solid rgba(255, 255, 255, 0.05);
   padding-top: 12px;
+  gap: 8px;
+  flex-wrap: wrap;
+}
+
+.inlineEditForm {
+  display: grid;
+  gap: 10px;
+  border-top: 1px solid rgba(255, 255, 255, 0.05);
+  padding-top: 12px;
+}
+
+.inlineEditForm label {
+  display: grid;
+  gap: 5px;
+}
+
+.inlineEditForm label span {
+  color: var(--slate-400);
+  font-size: 11px;
+  font-weight: 800;
+}
+
+.checkboxRow {
+  align-items: center;
+  display: flex !important;
+  gap: 8px;
+}
+
+.checkboxRow input {
+  width: auto;
+}
+
+.inlineEditActions {
+  display: flex;
+  gap: 8px;
 }
 
 .actionBtn {

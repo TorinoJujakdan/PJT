@@ -68,6 +68,32 @@ class MyVehicleProfilesAPIView(APIView):
 class MyVehicleProfileDetailAPIView(APIView):
     permission_classes = [IsAuthenticated]
 
+    def patch(self, request, pk):
+        profile = get_object_or_404(VehicleProfile, user=request.user, pk=pk)
+        serializer = VehicleProfileSerializer(profile, data=request.data, partial=True)
+        if not serializer.is_valid():
+            return error_response("INVALID_VEHICLE_PROFILE", status.HTTP_400_BAD_REQUEST, serializer.errors)
+
+        is_default = serializer.validated_data.get("is_default")
+        if is_default:
+            VehicleProfile.objects.filter(user=request.user).exclude(pk=pk).update(is_default=False)
+
+        profile = serializer.save()
+        return Response({"vehicle": VehicleProfileSerializer(profile).data})
+
+    def put(self, request, pk):
+        profile = get_object_or_404(VehicleProfile, user=request.user, pk=pk)
+        serializer = VehicleProfileSerializer(profile, data=request.data)
+        if not serializer.is_valid():
+            return error_response("INVALID_VEHICLE_PROFILE", status.HTTP_400_BAD_REQUEST, serializer.errors)
+
+        is_default = serializer.validated_data.get("is_default")
+        if is_default:
+            VehicleProfile.objects.filter(user=request.user).exclude(pk=pk).update(is_default=False)
+
+        profile = serializer.save()
+        return Response({"vehicle": VehicleProfileSerializer(profile).data})
+
     def delete(self, request, pk):
         profile = get_object_or_404(VehicleProfile, user=request.user, pk=pk)
         was_default = profile.is_default
@@ -93,4 +119,3 @@ class SetDefaultVehicleAPIView(APIView):
         profile.save()
         
         return Response({"vehicle": VehicleProfileSerializer(profile).data})
-

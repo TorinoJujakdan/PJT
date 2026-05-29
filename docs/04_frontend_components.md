@@ -58,8 +58,9 @@ Responsibilities:
 
 Inputs:
 
-- browser current location
-- manual latitude/longitude
+- Naver Geocoding-backed address or place search
+- browser current location with reverse geocoded address label
+- map click coordinate updates from the recommendation map
 
 Emits:
 
@@ -67,8 +68,10 @@ Emits:
 
 States:
 
-- loading while browser geolocation is pending
-- field-level message when geolocation is unavailable, denied, or fails
+- loading while geocoding or browser geolocation is pending
+- empty search results
+- selected departure address, coordinate, and browser accuracy when available
+- field-level message when geolocation, geocoding, or reverse geocoding fails
 
 ### `FuelTargetControl.vue`
 

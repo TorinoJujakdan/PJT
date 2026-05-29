@@ -31,10 +31,14 @@ const props = defineProps({
 const emit = defineEmits(["go-vehicle", "go-cards"]);
 
 const selectedVehicleId = ref(null);
+const SEARCH_RADIUS_KM = 5;
 
 const location = reactive({
-  latitude: 37.501,
-  longitude: 127.039
+  latitude: null,
+  longitude: null,
+  name: "",
+  address: "",
+  source: ""
 });
 
 const fuel = reactive({
@@ -65,8 +69,22 @@ const response = computed(() => recommendationStore.response);
 const recommendation = computed(() => response.value?.recommendation || null);
 const candidates = computed(() => response.value?.candidates || []);
 const selectedStationId = ref(null);
+const stationRefresh = ref(null);
 const isVehicleProfileApplied = computed(() => {
   return selectedVehicleId.value !== "manual" && selectedVehicleId.value !== null;
+});
+const canUseSavedVehicle = computed(() => props.isAuthenticated && props.savedVehicles.length > 0);
+const hasResolvedLocation = computed(() => {
+  return (
+    location.latitude !== null &&
+    location.latitude !== undefined &&
+    location.latitude !== "" &&
+    location.longitude !== null &&
+    location.longitude !== undefined &&
+    location.longitude !== "" &&
+    Number.isFinite(Number(location.latitude)) &&
+    Number.isFinite(Number(location.longitude))
+  );
 });
 
 const activeRecommendation = computed(() => {
@@ -157,7 +175,15 @@ function getFuelPriceUnit(type) {
   return 1650; // gasoline
 }
 
-function requestRecommendation() {
+async function requestRecommendation() {
+  if (!hasResolvedLocation.value) {
+    recommendationStore.error = {
+      code: "MISSING_LOCATION",
+      message: "출발 위치를 먼저 확정해 주세요."
+    };
+    return;
+  }
+
   const priceUnit = getFuelPriceUnit(fuel.fuel_type);
   const calculatedLiters = Number((fuel.target_amount / priceUnit).toFixed(2));
 
@@ -167,6 +193,7 @@ function requestRecommendation() {
       longitude: location.longitude
     },
     fuel_type: fuel.fuel_type,
+    radius_km: SEARCH_RADIUS_KM,
     target_liters: calculatedLiters,
     travel_mode: fuel.travel_mode,
     cards: selectedCards(),
@@ -176,8 +203,31 @@ function requestRecommendation() {
     }
   };
 
-  recommendationStore.quote(request);
+  stationRefresh.value = {
+    status: "loading",
+    message: "출발 위치 기준으로 주유소 데이터를 확인하는 중입니다."
+  };
+
+  await recommendationStore.quote(request);
+
+  const refreshStatus = recommendationStore.response?.meta?.external_station_refresh;
+  const refreshMeta = recommendationStore.response?.meta?.external_station_refresh_meta;
+  const rows = refreshMeta?.rows || 0;
+  stationRefresh.value = {
+    status: refreshStatus || "unknown",
+    message:
+      refreshStatus === "ok"
+        ? `출발 위치 주변 주유소 ${rows.toLocaleString("ko-KR")}건을 반영했습니다.`
+        : refreshStatus === "skipped"
+          ? "Opinet API 키가 없어 저장된 데이터로 계산합니다."
+          : refreshStatus === "empty"
+            ? "Opinet에서 출발 위치 주변 신규 주유소를 찾지 못해 저장된 데이터로 계산합니다."
+            : refreshStatus === "failed"
+              ? "Opinet 갱신에 실패해 저장된 데이터로 계산합니다."
+              : "저장된 주유소 데이터로 계산합니다."
+  };
 }
+
 </script>
 
 <template>
@@ -229,10 +279,11 @@ function requestRecommendation() {
 
       <CardPolicyForm v-model="card" :cards="savedCards" />
 
-      <button class="primaryButton fullWidth" type="button" :disabled="recommendationStore.loading" @click="requestRecommendation">
+      <button class="primaryButton fullWidth" type="button" :disabled="recommendationStore.loading || !hasResolvedLocation" @click="requestRecommendation">
         <Search :size="18" />
-        <span>{{ recommendationStore.loading ? "계산 중" : "추천 받기" }}</span>
+        <span>{{ recommendationStore.loading ? "계산 중" : hasResolvedLocation ? "추천 받기" : "출발지 선택 필요" }}</span>
       </button>
+      <p v-if="stationRefresh?.message" class="hintText">{{ stationRefresh.message }}</p>
     </aside>
 
     <section class="results">
@@ -248,6 +299,7 @@ function requestRecommendation() {
         :recommendation="recommendation"
         :candidates="candidates"
         :selected-station-id="selectedStationId"
+        :user-location="location"
         @select="selectedStationId = $event"
       />
 

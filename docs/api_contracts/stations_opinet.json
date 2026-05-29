@@ -14,10 +14,14 @@
     {
       "name": "sync_opinet_prices",
       "path": "backend/stations/management/commands/sync_opinet_prices.py",
-      "description": "Reads OPINET_API_KEY from the backend environment and synchronizes public fuel price data into FuelPrice rows with source=opinet.",
+      "description": "Reads OPINET_API_KEY from the backend environment and synchronizes public fuel price data around a selected WGS84 coordinate into FuelPrice rows with source=opinet.",
       "arguments": {
         "--dry-run": "Validate OPINET_API_KEY configuration without writing fuel price rows.",
-        "--health-check": "Call the official avgAllPrice.do endpoint and report the returned row count without writing fuel price rows."
+        "--health-check": "Call the official avgAllPrice.do endpoint and report the returned row count without writing fuel price rows.",
+        "--latitude": "Required for station-level sync. WGS84 latitude selected by the user or operator.",
+        "--longitude": "Required for station-level sync. WGS84 longitude selected by the user or operator.",
+        "--radius-km": "Optional station search radius. The current implementation caps Opinet aroundAll calls at 5km.",
+        "--fuel-type": "Optional SmartFuel fuel type filter: gasoline, diesel, lpg, or premium_gasoline."
       },
       "rules": [
         "The command must fail fast with a clear message when OPINET_API_KEY is missing.",
@@ -29,7 +33,7 @@
     }
   ],
   "stationLevelMapping": {
-    "status": "contract-only; no FuelPrice writes until coordinate conversion and station identity matching are verified",
+    "status": "implemented for WGS84 selected location -> KATEC Opinet request -> WGS84 station storage",
     "officialReferences": [
       {
         "name": "Opinet station detail by ID",
@@ -64,7 +68,7 @@
         "sourceFields": ["GIS_X_COOR", "GIS_Y_COOR"],
         "sourceCrs": "KATEC",
         "targetFields": ["GasStation.latitude", "GasStation.longitude"],
-        "rule": "Do not write GasStation coordinates from Opinet until KATEC-to-WGS84 conversion is implemented and verified."
+        "rule": "Convert Opinet KATEC station coordinates to WGS84 before writing GasStation.latitude and GasStation.longitude."
       },
       "FuelPrice.fuel_type": {
         "B027": "gasoline",
@@ -79,8 +83,9 @@
     },
     "requestTimeBoundary": [
       "Recommendation quote requests must not call Opinet endpoints.",
+      "The station refresh endpoint may call Opinet before a recommendation request to hydrate backend station data for the selected location.",
       "The frontend must not call Opinet endpoints or receive OPINET_API_KEY.",
-      "Station-level Opinet synchronization may run only through backend synchronization commands."
+      "Station-level Opinet synchronization may run through backend synchronization commands or the backend station refresh endpoint."
     ]
   }
 }

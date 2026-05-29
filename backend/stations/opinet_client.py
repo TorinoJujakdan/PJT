@@ -3,6 +3,7 @@ import json
 import urllib.parse
 import urllib.request
 import pyproj
+from django.utils import timezone
 
 from stations.models import FuelPrice, GasStation
 
@@ -21,6 +22,16 @@ OPINET_PRODUCT_TO_FUEL_TYPE = {
     "B034": FuelPrice.FuelType.PREMIUM_GASOLINE,
     "K015": FuelPrice.FuelType.LPG,
 }
+FUEL_TYPE_TO_OPINET_PRODUCT = {
+    fuel_type: product_code
+    for product_code, fuel_type in OPINET_PRODUCT_TO_FUEL_TYPE.items()
+}
+
+OPINET_MAX_RADIUS_KM = 5.0
+KATEC_PROJ = "+proj=tmerc +lat_0=38N +lon_0=128E +ellps=bessel +x_0=400000 +y_0=600000 +k=0.9999 +units=m +towgs84=-115.80,474.99,674.11,1.16,-2.31,-1.63,6.43"
+WGS84_PROJ = "+proj=latlong +datum=WGS84 +ellps=WGS84"
+KATEC_TO_WGS84_TRANSFORMER = pyproj.Transformer.from_crs(KATEC_PROJ, WGS84_PROJ, always_xy=True)
+WGS84_TO_KATEC_TRANSFORMER = pyproj.Transformer.from_crs(WGS84_PROJ, KATEC_PROJ, always_xy=True)
 
 OPINET_BRAND_TO_STATION_BRAND = {
     "SKE": GasStation.Brand.SK,
@@ -47,6 +58,31 @@ def map_opinet_product_code(prodcd):
 
 def map_opinet_brand_code(poll_div_cd):
     return OPINET_BRAND_TO_STATION_BRAND.get(poll_div_cd, GasStation.Brand.OTHER)
+
+
+def katec_to_wgs84(x, y):
+    lon, lat = KATEC_TO_WGS84_TRANSFORMER.transform(float(x), float(y))
+    return lat, lon
+
+
+def wgs84_to_katec(latitude, longitude):
+    x, y = WGS84_TO_KATEC_TRANSFORMER.transform(float(longitude), float(latitude))
+    return x, y
+
+
+def normalize_opinet_radius_meters(radius_km):
+    radius = float(radius_km or OPINET_MAX_RADIUS_KM)
+    radius = max(1.0, min(radius, OPINET_MAX_RADIUS_KM))
+    return int(radius * 1000)
+
+
+def opinet_product_codes_for_fuel_type(fuel_type=None):
+    if not fuel_type:
+        return ["B027", "D047", "B034", "K015"]
+    try:
+        return [FUEL_TYPE_TO_OPINET_PRODUCT[fuel_type]]
+    except KeyError as exc:
+        raise OpinetMappingError(f"Unsupported SmartFuel fuel type: {fuel_type}") from exc
 
 
 def normalize_opinet_price_row(row, default_product_code=None):
@@ -81,10 +117,7 @@ def normalize_opinet_station_row(row):
     lat, lon = None, None
     if x and y:
         try:
-            katec_proj = "+proj=tmerc +lat_0=38N +lon_0=128E +ellps=bessel +x_0=400000 +y_0=600000 +k=0.9999 +units=m +towgs84=-115.80,474.99,674.11,1.16,-2.31,-1.63,6.43"
-            wgs84_proj = "+proj=latlong +datum=WGS84 +ellps=WGS84"
-            transformer = pyproj.Transformer.from_crs(katec_proj, wgs84_proj, always_xy=True)
-            lon, lat = transformer.transform(float(x), float(y))
+            lat, lon = katec_to_wgs84(x, y)
         except (ValueError, TypeError, Exception):
             pass
 
@@ -130,24 +163,24 @@ class OpinetClient:
             return [rows]
         return rows or []
 
-    def fetch_price_rows(self):
-        """Fetch Opinet fuel price rows.
+    def fetch_price_rows(self, latitude=None, longitude=None, radius_km=OPINET_MAX_RADIUS_KM, fuel_type=None):
+        """Fetch Opinet fuel price rows around a user-selected WGS84 location."""
+        if latitude is None or longitude is None:
+            return []
 
-        강남역 주변 반경 5km 이내의 휘발유(B027) 및 경유(D047) 주유소 및 가격 수집
-        """
-        base_x = 314871.8
-        base_y = 544012.0
-        
+        x, y = wgs84_to_katec(latitude, longitude)
+        radius_meters = normalize_opinet_radius_meters(radius_km)
+
         all_collected_rows = []
-        
-        for prodcd in ["B027", "D047"]:
+
+        for prodcd in opinet_product_codes_for_fuel_type(fuel_type):
             try:
                 payload = self._get_json(
                     "aroundAll.do",
                     {
-                        "x": str(base_x),
-                        "y": str(base_y),
-                        "radius": "5000",
+                        "x": f"{x:.1f}",
+                        "y": f"{y:.1f}",
+                        "radius": str(radius_meters),
                         "prodcd": prodcd,
                         "sort": "1",
                     }
@@ -166,3 +199,47 @@ class OpinetClient:
                 pass
                 
         return all_collected_rows
+
+
+def save_opinet_price_rows(rows, collected_at=None):
+    collected_at = collected_at or timezone.now()
+    station_count = 0
+    price_count = 0
+    skipped_count = 0
+
+    for row in rows:
+        try:
+            station_data = normalize_opinet_station_row(row)
+            external_id = station_data.pop("external_station_id")
+            if "latitude" not in station_data or "longitude" not in station_data:
+                raise OpinetMappingError("Opinet station row is missing usable WGS84 coordinates.")
+
+            allowed_fields = {"name", "brand", "address", "latitude", "longitude", "is_self"}
+            defaults = {key: value for key, value in station_data.items() if key in allowed_fields}
+            if not defaults.get("address"):
+                defaults["address"] = "주소 정보 없음"
+
+            _station, created = GasStation.objects.update_or_create(
+                external_station_id=external_id,
+                defaults=defaults,
+            )
+            if created:
+                station_count += 1
+
+            price_data = normalize_opinet_price_row(row)
+            FuelPrice.objects.create(
+                station=_station,
+                fuel_type=price_data["fuel_type"],
+                price_per_liter=price_data["price_per_liter"],
+                source=FuelPrice.Source.OPINET,
+                collected_at=collected_at,
+            )
+            price_count += 1
+        except (OpinetMappingError, ValueError):
+            skipped_count += 1
+
+    return {
+        "stations_created": station_count,
+        "prices_created": price_count,
+        "rows_skipped": skipped_count,
+    }
