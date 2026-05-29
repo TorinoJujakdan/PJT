@@ -10,6 +10,9 @@ The full blueprint remains the canonical index, but day-to-day coding should use
 
 - `recommendations_quote.json`: `POST /api/v1/recommendations/quote/`
 - `stations_nearby.json`: `GET /api/v1/stations/nearby/`
+- `locations_geocode.json`: `GET /api/v1/stations/geocode/`
+- `locations_reverse_geocode.json`: `GET /api/v1/stations/reverse-geocode/`
+- `stations_refresh.json`: `POST /api/v1/stations/refresh/`
 - `accounts_auth.json`: signup, login, logout, and current-user APIs
 - `vehicles_profile.json`: `GET`/`PUT /api/v1/me/vehicle/`
 - `cards_policies.json`: manual card policy and Naver-based card discovery APIs

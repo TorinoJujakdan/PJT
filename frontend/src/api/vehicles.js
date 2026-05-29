@@ -28,9 +28,15 @@ export function deleteVehicle(id) {
   });
 }
 
+export function updateVehicle(id, payload) {
+  return apiRequest(`/me/vehicles/${id}/`, {
+    method: "PATCH",
+    body: JSON.stringify(payload)
+  });
+}
+
 export function setDefaultVehicle(id) {
   return apiRequest(`/me/vehicles/${id}/set-default/`, {
     method: "POST"
   });
 }
-

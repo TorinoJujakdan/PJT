@@ -8,6 +8,8 @@ venv/
 # Django
 db.sqlite3
 .env
+apikey.js
+apike.js
 media/
 static/
 *.log
@@ -27,3 +29,7 @@ dist-ssr/
 # OS
 .DS_Store
 Thumbs.db
+
+.omx
+.docs
+harness/

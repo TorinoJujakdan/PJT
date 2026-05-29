@@ -35,11 +35,12 @@ const calculatedLiters = computed(() => {
       <label>
         <span>유종</span>
         <select v-model="model.fuel_type" :disabled="isReadOnly">
-          <option value="gasoline">휘발유 (1,650원/L)</option>
-          <option value="diesel">경유 (1,500원/L)</option>
-          <option value="lpg">LPG (1,000원/L)</option>
-          <option value="premium_gasoline">고급 휘발유 (1,850원/L)</option>
+          <option value="gasoline">휘발유</option>
+          <option value="diesel">경유</option>
+          <option value="lpg">LPG</option>
+          <option value="premium_gasoline">고급 휘발유</option>
         </select>
+
       </label>
       <label>
         <span>주유 금액 (원)</span>

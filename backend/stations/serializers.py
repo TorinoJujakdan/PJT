@@ -17,6 +17,12 @@ class LocationSerializer(serializers.Serializer):
     longitude = serializers.FloatField(min_value=-180, max_value=180)
 
 
+class StationRefreshRequestSerializer(serializers.Serializer):
+    location = LocationSerializer()
+    fuel_type = serializers.ChoiceField(choices=FuelPrice.FuelType.choices, required=False)
+    radius_km = serializers.FloatField(min_value=1, max_value=5, required=False, default=5)
+
+
 class RecommendationCardPolicySerializer(serializers.Serializer):
     card_id = serializers.CharField(required=False, allow_blank=True)
     card_name = serializers.CharField()
@@ -88,13 +94,34 @@ class StationSummarySerializer(serializers.Serializer):
     longitude = serializers.FloatField()
     distance_km = serializers.FloatField()
     distance_source = serializers.CharField()
+    duration_min = serializers.FloatField(required=False, allow_null=True)
+    route_path = serializers.ListField(required=False, allow_empty=True)
     fuel_type = serializers.CharField()
     fuel_price_per_liter = serializers.IntegerField()
+    price_collected_at = serializers.CharField(required=False, allow_null=True)
+    price_source = serializers.CharField(required=False, allow_null=True)
 
 
-def serialize_station_candidate(candidate):
+def serialize_station_candidate(
+    candidate,
+    distance_source="haversine",
+    duration_min=None,
+    price_collected_at=None,
+    price_source="database",
+    route_path=None,
+):
     station = candidate.station
-    return {
+    
+    # price_collected_at fallback parsing
+    price_coll_at = price_collected_at
+    if not price_coll_at and getattr(candidate, "price_collected_at", None):
+        price_coll_at = candidate.price_collected_at.isoformat()
+
+    price_src = price_source
+    if not price_src and getattr(candidate, "price_source", None):
+        price_src = candidate.price_source
+
+    payload = {
         "station_id": station.id,
         "name": station.name,
         "brand": station.brand,
@@ -102,15 +129,28 @@ def serialize_station_candidate(candidate):
         "latitude": float(station.latitude),
         "longitude": float(station.longitude),
         "distance_km": candidate.distance_km,
-        "distance_source": "haversine",
+        "distance_source": distance_source,
+        "duration_min": duration_min,
         "fuel_type": candidate.fuel_type,
         "fuel_price_per_liter": candidate.fuel_price_per_liter,
+        "price_collected_at": price_coll_at,
+        "price_source": price_src or "database",
     }
+    if route_path:
+        payload["route_path"] = route_path
+    return payload
 
 
-def serialize_recommendation(item):
+def serialize_recommendation(item, include_route_path=False):
     return {
-        "station": serialize_station_candidate(item.candidate),
+        "station": serialize_station_candidate(
+            item.candidate,
+            distance_source=item.distance_source,
+            duration_min=item.duration_min,
+            price_collected_at=item.price_collected_at,
+            price_source=item.price_source,
+            route_path=item.route_path if include_route_path else None,
+        ),
         "cost_breakdown": {
             "target_liters": item.target_liters,
             "refuel_cost": item.refuel_cost,

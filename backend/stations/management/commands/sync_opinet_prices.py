@@ -1,13 +1,11 @@
 from django.core.management.base import BaseCommand, CommandError
-from django.utils import timezone
 
-from stations.models import GasStation, FuelPrice
 from stations.opinet_client import (
     OpinetClient,
     OpinetConfigurationError,
     OpinetMappingError,
-    normalize_opinet_station_row,
-    normalize_opinet_price_row,
+    OPINET_MAX_RADIUS_KM,
+    save_opinet_price_rows,
 )
 
 
@@ -24,6 +22,19 @@ class Command(BaseCommand):
             "--health-check",
             action="store_true",
             help="Call the official Opinet average-price endpoint without writing fuel price rows.",
+        )
+        parser.add_argument("--latitude", type=float, help="WGS84 latitude to search around.")
+        parser.add_argument("--longitude", type=float, help="WGS84 longitude to search around.")
+        parser.add_argument(
+            "--radius-km",
+            type=float,
+            default=OPINET_MAX_RADIUS_KM,
+            help=f"Search radius in km. Opinet aroundAll is capped at {OPINET_MAX_RADIUS_KM:g}km.",
+        )
+        parser.add_argument(
+            "--fuel-type",
+            choices=["gasoline", "diesel", "lpg", "premium_gasoline"],
+            help="Optional SmartFuel fuel type to synchronize.",
         )
 
     def handle(self, *args, **options):
@@ -42,56 +53,41 @@ class Command(BaseCommand):
             return
 
         if options["dry_run"]:
-            rows = client.fetch_price_rows()
+            self._require_location(options)
+            rows = client.fetch_price_rows(
+                latitude=options["latitude"],
+                longitude=options["longitude"],
+                radius_km=options["radius_km"],
+                fuel_type=options["fuel_type"],
+            )
             self.stdout.write(self.style.SUCCESS(f"Opinet configuration ok. {len(rows)} rows available."))
             return
 
-        rows = client.fetch_price_rows()
+        self._require_location(options)
+        try:
+            rows = client.fetch_price_rows(
+                latitude=options["latitude"],
+                longitude=options["longitude"],
+                radius_km=options["radius_km"],
+                fuel_type=options["fuel_type"],
+            )
+        except OpinetMappingError as exc:
+            raise CommandError(str(exc)) from exc
+
         if not rows:
             self.stdout.write(self.style.WARNING("No rows returned from Opinet API."))
             return
 
-        now = timezone.now()
-        station_count = 0
-        price_count = 0
-
-        for row in rows:
-            try:
-                # 1. 주유소 정보 매핑 및 저장/업데이트
-                station_data = normalize_opinet_station_row(row)
-                external_id = station_data.pop("external_station_id")
-                
-                # GasStation의 실제 DB 필드만 필터링하여 defaults로 전달
-                allowed_fields = {"name", "brand", "address", "latitude", "longitude", "is_self"}
-                defaults = {k: v for k, v in station_data.items() if k in allowed_fields}
-                
-                # address 필드가 없을 수 있으므로 폴백 처리
-                if "address" not in defaults or not defaults["address"]:
-                    defaults["address"] = "주소 정보 없음"
-
-                station, created = GasStation.objects.update_or_create(
-                    external_station_id=external_id,
-                    defaults=defaults,
-                )
-                if created:
-                    station_count += 1
-
-                # 2. 가격 정보 매핑 및 저장
-                price_data = normalize_opinet_price_row(row)
-                FuelPrice.objects.create(
-                    station=station,
-                    fuel_type=price_data["fuel_type"],
-                    price_per_liter=price_data["price_per_liter"],
-                    source=FuelPrice.Source.OPINET,
-                    collected_at=now,
-                )
-                price_count += 1
-            except (OpinetMappingError, ValueError) as exc:
-                self.stdout.write(self.style.WARNING(f"Skipping row due to mapping error: {exc}"))
-                continue
-
+        summary = save_opinet_price_rows(rows)
         self.stdout.write(
             self.style.SUCCESS(
-                f"Opinet Ingestion complete. Created {station_count} new stations, saved {price_count} price entries."
+                "Opinet ingestion complete. "
+                f"Created {summary['stations_created']} new stations, "
+                f"saved {summary['prices_created']} price entries, "
+                f"skipped {summary['rows_skipped']} rows."
             )
         )
+
+    def _require_location(self, options):
+        if options["latitude"] is None or options["longitude"] is None:
+            raise CommandError("--latitude and --longitude are required for station-level Opinet synchronization.")

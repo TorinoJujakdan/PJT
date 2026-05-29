@@ -56,3 +56,73 @@ class VehicleProfileAPITests(TestCase):
 
         self.assertEqual(response.status_code, 400)
         self.assertEqual(response.json()["code"], "INVALID_VEHICLE_PROFILE")
+
+    def test_patch_updates_owned_vehicle_profile(self):
+        self.client.force_authenticate(self.user)
+        profile = VehicleProfile.objects.create(
+            user=self.user,
+            fuel_type="gasoline",
+            fuel_efficiency_kmpl="10.0",
+            is_default=True,
+        )
+
+        response = self.client.patch(
+            f"/api/v1/me/vehicles/{profile.id}/",
+            {
+                "fuel_type": "diesel",
+                "fuel_efficiency_kmpl": "14.5",
+            },
+            format="json",
+        )
+
+        self.assertEqual(response.status_code, 200)
+        data = response.json()["vehicle"]
+        self.assertEqual(data["fuel_type"], "diesel")
+        self.assertEqual(data["fuel_efficiency_kmpl"], "14.5")
+        profile.refresh_from_db()
+        self.assertEqual(profile.fuel_type, "diesel")
+
+    def test_patch_default_vehicle_unsets_other_defaults(self):
+        self.client.force_authenticate(self.user)
+        first = VehicleProfile.objects.create(
+            user=self.user,
+            fuel_type="gasoline",
+            fuel_efficiency_kmpl="10.0",
+            is_default=True,
+        )
+        second = VehicleProfile.objects.create(
+            user=self.user,
+            fuel_type="diesel",
+            fuel_efficiency_kmpl="14.0",
+            is_default=False,
+        )
+
+        response = self.client.patch(
+            f"/api/v1/me/vehicles/{second.id}/",
+            {"is_default": True},
+            format="json",
+        )
+
+        self.assertEqual(response.status_code, 200)
+        first.refresh_from_db()
+        second.refresh_from_db()
+        self.assertFalse(first.is_default)
+        self.assertTrue(second.is_default)
+
+    def test_patch_cannot_update_other_users_vehicle(self):
+        other_user = get_user_model().objects.create_user(username="other-vehicle-user", password="pass12345")
+        profile = VehicleProfile.objects.create(
+            user=other_user,
+            fuel_type="gasoline",
+            fuel_efficiency_kmpl="10.0",
+            is_default=True,
+        )
+        self.client.force_authenticate(self.user)
+
+        response = self.client.patch(
+            f"/api/v1/me/vehicles/{profile.id}/",
+            {"fuel_efficiency_kmpl": "20.0"},
+            format="json",
+        )
+
+        self.assertEqual(response.status_code, 404)

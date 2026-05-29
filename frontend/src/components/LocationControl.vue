@@ -1,358 +1,789 @@
 <script setup>
-import { LocateFixed, MapPin, Search, X } from "@lucide/vue";
-import { ref, watch, onMounted } from "vue";
-import { geocode, presets } from "../utils/geocoder";
-import { apiRequest } from "../api/client";
+import { computed, onBeforeUnmount, ref, watch } from "vue";
+import { BriefcaseBusiness, Home, LoaderCircle, LocateFixed, MapPin, Search, X } from "@lucide/vue";
+import { reverseGeocodeLocation, searchLocations } from "../api/stations";
+import { loadNaverMapsScript } from "../utils/naverMapLoader";
 
 const model = defineModel({ required: true });
+
+const PRESET_STORAGE_KEYS = {
+  home: "smartfuel_preset_home",
+  work: "smartfuel_preset_work"
+};
+const RECENT_STORAGE_KEY = "smartfuel_recent_locations";
+const MAX_RECENT_LOCATIONS = 5;
+
 const loading = ref(false);
+const locating = ref(false);
 const message = ref("");
+const messageType = ref("info");
 const searchQuery = ref("");
 const searchResults = ref([]);
-const selectedLocationName = ref("");
 const showDropdown = ref(false);
-
-// 초기 위경도 기반으로 출발 위치명 동기화
-onMounted(() => {
-  if (model.value) {
-    const found = presets.find(
-      p => Math.abs(p.latitude - model.value.latitude) < 0.001 &&
-           Math.abs(p.longitude - model.value.longitude) < 0.001
-    );
-    selectedLocationName.value = found ? found.name : "역삼역/강남역 부근 (기본값)";
-  }
+const recentLocations = ref(readRecentLocations());
+const presets = ref({
+  home: readStoredLocation(PRESET_STORAGE_KEYS.home),
+  work: readStoredLocation(PRESET_STORAGE_KEYS.work)
 });
 
-function applyPreset(preset) {
-  model.value = {
-    latitude: preset.latitude,
-    longitude: preset.longitude
-  };
-  selectedLocationName.value = preset.name;
-  searchQuery.value = "";
-  searchResults.value = [];
-  showDropdown.value = false;
-  message.value = `출발지가 '${preset.name}'(으)로 변경되었습니다.`;
+let debounceTimer = null;
+let reverseTimer = null;
+let lastResolvedKey = "";
+let searchRequestId = 0;
+let reverseRequestId = 0;
+
+function isCoordinateValue(value) {
+  return value !== null && value !== undefined && value !== "" && Number.isFinite(Number(value));
 }
 
-let debounceTimer = null;
+const activeName = computed(() => model.value?.name || model.value?.address || "출발지 미확정");
+const activeAddress = computed(() => model.value?.address || "좌표를 먼저 확정해 주세요.");
+const activeCoords = computed(() => {
+  if (!isCoordinateValue(model.value?.latitude) || !isCoordinateValue(model.value?.longitude)) {
+    return "";
+  }
+  const latitude = Number(model.value.latitude);
+  const longitude = Number(model.value.longitude);
+  return `${latitude.toFixed(5)}, ${longitude.toFixed(5)}`;
+});
+const activeAccuracy = computed(() => {
+  const accuracy = Number(model.value?.accuracy_m);
+  if (!Number.isFinite(accuracy)) return "";
+  return `${Math.round(accuracy).toLocaleString("ko-KR")}m`;
+});
 
-function handleInput() {
-  if (debounceTimer) {
-    clearTimeout(debounceTimer);
+function coordsKey(latitude, longitude) {
+  return `${Number(latitude).toFixed(6)},${Number(longitude).toFixed(6)}`;
+}
+
+function normalizeStoredLocation(item, fallbackName = "저장된 위치") {
+  if (!item || !isCoordinateValue(item.latitude) || !isCoordinateValue(item.longitude)) {
+    return null;
   }
 
+  return {
+    latitude: Number(item.latitude),
+    longitude: Number(item.longitude),
+    name: item.name || item.address || fallbackName,
+    address: item.address || item.road_address || item.jibun_address || "",
+    road_address: item.road_address || "",
+    jibun_address: item.jibun_address || "",
+    source: item.source || "stored",
+    accuracy_m: item.accuracy_m ?? null,
+    saved_at: item.saved_at || new Date().toISOString()
+  };
+}
+
+function readStoredLocation(key) {
+  try {
+    return normalizeStoredLocation(JSON.parse(window.localStorage.getItem(key)));
+  } catch (error) {
+    window.localStorage.removeItem(key);
+    return null;
+  }
+}
+
+function writeStoredLocation(key, item) {
+  const normalized = normalizeStoredLocation(item);
+  if (!normalized) return null;
+
+  const saved = {
+    ...normalized,
+    saved_at: new Date().toISOString()
+  };
+  window.localStorage.setItem(key, JSON.stringify(saved));
+  return saved;
+}
+
+function readRecentLocations() {
+  try {
+    const parsed = JSON.parse(window.localStorage.getItem(RECENT_STORAGE_KEY));
+    if (!Array.isArray(parsed)) return [];
+    return parsed
+      .map((item) => normalizeStoredLocation(item))
+      .filter(Boolean)
+      .slice(0, MAX_RECENT_LOCATIONS);
+  } catch (error) {
+    window.localStorage.removeItem(RECENT_STORAGE_KEY);
+    return [];
+  }
+}
+
+function writeRecentLocations(items) {
+  window.localStorage.setItem(RECENT_STORAGE_KEY, JSON.stringify(items));
+}
+
+function rememberRecentLocation(item) {
+  const normalized = normalizeStoredLocation(item);
+  if (!normalized) return;
+
+  const key = coordsKey(normalized.latitude, normalized.longitude);
+  recentLocations.value = [
+    { ...normalized, saved_at: new Date().toISOString() },
+    ...recentLocations.value.filter((recent) => coordsKey(recent.latitude, recent.longitude) !== key)
+  ].slice(0, MAX_RECENT_LOCATIONS);
+  writeRecentLocations(recentLocations.value);
+}
+
+function setMessage(text, type = "info") {
+  message.value = text;
+  messageType.value = type;
+}
+
+function updateLocation(item, { remember = true } = {}) {
+  const latitude = Number(item.latitude);
+  const longitude = Number(item.longitude);
+  if (!Number.isFinite(latitude) || !Number.isFinite(longitude)) {
+    return;
+  }
+
+  lastResolvedKey = coordsKey(latitude, longitude);
+  Object.assign(model.value, {
+    latitude,
+    longitude,
+    name: item.name || item.address || "선택한 위치",
+    address: item.address || item.road_address || item.jibun_address || "",
+    road_address: item.road_address || "",
+    jibun_address: item.jibun_address || "",
+    source: item.source || "manual",
+    accuracy_m: item.accuracy_m ?? null
+  });
+
+  if (remember) {
+    rememberRecentLocation(model.value);
+  }
+}
+
+function normalizedResults(results) {
+  return (results || [])
+    .map((item) => ({
+      ...item,
+      latitude: Number(item.latitude),
+      longitude: Number(item.longitude)
+    }))
+    .filter((item) => Number.isFinite(item.latitude) && Number.isFinite(item.longitude));
+}
+
+function geocodeWithNaverMapScript(query) {
+  return loadNaverMapsScript()
+    .then((naverMaps) => new Promise((resolve) => {
+      if (!naverMaps.Service?.geocode) {
+        resolve([]);
+        return;
+      }
+      naverMaps.Service.geocode({ query, address: query }, (status, response) => {
+        if (status !== naverMaps.Service.Status.OK) {
+          resolve([]);
+          return;
+        }
+        const v2Addresses = response?.v2?.addresses || [];
+        const legacyItems = response?.result?.items || [];
+        const mappedV2 = v2Addresses.map((address) => {
+          const roadAddress = address.roadAddress || "";
+          const jibunAddress = address.jibunAddress || "";
+          const displayAddress = roadAddress || jibunAddress;
+          return {
+            name: displayAddress || query,
+            address: displayAddress,
+            road_address: roadAddress,
+            jibun_address: jibunAddress,
+            latitude: address.y,
+            longitude: address.x,
+            source: "naver_maps_js_geocode"
+          };
+        });
+        const mappedLegacy = legacyItems.map((item) => {
+          const roadAddress = item.address || "";
+          const jibunAddress = item.addrdetail
+            ? [
+                item.addrdetail.sido,
+                item.addrdetail.sigugun,
+                item.addrdetail.dongmyun,
+                item.addrdetail.ri,
+                item.addrdetail.rest
+              ].filter(Boolean).join(" ")
+            : "";
+          const displayAddress = roadAddress || jibunAddress;
+          return {
+            name: displayAddress || query,
+            address: displayAddress,
+            road_address: roadAddress,
+            jibun_address: jibunAddress,
+            latitude: item.point?.y,
+            longitude: item.point?.x,
+            source: "naver_maps_js_geocode"
+          };
+        });
+        resolve(normalizedResults([...mappedV2, ...mappedLegacy]));
+      });
+    }))
+    .catch(() => []);
+}
+
+async function resolveLocationSearch(query) {
+  try {
+    const response = await searchLocations(query);
+    const backendResults = normalizedResults(response.results);
+    if (backendResults.length) {
+      return backendResults;
+    }
+  } catch (error) {
+    // Fall through to the browser-side Naver Maps geocoder below.
+  }
+  return geocodeWithNaverMapScript(query);
+}
+
+function handleInput() {
+  window.clearTimeout(debounceTimer);
+
   const query = searchQuery.value.trim();
-  if (!query) {
+  if (query.length < 2) {
+    loading.value = false;
     searchResults.value = [];
     showDropdown.value = false;
     return;
   }
 
-  // Pre-populate with local geocode search results immediately for instant feedback
-  searchResults.value = geocode(query);
-  showDropdown.value = searchResults.value.length > 0;
-
+  showDropdown.value = true;
   loading.value = true;
-  debounceTimer = setTimeout(async () => {
+  const requestId = ++searchRequestId;
+  debounceTimer = window.setTimeout(async () => {
     try {
-      const response = await apiRequest(`/stations/geocode/?query=${encodeURIComponent(query)}`);
-      if (response && Array.isArray(response.results)) {
-        searchResults.value = response.results;
-        showDropdown.value = searchResults.value.length > 0;
+      const results = await resolveLocationSearch(query);
+      if (requestId !== searchRequestId) return;
+      searchResults.value = results;
+      if (!searchResults.value.length) {
+        setMessage("검색 결과가 없습니다.", "info");
       }
-    } catch (err) {
-      console.error("Geocoding proxy search failed:", err);
-      // Fallback is already loaded via geocode(query)
+    } catch (error) {
+      if (requestId !== searchRequestId) return;
+      searchResults.value = [];
+      setMessage(error.message || "위치 검색을 완료하지 못했습니다.", "error");
     } finally {
-      loading.value = false;
+      if (requestId === searchRequestId) {
+        loading.value = false;
+      }
     }
   }, 300);
 }
 
+async function searchNow() {
+  window.clearTimeout(debounceTimer);
+  const query = searchQuery.value.trim();
+  if (query.length < 2) {
+    searchResults.value = [];
+    showDropdown.value = false;
+    return [];
+  }
+
+  showDropdown.value = true;
+  loading.value = true;
+  const requestId = ++searchRequestId;
+  try {
+    const results = await resolveLocationSearch(query);
+    if (requestId !== searchRequestId) return searchResults.value;
+    searchResults.value = results;
+    if (!searchResults.value.length) {
+      setMessage("?? ??? ????.", "info");
+    }
+    return searchResults.value;
+  } catch (error) {
+    if (requestId !== searchRequestId) return searchResults.value;
+    searchResults.value = [];
+    setMessage(error.message || "?? ??? ???? ?????.", "error");
+    return [];
+  } finally {
+    if (requestId === searchRequestId) {
+      loading.value = false;
+    }
+  }
+}
+
+async function submitSearch() {
+  const results = searchResults.value.length ? searchResults.value : await searchNow();
+  if (results.length) {
+    applySearchResult(results[0]);
+  }
+}
+
+function applySearchResult(item) {
+  updateLocation(item);
+  searchQuery.value = item.name || item.address || "";
+  searchResults.value = [];
+  showDropdown.value = false;
+  setMessage("출발지가 확정되었습니다.", "success");
+}
+
+function applyStoredLocation(item, label = "저장된 위치") {
+  updateLocation({ ...item, source: item.source || "stored" });
+  searchQuery.value = item.name || item.address || "";
+  searchResults.value = [];
+  showDropdown.value = false;
+  setMessage(`${label}로 출발지가 변경되었습니다.`, "success");
+}
+
 function clearSearch() {
+  window.clearTimeout(debounceTimer);
+  searchRequestId++;
   searchQuery.value = "";
   searchResults.value = [];
   showDropdown.value = false;
+  loading.value = false;
+}
+
+async function resolveAddress(latitude, longitude, fallbackName = "선택한 위치") {
+  const requestId = ++reverseRequestId;
+  try {
+    const response = await reverseGeocodeLocation(latitude, longitude);
+    if (requestId !== reverseRequestId) return false;
+    if (response.result) {
+      updateLocation({
+        ...response.result,
+        name: response.result.name || fallbackName
+      });
+      return true;
+    }
+  } catch (error) {
+    if (requestId !== reverseRequestId) return false;
+    setMessage(error.message || "주소 확인을 완료하지 못했습니다.", "error");
+  }
+  return false;
 }
 
 function useBrowserLocation() {
   message.value = "";
   if (!navigator.geolocation) {
-    message.value = "브라우저 위치 기능을 사용할 수 없습니다.";
+    setMessage("브라우저 위치 기능을 사용할 수 없습니다.", "error");
     return;
   }
 
-  loading.value = true;
+  locating.value = true;
   navigator.geolocation.getCurrentPosition(
-    (position) => {
-      model.value = {
-        latitude: Number(position.coords.latitude.toFixed(6)),
-        longitude: Number(position.coords.longitude.toFixed(6))
-      };
-      selectedLocationName.value = "내 현재 GPS 위치";
-      loading.value = false;
-      message.value = "현재 위치가 성공적으로 감지되었습니다.";
+    async (position) => {
+      const latitude = Number(position.coords.latitude.toFixed(6));
+      const longitude = Number(position.coords.longitude.toFixed(6));
+      updateLocation({
+        latitude,
+        longitude,
+        name: "현재 위치 확인 중",
+        address: "",
+        source: "browser_geolocation",
+        accuracy_m: position.coords.accuracy
+      });
+      const resolved = await resolveAddress(latitude, longitude, "현재 위치");
+      setMessage(resolved ? "현재 위치가 확정되었습니다." : "현재 좌표가 확정되었습니다.", "success");
+      locating.value = false;
     },
     () => {
-      loading.value = false;
-      message.value = "위치 권한을 확인하거나 아래 추천 검색을 이용해 주세요.";
+      locating.value = false;
+      setMessage("위치 권한을 확인해 주세요.", "error");
     },
-    { enableHighAccuracy: true, timeout: 8000, maximumAge: 60000 }
+    { enableHighAccuracy: true, timeout: 8000, maximumAge: 30000 }
   );
 }
+
+function savePreset(type) {
+  const label = type === "home" ? "집" : "회사";
+  const saved = writeStoredLocation(PRESET_STORAGE_KEYS[type], {
+    ...model.value,
+    source: `${type}_preset`
+  });
+  if (!saved) {
+    setMessage("먼저 출발지를 확정해 주세요.", "error");
+    return;
+  }
+  presets.value = {
+    ...presets.value,
+    [type]: saved
+  };
+  setMessage(`${label} 위치로 저장했습니다.`, "success");
+}
+
+function usePreset(type) {
+  const label = type === "home" ? "집" : "회사";
+  const preset = presets.value[type];
+  if (!preset) {
+    savePreset(type);
+    return;
+  }
+  applyStoredLocation(preset, label);
+}
+
+watch(
+  () => [
+    model.value?.latitude,
+    model.value?.longitude,
+    model.value?.name,
+    model.value?.address
+  ],
+  ([latitude, longitude, name, address]) => {
+    if (!isCoordinateValue(latitude) || !isCoordinateValue(longitude)) {
+      searchQuery.value = "";
+      return;
+    }
+
+    const key = coordsKey(latitude, longitude);
+    if (key !== lastResolvedKey) {
+      lastResolvedKey = key;
+    }
+
+    // Sync the searchQuery input text so that the input reflects the current active location,
+    // but only if the dropdown is not open (so we don't disrupt the user's active typing)
+    const displayName = name || address || "";
+    if (!showDropdown.value && searchQuery.value !== displayName) {
+      searchQuery.value = displayName;
+    }
+  },
+  { immediate: true }
+);
+
+onBeforeUnmount(() => {
+  window.clearTimeout(debounceTimer);
+  window.clearTimeout(reverseTimer);
+});
 </script>
 
 <template>
-  <section class="panel">
+  <section class="panel locationPanel">
     <div class="panelHeader">
       <div>
-        <p class="eyebrow">Location Settings</p>
-        <h2>출발 위치 검색</h2>
+        <p class="eyebrow">Location</p>
+        <h2>출발 위치</h2>
       </div>
-      <button class="iconButton" type="button" title="내 GPS 위치 사용" :disabled="loading" @click="useBrowserLocation">
-        <LocateFixed :size="18" />
+      <button class="iconButton" type="button" title="현재 위치 사용" :disabled="locating" @click="useBrowserLocation">
+        <LoaderCircle v-if="locating" :size="18" class="spinIcon" />
+        <LocateFixed v-else :size="18" />
       </button>
     </div>
 
-    <!-- Active Departure Location Badge -->
+    <div class="presetActions">
+      <button class="presetButton" type="button" @click="usePreset('home')" @dblclick.prevent="savePreset('home')">
+        <Home :size="15" />
+        <span>{{ presets.home ? "집" : "집 저장" }}</span>
+      </button>
+      <button class="presetButton" type="button" @click="usePreset('work')" @dblclick.prevent="savePreset('work')">
+        <BriefcaseBusiness :size="15" />
+        <span>{{ presets.work ? "회사" : "회사 저장" }}</span>
+      </button>
+    </div>
+
     <div class="activeLocationBadge">
-      <MapPin :size="16" class="neonText" style="color: var(--primary);" />
-      <div class="info">
-        <span class="label">선택된 출발지</span>
-        <span class="value">{{ selectedLocationName }}</span>
+      <MapPin :size="18" />
+      <div class="activeLocationText">
+        <strong>{{ activeName }}</strong>
+        <span>{{ activeAddress }}</span>
+        <small v-if="activeCoords">{{ activeCoords }}<template v-if="activeAccuracy"> · 정확도 {{ activeAccuracy }}</template></small>
       </div>
     </div>
 
-    <!-- Address Search Input -->
     <div class="searchControl">
-      <span class="inputLabel">출발지 주소 또는 랜드마크 검색</span>
+      <label class="inputLabel" for="departure-search">주소 검색</label>
       <div class="searchInputWrapper">
         <Search class="searchIcon" :size="16" />
         <input
+          id="departure-search"
           v-model="searchQuery"
           type="text"
-          placeholder="예: 서울시청, 강남역, 대전시청, 부산역..."
+          autocomplete="off"
+          placeholder="도로명 주소, 지번, 건물명"
           @input="handleInput"
           @focus="handleInput"
+          @keydown.enter.prevent="submitSearch"
+          @keydown.escape="clearSearch"
         />
-        <button v-if="searchQuery" class="clearButton" type="button" @click="clearSearch">
+        <button v-if="searchQuery" class="clearButton" type="button" title="검색어 지우기" @click="clearSearch">
           <X :size="14" />
         </button>
       </div>
 
-      <!-- Realtime Autocomplete Dropdown -->
       <transition name="fadeSlide">
         <div v-if="showDropdown" class="searchDropdown">
-          <button
-            v-for="item in searchResults"
-            :key="item.name"
-            class="dropdownItem"
-            type="button"
-            @click="applyPreset(item)"
-          >
-            <div class="itemMain">
-              <MapPin :size="14" style="margin-right: 6px; color: var(--primary);" />
-              <strong>{{ item.name }}</strong>
-            </div>
-            <span class="itemSub">{{ item.address }}</span>
-          </button>
+          <div v-if="loading" class="dropdownState">
+            <LoaderCircle :size="15" class="spinIcon" />
+            <span>검색 중</span>
+          </div>
+          <div v-else-if="!searchResults.length" class="dropdownState">
+            <span>검색 결과 없음</span>
+          </div>
+          <template v-else>
+            <button
+              v-for="item in searchResults"
+              :key="`${item.latitude}-${item.longitude}-${item.address}`"
+              class="dropdownItem"
+              type="button"
+              @click="applySearchResult(item)"
+            >
+              <MapPin :size="15" />
+              <span>
+                <strong>{{ item.name }}</strong>
+                <small>{{ item.address || item.road_address || item.jibun_address }}</small>
+              </span>
+            </button>
+          </template>
         </div>
       </transition>
     </div>
 
-    <!-- Quick Location Presets -->
-    <div class="presetSection">
-      <span class="presetLabel">주요 출발지 퀵 선택</span>
-      <div class="locationPresets">
-        <button
-          v-for="preset in presets.slice(0, 5)"
-          :key="preset.name"
-          class="presetLocBtn"
-          type="button"
-          :class="{ active: selectedLocationName === preset.name }"
-          @click="applyPreset(preset)"
-        >
-          {{ preset.name }}
-        </button>
-      </div>
+    <div v-if="recentLocations.length" class="recentList">
+      <button
+        v-for="item in recentLocations"
+        :key="`${item.latitude}-${item.longitude}-${item.saved_at}`"
+        class="recentItem"
+        type="button"
+        @click="applyStoredLocation(item, '최근 위치')"
+      >
+        <MapPin :size="13" />
+        <span>{{ item.name || item.address }}</span>
+      </button>
     </div>
 
-    <!-- Hidden native coords input to keep Vue data-binding working behind the scenes -->
-    <div style="display: none;">
-      <input v-model.number="model.latitude" type="number" />
-      <input v-model.number="model.longitude" type="number" />
-    </div>
+    <input v-model.number="model.latitude" type="hidden" />
+    <input v-model.number="model.longitude" type="hidden" />
 
-    <p v-if="message" class="hintText success" style="margin-top: 10px;">{{ message }}</p>
+    <p v-if="message" class="hintText" :class="messageType">{{ message }}</p>
   </section>
 </template>
 
 <style scoped>
-.activeLocationBadge {
-  display: flex;
-  align-items: center;
-  gap: 12px;
-  background: rgba(255, 255, 255, 0.03);
-  border: 1px solid rgba(255, 255, 255, 0.08);
-  border-radius: 12px;
-  padding: 12px 16px;
-  margin-bottom: 18px;
-  box-shadow: inset 0 1px 1px rgba(255,255,255,0.05);
-}
-.activeLocationBadge .info {
-  display: flex;
-  flex-direction: column;
-}
-.activeLocationBadge .info .label {
-  font-size: 10px;
-  color: var(--slate-400);
-  text-transform: uppercase;
-  font-weight: 700;
-  letter-spacing: 0.5px;
-}
-.activeLocationBadge .info .value {
-  font-size: 14px;
-  font-weight: 800;
-  color: var(--secondary);
-  margin-top: 2px;
-}
-.searchControl {
-  position: relative;
-  margin-bottom: 18px;
-}
-.inputLabel {
-  font-size: 11px;
-  font-weight: 800;
-  color: var(--slate-400);
-  text-transform: uppercase;
-  display: block;
-  margin-bottom: 8px;
-}
-.searchInputWrapper {
-  position: relative;
-  display: flex;
-  align-items: center;
-}
-.searchIcon {
-  position: absolute;
-  left: 14px;
-  color: var(--slate-400);
-  pointer-events: none;
-}
-.searchInputWrapper input {
-  width: 100%;
-  padding: 12px 16px 12px 40px;
-  background: rgba(0, 0, 0, 0.2);
-  border: 1px solid rgba(255, 255, 255, 0.1);
-  border-radius: 10px;
-  color: var(--slate-100);
-  font-size: 13.5px;
-  transition: all 0.25s cubic-bezier(0.4, 0, 0.2, 1);
-}
-.searchInputWrapper input:focus {
-  outline: none;
-  border-color: var(--primary);
-  box-shadow: 0 0 12px rgba(0, 229, 255, 0.2), inset 0 1px 1px rgba(255,255,255,0.05);
-  background: rgba(0, 0, 0, 0.35);
-}
-.clearButton {
-  position: absolute;
-  right: 14px;
-  background: transparent;
-  border: none;
-  color: var(--slate-400);
-  cursor: pointer;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  padding: 4px;
-  border-radius: 50%;
-  transition: all 0.2s;
-}
-.clearButton:hover {
-  color: var(--slate-100);
-  background: rgba(255, 255, 255, 0.1);
-}
-.searchDropdown {
-  position: absolute;
-  top: calc(100% + 6px);
-  left: 0;
-  right: 0;
-  background: rgba(26, 38, 34, 0.95);
-  backdrop-filter: blur(12px);
-  -webkit-backdrop-filter: blur(12px);
-  border: 1px solid rgba(255, 255, 255, 0.12);
-  border-radius: 12px;
-  box-shadow: 0 12px 28px rgba(0, 0, 0, 0.4), 0 0 1px rgba(255,255,255,0.1);
-  z-index: 99;
-  max-height: 240px;
-  overflow-y: auto;
-  padding: 6px;
-}
-.dropdownItem {
-  width: 100%;
-  display: flex;
-  flex-direction: column;
-  align-items: flex-start;
-  padding: 10px 12px;
-  background: transparent;
-  border: none;
-  border-radius: 8px;
-  color: var(--slate-200);
-  cursor: pointer;
-  text-align: left;
-  transition: all 0.2s;
-}
-.dropdownItem:hover {
-  background: rgba(0, 229, 255, 0.08);
-  color: var(--secondary);
-}
-.dropdownItem .itemMain {
-  display: flex;
-  align-items: center;
-  font-size: 13px;
-  font-weight: 700;
-}
-.dropdownItem .itemSub {
-  font-size: 11px;
-  color: var(--slate-400);
-  margin-top: 3px;
-  margin-left: 20px;
-}
-.presetSection {
-  margin-top: 16px;
-}
-.presetLabel {
-  font-size: 11px;
-  font-weight: 800;
-  color: var(--slate-400);
-  text-transform: uppercase;
-  display: block;
-  margin-bottom: 8px;
-}
-.presetLocBtn {
-  font-size: 11.5px;
-  padding: 6px 12px;
-  background: rgba(255, 255, 255, 0.04);
-  border: 1px solid rgba(255, 255, 255, 0.08);
-  border-radius: 20px;
-  color: var(--slate-300);
-  cursor: pointer;
-  transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
-}
-.presetLocBtn:hover, .presetLocBtn.active {
-  background: rgba(0, 229, 255, 0.12);
-  border-color: var(--primary);
-  color: var(--secondary);
-  box-shadow: 0 0 8px rgba(0, 229, 255, 0.15);
+.locationPanel {
+  overflow: visible;
 }
 
-.fadeSlide-enter-active, .fadeSlide-enter-active {
-  transition: all 0.2s ease;
+.activeLocationBadge {
+  align-items: flex-start;
+  background: var(--slate-50);
+  border: 1px solid var(--slate-200);
+  border-radius: var(--radius-sm);
+  color: var(--primary);
+  display: grid;
+  gap: 12px;
+  grid-template-columns: 22px minmax(0, 1fr);
+  margin-bottom: 18px;
+  padding: 14px;
 }
-.fadeSlide-enter-from, .fadeSlide-leave-to {
+
+.presetActions {
+  display: grid;
+  gap: 8px;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  margin-bottom: 12px;
+}
+
+.presetButton,
+.recentItem {
+  align-items: center;
+  background: var(--white);
+  border: 1px solid var(--slate-200);
+  border-radius: var(--radius-sm);
+  color: var(--slate-700);
+  cursor: pointer;
+  display: inline-flex;
+  font-size: 12px;
+  font-weight: 800;
+  gap: 7px;
+  justify-content: center;
+  min-height: 34px;
+  min-width: 0;
+  padding: 0 10px;
+}
+
+.presetButton:hover,
+.recentItem:hover {
+  background: var(--primary-light);
+  border-color: rgba(15, 107, 79, 0.22);
+  color: var(--primary);
+}
+
+.activeLocationText {
+  min-width: 0;
+}
+
+.activeLocationText strong,
+.activeLocationText span,
+.activeLocationText small {
+  display: block;
+  min-width: 0;
+  overflow-wrap: anywhere;
+}
+
+.activeLocationText strong {
+  color: var(--slate-900);
+  font-size: 14px;
+  font-weight: 800;
+}
+
+.activeLocationText span {
+  color: var(--slate-600);
+  font-size: 12px;
+  font-weight: 600;
+  line-height: 1.45;
+  margin-top: 3px;
+}
+
+.activeLocationText small {
+  color: var(--slate-400);
+  font-size: 11px;
+  font-weight: 700;
+  margin-top: 6px;
+}
+
+.searchControl {
+  position: relative;
+}
+
+.recentList {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  margin-top: 12px;
+}
+
+.recentItem {
+  justify-content: flex-start;
+  max-width: 100%;
+}
+
+.recentItem span {
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.inputLabel {
+  display: block;
+  margin-bottom: 8px;
+}
+
+.searchInputWrapper {
+  align-items: center;
+  display: flex;
+  position: relative;
+}
+
+.searchIcon {
+  color: var(--slate-400);
+  left: 14px;
+  pointer-events: none;
+  position: absolute;
+}
+
+.searchInputWrapper input {
+  padding-left: 40px;
+  padding-right: 40px;
+}
+
+.clearButton {
+  align-items: center;
+  background: transparent;
+  border: 0;
+  border-radius: 999px;
+  color: var(--slate-400);
+  cursor: pointer;
+  display: flex;
+  height: 28px;
+  justify-content: center;
+  position: absolute;
+  right: 8px;
+  width: 28px;
+}
+
+.clearButton:hover {
+  background: var(--slate-100);
+  color: var(--slate-700);
+}
+
+.searchDropdown {
+  background: var(--white);
+  border: 1px solid var(--slate-200);
+  border-radius: var(--radius-sm);
+  box-shadow: var(--shadow-lg);
+  left: 0;
+  max-height: 280px;
+  overflow-y: auto;
+  padding: 6px;
+  position: absolute;
+  right: 0;
+  top: calc(100% + 6px);
+  z-index: 50;
+}
+
+.dropdownItem {
+  align-items: flex-start;
+  background: transparent;
+  border: 0;
+  border-radius: var(--radius-sm);
+  color: var(--slate-700);
+  cursor: pointer;
+  display: grid;
+  gap: 10px;
+  grid-template-columns: 18px minmax(0, 1fr);
+  padding: 10px;
+  text-align: left;
+  width: 100%;
+}
+
+.dropdownItem:hover {
+  background: var(--primary-light);
+  color: var(--primary);
+}
+
+.dropdownItem strong,
+.dropdownItem small {
+  display: block;
+  overflow-wrap: anywhere;
+}
+
+.dropdownItem strong {
+  color: var(--slate-900);
+  font-size: 13px;
+  font-weight: 800;
+}
+
+.dropdownItem small {
+  color: var(--slate-500);
+  font-size: 12px;
+  line-height: 1.4;
+  margin-top: 3px;
+}
+
+.dropdownState {
+  align-items: center;
+  color: var(--slate-500);
+  display: flex;
+  font-size: 12px;
+  font-weight: 700;
+  gap: 8px;
+  min-height: 42px;
+  padding: 0 10px;
+}
+
+.hintText.success {
+  color: var(--primary);
+}
+
+.hintText.error {
+  color: #b91c1c;
+}
+
+.spinIcon {
+  animation: spin 0.8s linear infinite;
+}
+
+.fadeSlide-enter-active,
+.fadeSlide-leave-active {
+  transition: opacity 0.16s ease, transform 0.16s ease;
+}
+
+.fadeSlide-enter-from,
+.fadeSlide-leave-to {
   opacity: 0;
-  transform: translateY(-8px);
+  transform: translateY(-4px);
+}
+
+@keyframes spin {
+  to {
+    transform: rotate(360deg);
+  }
 }
 </style>

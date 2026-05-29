@@ -9,8 +9,10 @@ from .opinet_client import (
     OpinetClient,
     OpinetConfigurationError,
     OpinetMappingError,
+    opinet_product_codes_for_fuel_type,
     normalize_opinet_price_row,
     normalize_opinet_station_row,
+    wgs84_to_katec,
 )
 
 
@@ -25,6 +27,29 @@ class OpinetConfigurationTests(SimpleTestCase):
 
         self.assertEqual(client.api_key, "test-key")
         self.assertEqual(client.fetch_price_rows(), [])
+
+    def test_opinet_client_fetches_rows_around_selected_location(self):
+        client = OpinetClient(api_key="test-key")
+
+        with patch.object(
+            client,
+            "_get_json",
+            return_value={"RESULT": {"OIL": [{"UNI_ID": "A0010207", "PRICE": "1700"}]}},
+        ) as get_json:
+            rows = client.fetch_price_rows(
+                latitude=37.5665,
+                longitude=126.978,
+                radius_km=5,
+                fuel_type=FuelPrice.FuelType.GASOLINE,
+            )
+
+        self.assertEqual(rows[0]["PRODCD"], "B027")
+        endpoint, params = get_json.call_args.args
+        self.assertEqual(endpoint, "aroundAll.do")
+        self.assertEqual(params["prodcd"], "B027")
+        self.assertEqual(params["radius"], "5000")
+        self.assertNotEqual(params["x"], "314871.8")
+        self.assertNotEqual(params["y"], "544012.0")
 
     def test_opinet_client_fetches_average_price_rows(self):
         client = OpinetClient(api_key="test-key")
@@ -70,6 +95,11 @@ class OpinetConfigurationTests(SimpleTestCase):
 
         self.assertIn("1 rows returned", stdout.getvalue())
         fetch_price_rows.assert_not_called()
+
+    def test_sync_opinet_prices_requires_location_for_station_sync(self):
+        with patch.dict("os.environ", {"OPINET_API_KEY": "test-key"}, clear=True):
+            with self.assertRaises(CommandError):
+                call_command("sync_opinet_prices", "--dry-run")
 
 
 class OpinetMappingTests(SimpleTestCase):
@@ -120,3 +150,12 @@ class OpinetMappingTests(SimpleTestCase):
     def test_normalize_opinet_price_row_rejects_unknown_product_code(self):
         with self.assertRaises(OpinetMappingError):
             normalize_opinet_price_row({"PRODCD": "C004", "PRICE": "1200"})
+
+    def test_wgs84_to_katec_returns_opinet_request_coordinates(self):
+        x, y = wgs84_to_katec(37.4943, 127.0351)
+
+        self.assertAlmostEqual(x, 314871.8, delta=25)
+        self.assertAlmostEqual(y, 544012.0, delta=25)
+
+    def test_opinet_product_codes_for_fuel_type_maps_smartfuel_type(self):
+        self.assertEqual(opinet_product_codes_for_fuel_type(FuelPrice.FuelType.DIESEL), ["D047"])

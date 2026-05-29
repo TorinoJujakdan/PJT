@@ -3,7 +3,7 @@
   "method": "GET",
   "path": "/stations/geocode/",
   "auth": "optional",
-  "description": "사용자가 입력한 주소 또는 랜드마크 검색어를 기반으로 매칭되는 위치의 좌표(위경도) 정보를 조회한다. 네이버 지도 API 등을 경유하여 실시간 조회할 수 있으며, API 설정이 없을 경우 로컬 프리셋에서 부분 일치하는 데이터를 폴백으로 조회한다.",
+  "description": "사용자가 입력한 주소 또는 장소 검색어를 기반으로 네이버 Geocoding API 결과를 조회한다. 운영 UX에서는 로컬 프리셋 더미 결과를 노출하지 않는다.",
   "query": {
     "required": [
       "query"
@@ -40,7 +40,28 @@
               "longitude": {
                 "type": "number",
                 "example": 127.0276
+              },
+              "source": {
+                "type": "string",
+                "example": "naver_geocode"
               }
+            }
+          }
+        },
+        "meta": {
+          "type": "object",
+          "properties": {
+            "source": {
+              "type": "string",
+              "example": "naver_geocode"
+            },
+            "status": {
+              "type": "string",
+              "example": "ok"
+            },
+            "count": {
+              "type": "number",
+              "example": 1
             }
           }
         }

@@ -9,18 +9,19 @@
 ### 📌 설계 목적
 * 프론트엔드 코드에 네이버/카카오 API 키를 노출하는 보안 리스크를 완전히 제거합니다.
 * 사용자가 검색어를 입력할 때마다 API 호출이 무분별하게 발생하지 않도록 **300ms 디바운싱(Debounce)**을 적용합니다.
-* 외부 API 호출에 실패하거나 API 키가 없는 개발 환경에서도 정상적으로 실행될 수 있도록 **데이터 소스 회복 탄력성(Data Source Resilience)**을 확보합니다.
+* 운영 UX에서 로컬 더미 프리셋이 검색 결과처럼 노출되지 않도록 네이버 Geocoding 결과와 실패 상태를 명확히 분리합니다.
 
 ### 🛠️ 세부 설계 내용
 * **API 계약(Contract-First)**: 
   * `docs/api_contracts/locations_geocode.json`에 엔드포인트 규격 선 정의
   * `GET /api/v1/stations/geocode/?query={검색어}` 엔드포인트 등록
+  * `GET /api/v1/stations/reverse-geocode/?latitude={위도}&longitude={경도}` 엔드포인트 등록
 * **백엔드 프록시 (Geocoding Proxy)**:
   * 외부 네이버 지도 API에 안전하게 통신 및 토큰 암호화 처리.
-  * API Key가 없는 환경에서는 로컬 프리셋 데이터베이스에서 입력 문자열과 매칭을 시도하는 **유연한 Fallback 메커니즘** 구현.
+  * API Key가 없는 환경에서는 빈 결과와 `meta.status=unavailable`을 반환해 더미 위치를 실제 검색 결과로 오인하지 않도록 처리.
 * **프론트엔드 검색 고도화**:
   * `LocationControl.vue` 내에 `300ms 디바운스` 로직을 구축해 검색어가 완성되었을 때 백엔드 프록시를 호출.
-  * 화면의 주요 5개 퀵 프리셋 버튼은 백엔드를 경유하지 않고 즉시 적용되어 **100% 즉각적인 UI 반응성** 유지.
+  * 브라우저 현재 위치와 지도 클릭 좌표는 Reverse Geocoding으로 주소 라벨을 확정.
 
 ---
 
@@ -75,10 +76,10 @@
  ┃ ┣ 📂 stations
  ┃ ┃ ┣ 📄 urls.py                         # [MODIFY] geocode API 엔드포인트 매핑
  ┃ ┃ ┣ 📄 views.py                        # [NEW] GeocodeAPIView 구현
- ┃ ┃ ┣ 📄 geocoding_service.py            # [NEW] Naver API 연동 및 회복탄력성 로컬 프리셋 매칭 서비스
+ ┃ ┃ ┣ 📄 geocoding_service.py            # [NEW] Naver Geocoding/Reverse Geocoding 프록시 서비스
  ┃ ┃ ┣ 📄 scheduler.py                    # [NEW] APScheduler cron 2회 동기화 스케줄 구축
  ┃ ┃ ┣ 📄 apps.py                         # [MODIFY] 중복 초기화 방지 및 SQLite 데드락 방지 가드 적용
- ┃ ┃ ┗ 📄 tests_additions.py              # [NEW] 지오코딩 API + 폴백 모의 테스트 + 자동 검증 테스트
+ ┃ ┃ ┗ 📄 tests_additions.py              # [NEW] 지오코딩 API + 주유소 refresh + 자동 검증 테스트
  ┃ ┣ 📂 cards
  ┃ ┃ ┗ 📄 selenium_ingestion.py           # [MODIFY] Selenium 더보기 클릭 자동화 + Auto-Verification 조건 구현
  ┗ 📂 frontend

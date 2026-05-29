@@ -29,7 +29,7 @@ export function loadNaverMapsScript(clientId = getNaverMapsClientId()) {
 
     script.id = NAVER_MAPS_SCRIPT_ID;
     script.async = true;
-    script.src = `https://oapi.map.naver.com/openapi/v3/maps.js?ncpKeyId=${encodeURIComponent(clientId)}`;
+    script.src = `https://oapi.map.naver.com/openapi/v3/maps.js?ncpKeyId=${encodeURIComponent(clientId)}&submodules=geocoder`;
 
     script.addEventListener(
       "load",

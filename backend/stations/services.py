@@ -1,7 +1,9 @@
+import concurrent.futures
 from dataclasses import dataclass
 from decimal import Decimal
 from math import asin, cos, radians, sin, sqrt
 from typing import Any, Optional
+
 
 from django.db.models import OuterRef, Subquery
 
@@ -21,6 +23,8 @@ class StationCandidate:
     distance_km: float
     fuel_type: str
     fuel_price_per_liter: int
+    price_collected_at: Optional[Any] = None
+    price_source: Optional[str] = None
 
 
 @dataclass(frozen=True)
@@ -34,6 +38,12 @@ class FuelPriceRecommendation:
     estimated_saving: int
     selected_card: Optional[dict[str, Any]]
     reason: str
+    distance_source: str = "haversine"
+    duration_min: Optional[float] = None
+    route_path: Optional[list[dict[str, float]]] = None
+    price_collected_at: Optional[Any] = None
+    price_source: Optional[str] = None
+
 
 
 def haversine_distance_km(lat1, lon1, lat2, lon2):
@@ -83,10 +93,9 @@ def get_station_candidates(location, radius_km, fuel_type):
     longitude = float(location["longitude"])
     bbox = calculate_bounding_box(latitude, longitude, radius)
 
-    latest_price = (
+    latest_price_val = (
         FuelPrice.objects.filter(station=OuterRef("pk"), fuel_type=fuel_type)
         .order_by("-collected_at", "-id")
-        .values("price_per_liter")[:1]
     )
 
     queryset = (
@@ -96,7 +105,11 @@ def get_station_candidates(location, radius_km, fuel_type):
             longitude__gte=bbox["min_longitude"],
             longitude__lte=bbox["max_longitude"],
         )
-        .annotate(fuel_price_per_liter=Subquery(latest_price))
+        .annotate(
+            fuel_price_per_liter=Subquery(latest_price_val.values("price_per_liter")[:1]),
+            fuel_price_collected_at=Subquery(latest_price_val.values("collected_at")[:1]),
+            fuel_price_source=Subquery(latest_price_val.values("source")[:1]),
+        )
         .exclude(fuel_price_per_liter__isnull=True)
     )
 
@@ -110,10 +123,13 @@ def get_station_candidates(location, radius_km, fuel_type):
                     distance_km=round(distance_km, 2),
                     fuel_type=fuel_type,
                     fuel_price_per_liter=int(station.fuel_price_per_liter),
+                    price_collected_at=station.fuel_price_collected_at,
+                    price_source=station.fuel_price_source,
                 )
             )
 
     return sorted(candidates, key=lambda item: (item.distance_km, item.fuel_price_per_liter, item.station.id))
+
 
 
 def calculate_refuel_cost(fuel_price_per_liter, target_liters):
@@ -125,6 +141,55 @@ def calculate_travel_cost(distance_km, fuel_efficiency_kmpl, fuel_price_per_lite
     travel_distance_km = float(distance_km) * distance_multiplier
     travel_fuel_liters = travel_distance_km / float(fuel_efficiency_kmpl)
     return round(travel_fuel_liters * int(fuel_price_per_liter))
+
+
+def fetch_directions_parallel(start_lat, start_lng, candidates_to_route):
+    """
+    후보들에 대해 병렬로 Naver Directions API를 호출하여 도로 주행 정보(거리, 시간)를 구합니다.
+    """
+    from .geocoding_service import get_driving_route_with_path
+
+    results = {}
+    with concurrent.futures.ThreadPoolExecutor(max_workers=5) as executor:
+        future_to_candidate = {
+            executor.submit(
+                get_driving_route_with_path,
+                start_lat,
+                start_lng,
+                float(cand.station.latitude),
+                float(cand.station.longitude)
+            ): cand.station.id
+            for cand in candidates_to_route
+        }
+        for future in concurrent.futures.as_completed(future_to_candidate):
+            cand_id = future_to_candidate[future]
+            try:
+                distance_m, duration_ms, route_path, err = future.result()
+                if err is None and distance_m is not None:
+                    results[cand_id] = {
+                        "distance_km": round(distance_m / 1000.0, 2),
+                        "duration_min": round(duration_ms / 60000.0, 1),
+                        "distance_source": "naver_directions",
+                        "route_path": route_path,
+                    }
+                else:
+                    results[cand_id] = {
+                        "distance_km": None,
+                        "duration_min": None,
+                        "distance_source": "haversine",
+                        "route_path": [],
+                        "error": err
+                    }
+            except Exception as e:
+                results[cand_id] = {
+                    "distance_km": None,
+                    "duration_min": None,
+                    "distance_source": "haversine",
+                    "route_path": [],
+                    "error": str(e)
+                }
+    return results
+
 
 
 def get_card_value(card, field_name, default=None):
@@ -274,7 +339,8 @@ def quote_travel_cost_recommendations(
     if not candidates:
         return []
 
-    baseline_cost = min(
+    # 1단계: 모든 후보에 대해 임시 직선거리 기반 비용 및 임시 baseline 계산
+    draft_baseline_cost = min(
         calculate_refuel_cost(candidate.fuel_price_per_liter, target_liters)
         + calculate_travel_cost(
             candidate.distance_km,
@@ -309,14 +375,87 @@ def quote_travel_cost_recommendations(
                 card_discount_amount=card_discount_amount,
                 travel_cost=travel_cost,
                 effective_total_cost=effective_total_cost,
-                estimated_saving=baseline_cost - effective_total_cost,
+                estimated_saving=draft_baseline_cost - effective_total_cost,
                 selected_card=selected_card,
                 reason="",
             )
         )
 
-    sorted_drafts = sorted(
-        draft_recommendations,
+    # Route every haversine-filtered candidate before final cost/ranking decisions.
+    start_lat = float(location["latitude"])
+    start_lng = float(location["longitude"])
+    direction_results = fetch_directions_parallel(start_lat, start_lng, candidates)
+
+    # 4단계: 도로 경로 결과를 맵핑하여 데이터 최신화 (StationCandidate 및 비용 재산출)
+    final_recommendations = []
+    for item in draft_recommendations:
+        cand = item.candidate
+        res = direction_results.get(cand.station.id)
+
+        dist_km = cand.distance_km
+        dist_src = "haversine"
+        dur_min = None
+        route_path = []
+
+        if res and res.get("distance_km") is not None:
+            dist_km = res["distance_km"]
+            dist_src = res["distance_source"]
+            dur_min = res["duration_min"]
+            route_path = res.get("route_path") or []
+
+        # 실제 도로 경로에 따른 이동 주유 비용 재계산
+        travel_cost = calculate_travel_cost(
+            dist_km,
+            fuel_efficiency_kmpl,
+            cand.fuel_price_per_liter,
+            travel_mode,
+        )
+        effective_total_cost = item.refuel_cost - item.card_discount_amount + travel_cost
+
+        # 직렬화를 위한 시간 및 소스 정보 파싱
+        price_coll_at = cand.price_collected_at.isoformat() if cand.price_collected_at else None
+
+        # 5km 이내이며 소스가 opinet인 가격만 live opinet 마킹, 그 외는 database
+        is_live = cand.distance_km <= 5.0 and cand.price_source == "opinet"
+        price_src = "opinet" if is_live else "database"
+
+        # 불변 객체이므로 업데이트된 속성을 담은 새 StationCandidate 생성
+        updated_candidate = StationCandidate(
+            station=cand.station,
+            distance_km=dist_km,
+            fuel_type=cand.fuel_type,
+            fuel_price_per_liter=cand.fuel_price_per_liter,
+            price_collected_at=cand.price_collected_at,
+            price_source=cand.price_source,
+        )
+
+        final_recommendations.append(
+            FuelPriceRecommendation(
+                candidate=updated_candidate,
+                target_liters=item.target_liters,
+                refuel_cost=item.refuel_cost,
+                card_discount_amount=item.card_discount_amount,
+                travel_cost=travel_cost,
+                effective_total_cost=effective_total_cost,
+                estimated_saving=0,  # 다음 단계에서 재계산
+                selected_card=item.selected_card,
+                reason="",
+                distance_source=dist_src,
+                duration_min=dur_min,
+                route_path=route_path,
+                price_collected_at=price_coll_at,
+                price_source=price_src,
+            )
+        )
+
+    # 5단계: 최종 이동비용이 확정된 전체 후보 중 진짜 baseline_cost 도출
+    final_baseline_cost = min(
+        rec.refuel_cost + rec.travel_cost for rec in final_recommendations
+    )
+
+    # 6단계: 최종 정렬 및 각 추천 사유(reason) 빌드
+    sorted_finals = sorted(
+        final_recommendations,
         key=lambda item: (
             item.effective_total_cost,
             item.candidate.distance_km,
@@ -324,11 +463,46 @@ def quote_travel_cost_recommendations(
             item.candidate.station.id,
         ),
     )
-    cheapest_candidate = min(candidates, key=lambda item: (item.fuel_price_per_liter, item.distance_km, item.station.id))
-    closest_candidate = min(candidates, key=lambda item: (item.distance_km, item.fuel_price_per_liter, item.station.id))
+
+    cheapest_candidate = min(
+        [r.candidate for r in sorted_finals],
+        key=lambda item: (item.fuel_price_per_liter, item.distance_km, item.station.id),
+    )
+    closest_candidate = min(
+        [r.candidate for r in sorted_finals],
+        key=lambda item: (item.distance_km, item.fuel_price_per_liter, item.station.id),
+    )
 
     recommendations = []
-    for index, item in enumerate(sorted_drafts):
+    for index, item in enumerate(sorted_finals):
+        saving = final_baseline_cost - item.effective_total_cost
+
+        # 임시 객체를 생성하여 reason을 계산
+        temp_rec = FuelPriceRecommendation(
+            candidate=item.candidate,
+            target_liters=item.target_liters,
+            refuel_cost=item.refuel_cost,
+            card_discount_amount=item.card_discount_amount,
+            travel_cost=item.travel_cost,
+            effective_total_cost=item.effective_total_cost,
+            estimated_saving=saving,
+            selected_card=item.selected_card,
+            reason="",
+            distance_source=item.distance_source,
+            duration_min=item.duration_min,
+            route_path=item.route_path,
+            price_collected_at=item.price_collected_at,
+            price_source=item.price_source,
+        )
+
+        reason = build_recommendation_reason(
+            temp_rec,
+            baseline_cost=final_baseline_cost,
+            cheapest_candidate=cheapest_candidate,
+            closest_candidate=closest_candidate,
+            is_winner=index == 0,
+        )
+
         recommendations.append(
             FuelPriceRecommendation(
                 candidate=item.candidate,
@@ -337,19 +511,19 @@ def quote_travel_cost_recommendations(
                 card_discount_amount=item.card_discount_amount,
                 travel_cost=item.travel_cost,
                 effective_total_cost=item.effective_total_cost,
-                estimated_saving=item.estimated_saving,
+                estimated_saving=saving,
                 selected_card=item.selected_card,
-                reason=build_recommendation_reason(
-                    item,
-                    baseline_cost=baseline_cost,
-                    cheapest_candidate=cheapest_candidate,
-                    closest_candidate=closest_candidate,
-                    is_winner=index == 0,
-                ),
+                reason=reason,
+                distance_source=item.distance_source,
+                duration_min=item.duration_min,
+                route_path=item.route_path,
+                price_collected_at=item.price_collected_at,
+                price_source=item.price_source,
             )
         )
 
     return recommendations
+
 
 
 def quote_baseline_without_card(recommendations):
