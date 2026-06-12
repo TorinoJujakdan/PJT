@@ -4,6 +4,10 @@ __pycache__/
 *$py.class
 venv/
 .venv/
+.pytest_cache/
+.ruff_cache/
+.coverage
+htmlcov/
 
 # Django
 db.sqlite3
@@ -19,6 +23,7 @@ static/
 node_modules/
 dist/
 dist-ssr/
+coverage/
 *.local
 
 # IDE
@@ -30,6 +35,11 @@ dist-ssr/
 .DS_Store
 Thumbs.db
 
-.omx
-.docs
+# Local agent/runtime files
+.omx/
+.docs/
 harness/
+
+# Generated QA artifacts
+artifacts/
+/frontend/*-smoke.png

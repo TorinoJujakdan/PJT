@@ -9,7 +9,7 @@ The goal is to support both:
 - user-entered card benefits
 - card benefit discovery through controlled Selenium ingestion from user-approved public domains
 
-without breaking the existing harness structure.
+without breaking the existing project structure.
 
 ## 2. Added Requirements
 

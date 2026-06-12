@@ -11,7 +11,7 @@ This file maintains the active summary of quality gate verifications, regression
 
 * **Backend Unit/API Tests**: **Passed (68/68 tests passed)**
 * **Frontend Production Build**: **Passed (`npm run build` completed successfully)**
-* **Harness Recommendation Scenarios**: **100% Verified**
+* **Recommendation Scenarios**: **100% Verified**
 * **Docker Smoke Test Status**: **Ready for Phase 4 deployment**
 
 ---
@@ -37,7 +37,7 @@ This file maintains the active summary of quality gate verifications, regression
 
 ---
 
-## 3. Verified Harness QA Scenarios
+## 3. Verified QA Scenarios
 
 1. **Cheapest/lowest effective-cost station** is recommended when no card exists. (Verified)
 2. **A more expensive station** is recommended when a confirmed card discount makes it cheaper. (Verified)
