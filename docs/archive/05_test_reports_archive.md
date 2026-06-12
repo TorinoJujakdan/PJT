@@ -306,7 +306,7 @@ Scope:
 
 - Backend unit/API tests
 - Frontend production build verification
-- Recommendation scenario QA against harness required scenarios
+- Recommendation scenario QA against the required scenarios
 - Docker smoke test readiness check
 
 Verification:
@@ -318,7 +318,7 @@ Verification:
 - Docker Compose availability check: passed
 - Docker smoke test: blocked because `docker-compose.yml`, `Dockerfile.backend`, and `Dockerfile.frontend` are not present yet
 
-Covered harness QA scenarios:
+Covered QA scenarios:
 
 1. Cheapest/lowest effective-cost station is recommended when no card exists.
 2. A more expensive station is recommended when a confirmed card discount makes it cheaper.

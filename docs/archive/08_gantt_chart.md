@@ -20,7 +20,7 @@ gantt
     Recommendation algorithm freeze    :done, des2, 2026-05-18, 1d
     API contract freeze                :done, des3, 2026-05-18, 1d
     ERD and use case documentation     :done, des4, 2026-05-18, 1d
-    Harness context and workflow rules :done, des5, 2026-05-18, 1d
+    Project context and workflow planning :done, des5, 2026-05-18, 1d
 
     section Phase 2 - Backend Implementation
     Django project scaffold            :impl1, 2026-05-19, 1d
@@ -57,7 +57,7 @@ gantt
 
 | Milestone | Exit Criteria |
 |---|---|
-| Design Complete | Architecture, API, algorithm, ERD, use case, and harness rules are documented |
+| Design Complete | Architecture, API, algorithm, ERD, and use cases are documented |
 | Backend MVP | Recommendation API returns ranked station candidates from dummy data |
 | Personalized Recommendation | Vehicle efficiency and card discounts affect final ranking |
 | Frontend MVP | User can request and view recommendation with cost breakdown |
@@ -68,7 +68,7 @@ gantt
 
 Do not implement all recommendation logic at once.
 
-Follow the slice order from `harness/workflows.md`:
+Follow this implementation slice order:
 
 ```text
 candidate search

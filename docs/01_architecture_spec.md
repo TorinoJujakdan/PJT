@@ -53,8 +53,7 @@ pjtworkspace/
 │       ├── views/
 │       ├── stores/
 │       └── api/
-├── ops/
-└── harness/
+└── ops/
 ```
 
 ## 4. Backend Domains
