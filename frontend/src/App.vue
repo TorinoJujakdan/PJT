@@ -17,6 +17,7 @@ import { getCurrentUser, logoutAccount } from "./api/accounts";
 import { getMyCards } from "./api/cards";
 import { getMyVehicles } from "./api/vehicles";
 import { refreshNearbyStations, reverseGeocodeLocation } from "./api/stations";
+import { resetCardsWorkspace } from "./stores/cardsWorkspaceStore";
 import { recommendationStore } from "./stores/recommendationStore";
 
 // Components Import
@@ -24,6 +25,8 @@ import DoubleSidebar from "./components/DoubleSidebar.vue";
 import RecommendationMap from "./components/RecommendationMap.vue";
 import FloatingDetailCard from "./components/FloatingDetailCard.vue";
 import AuthModal from "./components/AuthModal.vue";
+import CardsModalShell from "./components/cards/CardsModalShell.vue";
+import VehicleModalShell from "./components/vehicles/VehicleModalShell.vue";
 
 // Views Import for Modal overlay inclusion
 import VehicleView from "./views/VehicleView.vue";
@@ -87,6 +90,7 @@ const refreshLoading = ref(false);
 
 // 모달 제어 상태 ('auth' | 'vehicle' | 'cards' | null)
 const activeModal = ref(null);
+const modalReturnFocus = ref(null);
 const authModalMode = ref("login");
 
 // Computed Properties
@@ -368,6 +372,8 @@ async function loadCards() {
 
 async function handleLogout() {
   await logoutAccount();
+  activeModal.value = null;
+  resetCardsWorkspace();
   auth.user = null;
   vehicles.value = [];
   cards.value = [];
@@ -387,18 +393,24 @@ function openModal(modalType, extra = null) {
   if (modalType === "auth") {
     authModalMode.value = extra || "login";
   }
+  modalReturnFocus.value = document.activeElement;
   activeModal.value = modalType;
 }
 
 function closeModal() {
   activeModal.value = null;
+  requestAnimationFrame(() => modalReturnFocus.value?.focus?.());
 }
 
-// 차량 정보 저장 완료 시
-async function handleVehicleSaved() {
+async function handleVehicleChanged() {
   await loadVehicles();
-  closeModal();
-  requestRecommendation();
+  if (recommendationStore.response && location.latitude && location.longitude) {
+    await requestRecommendation();
+    return;
+  }
+  recommendationStore.response = null;
+  selectedStationId.value = null;
+  showDetailCard.value = false;
 }
 
 function optionalNumber(value) {
@@ -670,38 +682,17 @@ onMounted(async () => {
     />
 
     <!-- 2. 내 차량 설정 관리 모달 -->
-    <div v-if="activeModal === 'vehicle'" class="glassModalOverlay" @click.self="closeModal">
-      <div class="glassModalContainer" style="max-width: 520px; padding: 24px;">
-        <header class="glassModalHeader">
-          <h2>내 차량 정보 설정</h2>
-          <button class="glassModalCloseBtn" type="button" @click="closeModal" aria-label="닫기">
-            <X :size="16" />
-          </button>
-        </header>
-        <VehicleView 
-          :vehicle="vehicle" 
-          :vehicles="vehicles" 
-          @saved="handleVehicleSaved" 
-          @changed="loadVehicles" 
-        />
-      </div>
-    </div>
+    <VehicleModalShell v-if="activeModal === 'vehicle'" @close="closeModal">
+      <VehicleView
+        :vehicles="vehicles"
+        @changed="handleVehicleChanged"
+      />
+    </VehicleModalShell>
 
     <!-- 3. 내 할인 카드 관리 모달 -->
-    <div v-if="activeModal === 'cards'" class="glassModalOverlay" @click.self="closeModal">
-      <div class="glassModalContainer" style="max-width: 600px; padding: 24px;">
-        <header class="glassModalHeader">
-          <h2>소유 할인 카드 관리</h2>
-          <button class="glassModalCloseBtn" type="button" @click="closeModal" aria-label="닫기">
-            <X :size="16" />
-          </button>
-        </header>
-        <CardsView 
-          :cards="cards" 
-          @changed="loadCards" 
-        />
-      </div>
-    </div>
+    <CardsModalShell v-if="activeModal === 'cards'" @close="closeModal">
+      <CardsView :cards="cards" @changed="loadCards" />
+    </CardsModalShell>
 
     <!-- 4. 주유소 최종 상세 분석 분석 팝업 모달 -->
     <div v-if="activeModal === 'detail'" class="glassModalOverlay" @click.self="closeModal">

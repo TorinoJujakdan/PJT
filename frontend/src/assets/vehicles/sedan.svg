@@ -1,0 +1,5 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 280 120" role="img" aria-label="세단 실루엣">
+  <path fill="currentColor" d="M17 70c2-10 8-16 17-19l48-11c17-20 39-29 68-29h27c25 0 44 10 63 32l24 6c9 2 14 9 15 19l1 17h-24a25 25 0 0 0-49 0H91a25 25 0 0 0-49 0H12l1-9c0-3 2-5 4-6Zm80-31h123c-14-14-28-20-45-20h-26c-21 0-38 6-52 20Z"/>
+  <circle cx="66" cy="85" r="18" fill="none" stroke="currentColor" stroke-width="8"/>
+  <circle cx="231" cy="85" r="18" fill="none" stroke="currentColor" stroke-width="8"/>
+</svg>

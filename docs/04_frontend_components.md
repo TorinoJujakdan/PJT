@@ -38,10 +38,12 @@ Responsibilities:
 
 Responsibilities:
 
-- list user's registered cards
-- add card policy
-- remove card policy
-- show loading, empty, success, and error states for catalog search and card save/delete actions
+- coordinate the `catalog`, `manual`, and `saved` card-management tabs
+- keep API behavior inside the tab panels rather than duplicating it in the app shell
+- render inside the accessible full-height `CardsModalShell`
+
+The card workspace uses one primary internal scroll region and keeps drafts/search
+state while the workspace is closed and reopened.
 
 ### `ProfileView.vue`
 
@@ -147,20 +149,26 @@ Inputs:
 - source URL
 - user memo
 
-### `CardDiscoverySearch.vue`
+### Card workspace components
 
-Searches card benefit candidates from Naver-based discovery results.
+- `CardsModalShell.vue`: body scroll lock, focus trap, Escape handling, dirty-close confirmation, and focus restoration boundary
+- `CatalogCardPanel.vue`: catalog search, image/issuer/name result cards, fuel-benefit detail, Korean source/trust disclosure, and immediate registration
+- `ManualCardPanel.vue`: required basic/benefit fields plus optional detailed conditions
+- `SavedCardsPanel.vue`: saved-card list and edit/delete entry actions
+- `EditCardPanel.vue`: in-workspace side-panel editing
+- `DeleteCardDialog.vue`: accessible destructive confirmation dialog
+- `CardPolicyFields.vue`: shared discount and condition inputs
+- `CardArtwork.vue`: card image with a consistent fallback
 
-Displays:
+Catalog result cards display only:
 
-- candidate card name
 - issuer
 - card image
-- source title
-- source URL
-- verification status
+- card name
 
-The user must confirm or edit a discovered policy before it becomes active.
+Raw source and verification codes are not the primary user-facing labels. The
+selected-card detail translates them into Korean trust guidance before the user
+registers the card.
 
 ## 4. Stores
 
@@ -180,6 +188,19 @@ Owns:
 - latest recommendation response
 - loading state
 - API error state
+
+### `cardsWorkspaceStore`
+
+Owns retained card-workspace UI state:
+
+- active tab
+- catalog query, result list, selection, and draft
+- manual registration draft
+- edit draft and delete target
+- dirty-state close guard
+
+The store is intentionally module-scoped and resets only on an explicit reset or
+full page lifecycle, so closing the modal does not unexpectedly discard work.
 
 ### `profileStore`
 

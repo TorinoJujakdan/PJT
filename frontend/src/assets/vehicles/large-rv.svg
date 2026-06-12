@@ -1,0 +1,5 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 300 130" role="img" aria-label="대형 RV 실루엣">
+  <path fill="currentColor" d="M12 31c0-11 7-18 18-18h184c9 0 16 4 21 11l27 35 18 7c7 3 11 9 12 18l1 10h-28a27 27 0 0 0-53 0H92a27 27 0 0 0-53 0H13L12 31Zm24 8h186l-13-17H36v17Z"/>
+  <circle cx="65" cy="94" r="20" fill="none" stroke="currentColor" stroke-width="8"/>
+  <circle cx="238" cy="94" r="20" fill="none" stroke="currentColor" stroke-width="8"/>
+</svg>

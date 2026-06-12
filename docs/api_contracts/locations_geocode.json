@@ -3,81 +3,145 @@
   "method": "GET",
   "path": "/stations/geocode/",
   "auth": "optional",
-  "description": "사용자가 입력한 주소 또는 장소 검색어를 기반으로 네이버 Geocoding API 결과를 조회한다. 운영 UX에서는 로컬 프리셋 더미 결과를 노출하지 않는다.",
+  "description": "Search Naver Cloud Maps Geocoding first, then NAVER Developers Local Search when no normalized address result is available.",
   "query": {
-    "required": [
-      "query"
-    ],
+    "required": ["query"],
     "properties": {
       "query": {
         "type": "string",
-        "description": "검색할 주소 또는 랜드마크 명칭",
-        "example": "강남역"
+        "description": "Address, administrative district, building, business, or landmark name.",
+        "example": "멀티캠퍼스"
       }
     }
   },
   "responses": {
     "200": {
       "type": "object",
+      "required": ["results", "meta"],
+      "additionalProperties": false,
       "properties": {
         "results": {
           "type": "array",
           "items": {
             "type": "object",
+            "required": ["name", "address", "road_address", "jibun_address", "latitude", "longitude", "source"],
+            "additionalProperties": false,
             "properties": {
-              "name": {
-                "type": "string",
-                "example": "강남역"
-              },
-              "address": {
-                "type": "string",
-                "example": "서울특별시 강남구 강남대로 396"
-              },
-              "latitude": {
-                "type": "number",
-                "example": 37.4979
-              },
-              "longitude": {
-                "type": "number",
-                "example": 127.0276
-              },
-              "source": {
-                "type": "string",
-                "example": "naver_geocode"
-              }
+              "name": {"type": "string"},
+              "address": {"type": "string"},
+              "road_address": {"type": "string"},
+              "jibun_address": {"type": "string"},
+              "latitude": {"type": "number"},
+              "longitude": {"type": "number"},
+              "source": {"type": "string", "enum": ["naver_geocode", "naver_local_search"]},
+              "category": {"type": "string", "description": "Present only for NAVER Local Search results."}
             }
           }
         },
         "meta": {
-          "type": "object",
-          "properties": {
-            "source": {
-              "type": "string",
-              "example": "naver_geocode"
+          "oneOf": [
+            {
+              "title": "A - Geocode results",
+              "type": "object",
+              "required": ["source", "status", "count"],
+              "additionalProperties": false,
+              "properties": {
+                "source": {"const": "naver_geocode"},
+                "status": {"const": "ok"},
+                "count": {"type": "integer", "minimum": 0}
+              }
             },
-            "status": {
-              "type": "string",
-              "example": "ok"
+            {
+              "title": "B - Empty geocode, local results",
+              "type": "object",
+              "required": ["source", "status", "count", "fallback_from", "fallback_reason"],
+              "additionalProperties": false,
+              "properties": {
+                "source": {"const": "naver_local_search"},
+                "status": {"const": "ok"},
+                "count": {"type": "integer", "minimum": 1},
+                "fallback_from": {"const": "naver_geocode"},
+                "fallback_reason": {"const": "GEOCODE_EMPTY"}
+              }
             },
-            "count": {
-              "type": "number",
-              "example": 1
+            {
+              "title": "C - Unavailable geocode, local results",
+              "type": "object",
+              "required": ["source", "status", "count", "fallback_from", "fallback_reason"],
+              "additionalProperties": false,
+              "properties": {
+                "source": {"const": "naver_local_search"},
+                "status": {"const": "ok"},
+                "count": {"type": "integer", "minimum": 1},
+                "fallback_from": {"const": "naver_geocode"},
+                "fallback_reason": {"type": "string", "not": {"const": "GEOCODE_EMPTY"}}
+              }
+            },
+            {
+              "title": "D - Both providers unavailable",
+              "type": "object",
+              "required": ["source", "status", "reason", "fallback_source", "fallback_status", "fallback_reason"],
+              "additionalProperties": false,
+              "properties": {
+                "source": {"const": "naver_geocode"},
+                "status": {"const": "unavailable"},
+                "reason": {"type": "string"},
+                "fallback_source": {"const": "naver_local_search"},
+                "fallback_status": {"const": "unavailable"},
+                "fallback_reason": {"type": "string"}
+              }
+            },
+            {
+              "title": "E - Empty geocode, local unavailable",
+              "type": "object",
+              "required": ["source", "status", "count", "fallback_source", "fallback_status", "fallback_reason"],
+              "additionalProperties": false,
+              "properties": {
+                "source": {"const": "naver_geocode"},
+                "status": {"const": "ok"},
+                "count": {"const": 0},
+                "fallback_source": {"const": "naver_local_search"},
+                "fallback_status": {"const": "unavailable"},
+                "fallback_reason": {"type": "string"}
+              }
+            },
+            {
+              "title": "F - Both providers empty",
+              "type": "object",
+              "required": ["source", "status", "count", "fallback_source", "fallback_status", "fallback_count"],
+              "additionalProperties": false,
+              "properties": {
+                "source": {"const": "naver_geocode"},
+                "status": {"const": "ok"},
+                "count": {"const": 0},
+                "fallback_source": {"const": "naver_local_search"},
+                "fallback_status": {"const": "ok"},
+                "fallback_count": {"const": 0}
+              }
+            },
+            {
+              "title": "G - Unavailable geocode, local empty",
+              "type": "object",
+              "required": ["source", "status", "reason", "fallback_source", "fallback_status", "fallback_count"],
+              "additionalProperties": false,
+              "properties": {
+                "source": {"const": "naver_geocode"},
+                "status": {"const": "unavailable"},
+                "reason": {"type": "string"},
+                "fallback_source": {"const": "naver_local_search"},
+                "fallback_status": {"const": "ok"},
+                "fallback_count": {"const": 0}
+              }
             }
-          }
+          ]
         }
       }
     },
     "400": {
       "type": "object",
       "properties": {
-        "code": {
-          "type": "string",
-          "example": "MISSING_QUERY"
-        },
-        "message": {
-          "type": "string",
-          "example": "검색어(query) 파라미터가 누락되었습니다."
-        }
+        "code": {"type": "string", "example": "MISSING_QUERY"},
+        "message": {"type": "string", "example": "검색어(query) 파라미터가 누락되었습니다."}
       }
     }
   }

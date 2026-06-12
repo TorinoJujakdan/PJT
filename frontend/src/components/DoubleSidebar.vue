@@ -18,6 +18,10 @@ import {
 import LocationControl from "./LocationControl.vue";
 import FuelTargetControl from "./FuelTargetControl.vue";
 import CardPolicyForm from "./CardPolicyForm.vue";
+import {
+  getVehiclePresentation,
+  getVehicleSelectorLabel
+} from "./vehicles/vehiclePresentation";
 
 const props = defineProps({
   isAuthenticated: {
@@ -128,17 +132,10 @@ const localRadiusKm = computed({
   set: (val) => emit("update:searchRadiusKm", Number(val))
 });
 
-
-// 주유 타입 한글명 도우미
-function getFuelTypeName(type) {
-  const names = {
-    gasoline: "휘발유",
-    diesel: "경유",
-    lpg: "LPG",
-    premium_gasoline: "고급 휘발유"
-  };
-  return names[type] || type;
-}
+const selectedSavedVehicle = computed(() => {
+  if (localSelectedVehicleId.value === "manual") return null;
+  return props.savedVehicles.find((vehicle) => vehicle.id === localSelectedVehicleId.value) || null;
+});
 
 // 탭 토글 로직
 function handleTabClick(tab) {
@@ -274,11 +271,25 @@ function isPastData(station) {
                   :key="v.id"
                   :value="v.id"
                 >
-                  {{ getFuelTypeName(v.fuel_type) }} ({{ Number(v.fuel_efficiency_kmpl).toFixed(1) }} km/L){{ v.is_default ? ' [대표]' : '' }}
+                  {{ getVehicleSelectorLabel(v) }}
                 </option>
                 <option value="manual">직접 연비 입력 (수동)</option>
               </select>
             </label>
+
+            <div v-if="selectedSavedVehicle" class="selectedVehiclePreview">
+              <img
+                :src="getVehiclePresentation(selectedSavedVehicle.vehicle_type).imageUrl"
+                alt=""
+              />
+              <div>
+                <strong>{{ selectedSavedVehicle.name }}</strong>
+                <span>
+                  {{ getVehiclePresentation(selectedSavedVehicle.vehicle_type).label }}
+                  · {{ Number(selectedSavedVehicle.fuel_efficiency_kmpl).toFixed(1) }} km/L
+                </span>
+              </div>
+            </div>
 
             <!-- 수동 선택을 대비한 연비 필드 노출 -->
             <div v-if="localSelectedVehicleId === 'manual'" style="margin-top: 12px;">

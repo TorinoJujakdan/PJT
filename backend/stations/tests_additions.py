@@ -7,6 +7,7 @@ from unittest.mock import Mock, patch
 from cards.models import CardCatalog, CardPolicy
 from cards.selenium_ingestion import ScrapedCardCandidate, save_candidates
 from stations import geocoding_service
+from stations import naver_directions_client
 from stations.models import FuelPrice, GasStation
 
 
@@ -30,7 +31,7 @@ class GeocodeProxyAPITests(TestCase):
 
     def test_directions_path_is_normalized_to_latitude_longitude_points(self):
         self.assertEqual(
-            geocoding_service._normalize_route_path(
+            naver_directions_client._normalize_route_path(
                 [
                     [127.039, 37.501],
                     [127.041, 37.503],
@@ -54,7 +55,7 @@ class GeocodeProxyAPITests(TestCase):
                 }
             ]
         }
-        with patch("stations.geocoding_service._request_naver_json", return_value=(payload, None)):
+        with patch("stations.naver_geocoding_client._request_naver_json", return_value=(payload, None)):
             response = self.client.get(
                 "/api/v1/stations/geocode/",
                 {"query": "서울시청"},
@@ -97,8 +98,8 @@ class GeocodeProxyAPITests(TestCase):
         }
 
         with (
-            patch("stations.geocoding_service._request_naver_json", return_value=({"addresses": []}, None)),
-            patch("stations.geocoding_service._request_naver_local_json", return_value=(local_payload, None)),
+            patch("stations.naver_geocoding_client._request_naver_json", return_value=({"addresses": []}, None)),
+            patch("stations.naver_local_search_client._request_naver_local_json", return_value=(local_payload, None)),
         ):
             response = self.client.get(
                 "/api/v1/stations/geocode/",
@@ -127,8 +128,8 @@ class GeocodeProxyAPITests(TestCase):
         }
 
         with (
-            patch("stations.geocoding_service._request_naver_json", return_value=(None, "NAVER_GEOCODING_HTTP_401")),
-            patch("stations.geocoding_service._request_naver_local_json", return_value=(local_payload, None)),
+            patch("stations.naver_geocoding_client._request_naver_json", return_value=(None, "NAVER_GEOCODING_HTTP_401")),
+            patch("stations.naver_local_search_client._request_naver_local_json", return_value=(local_payload, None)),
         ):
             response = self.client.get(
                 "/api/v1/stations/geocode/",
@@ -145,9 +146,9 @@ class GeocodeProxyAPITests(TestCase):
 
     def test_geocode_endpoint_reports_empty_geocode_fallback_status(self):
         with (
-            patch("stations.geocoding_service._request_naver_json", return_value=({"addresses": []}, None)),
+            patch("stations.naver_geocoding_client._request_naver_json", return_value=({"addresses": []}, None)),
             patch(
-                "stations.geocoding_service._request_naver_local_json",
+                "stations.naver_local_search_client._request_naver_local_json",
                 return_value=(None, "NAVER_LOCAL_HTTP_401"),
             ),
         ):
@@ -191,7 +192,7 @@ class GeocodeProxyAPITests(TestCase):
                 }
             ]
         }
-        with patch("stations.geocoding_service._request_naver_json", return_value=(payload, None)):
+        with patch("stations.naver_geocoding_client._request_naver_json", return_value=(payload, None)):
             response = self.client.get(
                 "/api/v1/stations/reverse-geocode/",
                 {"latitude": 37.5665, "longitude": 126.978},

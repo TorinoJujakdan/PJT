@@ -1,3 +1,4 @@
+from django.db import transaction
 from django.shortcuts import get_object_or_404
 from rest_framework import status
 from rest_framework.permissions import IsAuthenticated
@@ -54,14 +55,11 @@ class MyVehicleProfilesAPIView(APIView):
         serializer = VehicleProfileSerializer(data=request.data)
         if not serializer.is_valid():
             return error_response("INVALID_VEHICLE_PROFILE", status.HTTP_400_BAD_REQUEST, serializer.errors)
-        
-        existing_count = VehicleProfile.objects.filter(user=request.user).count()
-        is_default = True if existing_count == 0 else request.data.get("is_default", False)
-        
-        if is_default:
-            VehicleProfile.objects.filter(user=request.user).update(is_default=False)
-            
-        profile = serializer.save(user=request.user, is_default=is_default)
+
+        with transaction.atomic():
+            type(request.user).objects.select_for_update().get(pk=request.user.pk)
+            is_default = not VehicleProfile.objects.filter(user=request.user).exists()
+            profile = serializer.save(user=request.user, is_default=is_default)
         return Response({"vehicle": VehicleProfileSerializer(profile).data}, status=status.HTTP_201_CREATED)
 
 
@@ -74,10 +72,6 @@ class MyVehicleProfileDetailAPIView(APIView):
         if not serializer.is_valid():
             return error_response("INVALID_VEHICLE_PROFILE", status.HTTP_400_BAD_REQUEST, serializer.errors)
 
-        is_default = serializer.validated_data.get("is_default")
-        if is_default:
-            VehicleProfile.objects.filter(user=request.user).exclude(pk=pk).update(is_default=False)
-
         profile = serializer.save()
         return Response({"vehicle": VehicleProfileSerializer(profile).data})
 
@@ -87,23 +81,25 @@ class MyVehicleProfileDetailAPIView(APIView):
         if not serializer.is_valid():
             return error_response("INVALID_VEHICLE_PROFILE", status.HTTP_400_BAD_REQUEST, serializer.errors)
 
-        is_default = serializer.validated_data.get("is_default")
-        if is_default:
-            VehicleProfile.objects.filter(user=request.user).exclude(pk=pk).update(is_default=False)
-
         profile = serializer.save()
         return Response({"vehicle": VehicleProfileSerializer(profile).data})
 
     def delete(self, request, pk):
-        profile = get_object_or_404(VehicleProfile, user=request.user, pk=pk)
-        was_default = profile.is_default
-        profile.delete()
-        
-        if was_default:
-            next_profile = VehicleProfile.objects.filter(user=request.user).first()
-            if next_profile:
-                next_profile.is_default = True
-                next_profile.save()
+        with transaction.atomic():
+            type(request.user).objects.select_for_update().get(pk=request.user.pk)
+            profile = get_object_or_404(
+                VehicleProfile.objects.select_for_update(),
+                user=request.user,
+                pk=pk,
+            )
+            was_default = profile.is_default
+            profile.delete()
+
+            if was_default:
+                next_profile = VehicleProfile.objects.filter(user=request.user).first()
+                if next_profile:
+                    next_profile.is_default = True
+                    next_profile.save(update_fields=["is_default", "updated_at"])
                 
         return Response(status=status.HTTP_204_NO_CONTENT)
 
@@ -112,10 +108,16 @@ class SetDefaultVehicleAPIView(APIView):
     permission_classes = [IsAuthenticated]
 
     def post(self, request, pk):
-        profile = get_object_or_404(VehicleProfile, user=request.user, pk=pk)
-        
-        VehicleProfile.objects.filter(user=request.user).update(is_default=False)
-        profile.is_default = True
-        profile.save()
+        with transaction.atomic():
+            type(request.user).objects.select_for_update().get(pk=request.user.pk)
+            profile = get_object_or_404(
+                VehicleProfile.objects.select_for_update(),
+                user=request.user,
+                pk=pk,
+            )
+            VehicleProfile.objects.filter(user=request.user, is_default=True).exclude(pk=pk).update(is_default=False)
+            if not profile.is_default:
+                profile.is_default = True
+                profile.save(update_fields=["is_default", "updated_at"])
         
         return Response({"vehicle": VehicleProfileSerializer(profile).data})
