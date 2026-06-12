@@ -8,6 +8,10 @@ import LocationControl from "../components/LocationControl.vue";
 import RecommendationContextPanel from "../components/RecommendationContextPanel.vue";
 import RecommendationMap from "../components/RecommendationMap.vue";
 import RecommendationResult from "../components/RecommendationResult.vue";
+import {
+  getVehiclePresentation,
+  getVehicleSelectorLabel
+} from "../components/vehicles/vehiclePresentation";
 import { recommendationStore } from "../stores/recommendationStore";
 
 const props = defineProps({
@@ -74,6 +78,10 @@ const isVehicleProfileApplied = computed(() => {
   return selectedVehicleId.value !== "manual" && selectedVehicleId.value !== null;
 });
 const canUseSavedVehicle = computed(() => props.isAuthenticated && props.savedVehicles.length > 0);
+const selectedSavedVehicle = computed(() => {
+  if (selectedVehicleId.value === "manual") return null;
+  return props.savedVehicles.find((vehicle) => vehicle.id === selectedVehicleId.value) || null;
+});
 const hasResolvedLocation = computed(() => {
   return (
     location.latitude !== null &&
@@ -102,16 +110,6 @@ const activeRecommendation = computed(() => {
 watch(recommendation, (nextRecommendation) => {
   selectedStationId.value = nextRecommendation?.station?.station_id || null;
 });
-
-function getFuelTypeName(type) {
-  const names = {
-    gasoline: "휘발유",
-    diesel: "경유",
-    lpg: "LPG",
-    premium_gasoline: "고급 휘발유"
-  };
-  return names[type] || type;
-}
 
 watch(
   () => props.savedVehicles,
@@ -262,11 +260,25 @@ async function requestRecommendation() {
                 :key="v.id"
                 :value="v.id"
               >
-                {{ getFuelTypeName(v.fuel_type) }} ({{ Number(v.fuel_efficiency_kmpl).toFixed(1) }} km/L){{ v.is_default ? ' [대표]' : '' }}
+                {{ getVehicleSelectorLabel(v) }}
               </option>
               <option value="manual">직접 입력 (수동 설정)</option>
             </select>
           </label>
+        </div>
+
+        <div v-if="selectedSavedVehicle" class="selectedVehiclePreview">
+          <img
+            :src="getVehiclePresentation(selectedSavedVehicle.vehicle_type).imageUrl"
+            alt=""
+          />
+          <div>
+            <strong>{{ selectedSavedVehicle.name }}</strong>
+            <span>
+              {{ getVehiclePresentation(selectedSavedVehicle.vehicle_type).label }}
+              · {{ Number(selectedSavedVehicle.fuel_efficiency_kmpl).toFixed(1) }} km/L
+            </span>
+          </div>
         </div>
         
         <p class="hintText" style="margin-top: 10px;">

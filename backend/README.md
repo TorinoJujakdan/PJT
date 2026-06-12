@@ -21,6 +21,11 @@ The recommendation service contract is defined in `docs/03_recommendation_algori
 - `PATCH /api/v1/accounts/me/`: update username or email.
 - `GET /api/v1/me/vehicle/`: fetch the authenticated user's default vehicle.
 - `PUT /api/v1/me/vehicle/`: create or update the default vehicle.
+- `GET /api/v1/me/vehicles/`: list all vehicles owned by the authenticated user.
+- `POST /api/v1/me/vehicles/`: create an owned vehicle.
+- `PATCH`/`PUT /api/v1/me/vehicles/{vehicle_id}/`: update an owned vehicle.
+- `DELETE /api/v1/me/vehicles/{vehicle_id}/`: delete an owned vehicle and promote a remaining vehicle when the default is deleted.
+- `POST /api/v1/me/vehicles/{vehicle_id}/set-default/`: make an owned vehicle the default.
 - `GET /api/v1/me/cards/`: list the authenticated user's active card policies.
 - `POST /api/v1/me/cards/`: create a manual card policy.
 - `PATCH /api/v1/me/cards/{card_id}/`: update an owned active card policy.
@@ -53,14 +58,17 @@ cd backend
 ## Data Boundaries
 
 - Recommendation ranking and cost calculation stay in `stations/services.py`.
+- Vehicle names are required, trimmed, non-unique, and limited to 40 characters. `vehicle_type` accepts only `compact`, `sedan`, `suv`, `large_rv`, or `sports`.
+- Migration `vehicles.0003_reset_profiles_add_name_vehicle_type` deletes only `VehicleProfile` rows. User accounts, cards, stations, and fuel-price rows are preserved.
+- Migration `vehicles.0004_vehicleprofile_vehicles_one_default_per_user` enforces one default vehicle at most per user; clients change it through the set-default endpoint.
 - `CardCatalog` rows collected from Selenium remain `unverified` and are not used for ranking until a user confirms them into `CardPolicy` or an admin verifies them.
 - Card ingestion is run through management commands, not through the recommendation request path.
 
 ## Environment
 
 - `OPINET_API_KEY`: required only for Opinet synchronization commands.
-- `NAVER_GEOCODING_CLIENT_ID` / `NAVER_GEOCODING_CLIENT_SECRET`: server-side Naver Geocoding and Reverse Geocoding credentials. Legacy `NAVER_CLIENT_ID` / `NAVER_CLIENT_SECRET` are still accepted.
-- `NAVER_LOCAL_CLIENT_ID` / `NAVER_LOCAL_CLIENT_SECRET`: optional server-side Naver Local Search credentials for detailed business/building search. `NAVER_SEARCH_*` and `NAVER_OPENAPI_*` aliases are also accepted. Legacy `NAVER_CLIENT_ID` / `NAVER_CLIENT_SECRET` are still accepted, but Naver Cloud Maps keys and Naver Developers Search keys are separate credential families.
+- `NAVER_GEOCODING_CLIENT_ID` / `NAVER_GEOCODING_CLIENT_SECRET`: server-side Naver Cloud Maps credentials shared by Geocoding, Reverse Geocoding, and Directions. Legacy `NAVER_CLIENT_ID` / `NAVER_CLIENT_SECRET` remain accepted for these Maps APIs.
+- `NAVER_LOCAL_CLIENT_ID` / `NAVER_LOCAL_CLIENT_SECRET`: optional NAVER Developers Search credentials for registered businesses, buildings, and landmarks. `NAVER_SEARCH_*` and `NAVER_OPENAPI_*` aliases are also accepted. Cloud Maps `NAVER_CLIENT_*` credentials are intentionally not used for Local Search.
 - `CARD_INGESTION_ALLOWED_DOMAINS`: comma-separated allowlist for card ingestion sources.
 
 ## Card Ingestion

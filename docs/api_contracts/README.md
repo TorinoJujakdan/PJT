@@ -14,7 +14,7 @@ The full blueprint remains the canonical index, but day-to-day coding should use
 - `locations_reverse_geocode.json`: `GET /api/v1/stations/reverse-geocode/`
 - `stations_refresh.json`: `POST /api/v1/stations/refresh/`
 - `accounts_auth.json`: signup, login, logout, and current-user APIs
-- `vehicles_profile.json`: `GET`/`PUT /api/v1/me/vehicle/`
+- `vehicles_profile.json`: default-vehicle `GET`/`PUT` plus vehicle list, create, update, delete, and set-default APIs
 - `cards_policies.json`: manual card policy and Naver-based card discovery APIs
 - `cards_catalog.json`: card catalog search and save-from-catalog APIs
 - `cards_ingestion.json`: controlled Selenium card ingestion contract

@@ -24,6 +24,14 @@ Display recommendation results from the backend. Do not recompute ranking in the
 - 상태 피드백: 위치 권한, 프로필 저장, 카드 검색/저장/삭제, 지도 로딩 실패 상태를 사용자에게 표시.
 - 주유소 데이터 갱신: 추천 직전 백엔드 station refresh API를 호출하고, Opinet 키가 없거나 실패하면 저장된 DB 데이터로 계속 계산한다.
 
+## Vehicle Profiles
+
+- Vehicle names are required, trimmed before submission, non-unique, and limited to 40 characters.
+- Supported `vehicle_type` values are `compact`, `sedan`, `suv`, `large_rv`, and `sports`.
+- `frontend/src/components/vehicles/vehiclePresentation.js` maps each type to a bundled static SVG silhouette under `frontend/src/assets/vehicles/`.
+- The UI uses the sedan presentation as the display fallback for an unknown type.
+- The vehicle workspace supports list, create, edit, delete, and default-vehicle selection.
+
 ## Environment
 
 Only expose frontend-safe public keys here.
@@ -39,6 +47,10 @@ Do not put server-side secrets in Vite environment variables.
 During local development, Vite proxies `/api` to Django on port 8000 and
 `/search-api` to the optional FastAPI search sidecar on port 8001. If the
 sidecar is not running, departure search falls back to the Django geocode API.
+Both backend paths use address-first Naver Cloud Maps Geocoding and then
+NAVER Developers Local Search when no address result is available. The
+browser-side Maps geocoder remains an address fallback and is not a substitute
+for Local Search credentials when searching buildings or landmarks.
 
 ## Local Verification
 

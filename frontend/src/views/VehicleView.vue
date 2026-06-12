@@ -1,98 +1,92 @@
 <script setup>
 import { reactive, ref } from "vue";
-import { Car, CheckCircle2, Pencil, Plus, Save, Trash2, X } from "@lucide/vue";
-import { addVehicle, deleteVehicle, setDefaultVehicle, updateVehicle } from "../api/vehicles";
+import { Check, Pencil, Plus, Save, Star, Trash2, X } from "@lucide/vue";
 
-const props = defineProps({
+import { addVehicle, deleteVehicle, setDefaultVehicle, updateVehicle } from "../api/vehicles";
+import VehicleTypePicker from "../components/vehicles/VehicleTypePicker.vue";
+import {
+  VEHICLE_NAME_MAX_LENGTH,
+  buildVehiclePayload,
+  getVehiclePresentation
+} from "../components/vehicles/vehiclePresentation";
+
+defineProps({
   vehicles: {
     type: Array,
     default: () => []
-  },
-  vehicle: {
-    type: Object,
-    default: null
   }
 });
-const emit = defineEmits(["saved", "changed"]);
 
-const form = reactive({
+const emit = defineEmits(["changed"]);
+
+const createForm = reactive({
+  name: "",
+  vehicle_type: "sedan",
   fuel_type: "gasoline",
   fuel_efficiency_kmpl: 10
 });
-const loading = ref(false);
-const error = ref(null);
-const saved = ref(false);
-const editingId = ref(null);
 const editForm = reactive({
+  name: "",
+  vehicle_type: "sedan",
   fuel_type: "gasoline",
   fuel_efficiency_kmpl: 10,
   is_default: false
 });
-const editError = ref(null);
-const editLoading = ref(false);
+const editingId = ref(null);
+const loadingAction = ref(null);
+const createError = ref("");
+const editError = ref("");
+const successMessage = ref("");
 
-function validateForm() {
-  if (!form.fuel_type || !form.fuel_efficiency_kmpl) {
-    return "연료 타입과 연비를 모두 입력해 주세요.";
+const fuelLabels = Object.freeze({
+  gasoline: "휘발유",
+  diesel: "경유",
+  lpg: "LPG",
+  premium_gasoline: "고급 휘발유"
+});
+
+function errorMessage(error, fallback) {
+  const details = error?.payload?.details;
+  if (details && typeof details === "object") {
+    const first = Object.values(details).flat()[0];
+    if (first) return String(first);
   }
-
-  if (form.fuel_efficiency_kmpl < 1 || form.fuel_efficiency_kmpl > 50) {
-    return "연비는 1.0km/L 이상 50.0km/L 이하로 입력해 주세요.";
-  }
-
-  return null;
+  return error?.payload?.message || error?.message || fallback;
 }
 
 async function handleAddVehicle() {
-  const validationMessage = validateForm();
-  if (validationMessage) {
-    error.value = { message: validationMessage };
-    saved.value = false;
+  createError.value = "";
+  successMessage.value = "";
+  let payload;
+  try {
+    payload = buildVehiclePayload(createForm);
+  } catch (error) {
+    createError.value = error.message;
     return;
   }
 
-  loading.value = true;
-  error.value = null;
-  saved.value = false;
+  loadingAction.value = "create";
   try {
-    await addVehicle({
-      fuel_type: form.fuel_type,
-      fuel_efficiency_kmpl: Number(form.fuel_efficiency_kmpl)
-    });
-    saved.value = true;
-    form.fuel_efficiency_kmpl = 10;
+    await addVehicle(payload);
+    createForm.name = "";
+    createForm.vehicle_type = "sedan";
+    createForm.fuel_type = "gasoline";
+    createForm.fuel_efficiency_kmpl = 10;
+    successMessage.value = "차량이 등록되었습니다.";
     emit("changed");
-    emit("saved");
-  } catch (err) {
-    error.value = err.payload || { message: err.message };
+  } catch (error) {
+    createError.value = errorMessage(error, "차량 등록에 실패했습니다.");
   } finally {
-    loading.value = false;
-  }
-}
-
-async function handleSetDefault(id) {
-  try {
-    await setDefaultVehicle(id);
-    emit("changed");
-  } catch (err) {
-    alert(err.message || "대표 차량 설정에 실패했습니다.");
-  }
-}
-
-async function handleDelete(id) {
-  if (!confirm("이 차량을 정말 삭제하시겠습니까?")) return;
-  try {
-    await deleteVehicle(id);
-    emit("changed");
-  } catch (err) {
-    alert(err.message || "차량 삭제에 실패했습니다.");
+    loadingAction.value = null;
   }
 }
 
 function startEdit(vehicle) {
   editingId.value = vehicle.id;
-  editError.value = null;
+  editError.value = "";
   Object.assign(editForm, {
+    name: vehicle.name,
+    vehicle_type: vehicle.vehicle_type,
     fuel_type: vehicle.fuel_type,
     fuel_efficiency_kmpl: Number(vehicle.fuel_efficiency_kmpl),
     is_default: Boolean(vehicle.is_default)
@@ -101,409 +95,164 @@ function startEdit(vehicle) {
 
 function cancelEdit() {
   editingId.value = null;
-  editError.value = null;
+  editError.value = "";
 }
 
-async function handleUpdateVehicle(id) {
-  const validationMessage = validateFormFor(editForm);
-  if (validationMessage) {
-    editError.value = { message: validationMessage };
+async function handleUpdate(vehicleId) {
+  editError.value = "";
+  let payload;
+  try {
+    payload = buildVehiclePayload(editForm);
+  } catch (error) {
+    editError.value = error.message;
     return;
   }
 
-  editLoading.value = true;
-  editError.value = null;
+  loadingAction.value = `edit-${vehicleId}`;
   try {
-    await updateVehicle(id, {
-      fuel_type: editForm.fuel_type,
-      fuel_efficiency_kmpl: Number(editForm.fuel_efficiency_kmpl),
-      is_default: editForm.is_default
-    });
+    await updateVehicle(vehicleId, payload);
     editingId.value = null;
+    successMessage.value = "차량 정보가 수정되었습니다.";
     emit("changed");
-  } catch (err) {
-    editError.value = err.payload || { message: err.message };
+  } catch (error) {
+    editError.value = errorMessage(error, "차량 수정에 실패했습니다.");
   } finally {
-    editLoading.value = false;
+    loadingAction.value = null;
   }
 }
 
-function validateFormFor(target) {
-  if (!target.fuel_type || !target.fuel_efficiency_kmpl) {
-    return "연료 타입과 연비를 모두 입력해 주세요.";
+async function handleSetDefault(vehicleId) {
+  loadingAction.value = `default-${vehicleId}`;
+  try {
+    await setDefaultVehicle(vehicleId);
+    successMessage.value = "대표 차량을 변경했습니다.";
+    emit("changed");
+  } catch (error) {
+    createError.value = errorMessage(error, "대표 차량 설정에 실패했습니다.");
+  } finally {
+    loadingAction.value = null;
   }
-
-  if (target.fuel_efficiency_kmpl < 1 || target.fuel_efficiency_kmpl > 50) {
-    return "연비는 1.0km/L 이상 50.0km/L 이하로 입력해 주세요.";
-  }
-
-  return null;
 }
 
-function getFuelTypeName(type) {
-  const names = {
-    gasoline: "휘발유",
-    diesel: "경유",
-    lpg: "LPG",
-    premium_gasoline: "고급 휘발유"
-  };
-  return names[type] || type;
+async function handleDelete(vehicle) {
+  if (!confirm(`‘${vehicle.name}’ 차량을 삭제할까요?`)) return;
+  loadingAction.value = `delete-${vehicle.id}`;
+  try {
+    await deleteVehicle(vehicle.id);
+    successMessage.value = "차량을 삭제했습니다.";
+    emit("changed");
+  } catch (error) {
+    createError.value = errorMessage(error, "차량 삭제에 실패했습니다.");
+  } finally {
+    loadingAction.value = null;
+  }
 }
 </script>
 
 <template>
-  <main class="workspace gridLayout">
-    <!-- Left: Vehicle List Dashboard -->
-    <section class="panel listPanel">
-      <div class="panelHeader">
+  <main class="vehicleWorkspace">
+    <section class="garagePanel" aria-labelledby="garage-title">
+      <header class="sectionHeader">
         <div>
-          <p class="eyebrow">My Garage</p>
-          <h2>내 등록 차량 목록 ({{ vehicles.length }})</h2>
+          <p class="eyebrow">MY GARAGE</p>
+          <h3 id="garage-title">등록 차량 <span>{{ vehicles.length }}</span></h3>
         </div>
+        <p>차량 이름과 실루엣으로 여러 차량을 빠르게 구분할 수 있습니다.</p>
+      </header>
+
+      <div v-if="!vehicles.length" class="emptyGarage">
+        <div class="emptySilhouette">
+          <img :src="getVehiclePresentation('sedan').imageUrl" alt="" />
+        </div>
+        <strong>아직 등록한 차량이 없습니다</strong>
+        <span>오른쪽 등록 양식에서 첫 차량을 추가해 보세요.</span>
       </div>
 
-      <div class="vehiclesContainer">
-        <div v-if="vehicles.length === 0" class="noVehicles">
-          <Car :size="48" class="emptyIcon" />
-          <p>등록된 차량이 없습니다.</p>
-          <span>오른쪽 폼에서 차량을 추가해 보세요!</span>
-        </div>
-
-        <div v-else class="vehicleCardsGrid">
-          <div
-            v-for="v in vehicles"
-            :key="v.id"
-            class="vehicleCard"
-            :class="{ isDefault: v.is_default }"
-          >
-            <div class="cardMain">
-              <div class="cardBadge" :class="v.fuel_type">
-                {{ getFuelTypeName(v.fuel_type) }}
-              </div>
-              <div class="efficiency">
-                <span class="num">{{ Number(v.fuel_efficiency_kmpl).toFixed(1) }}</span>
-                <span class="unit">km/L</span>
-              </div>
+      <div v-else class="vehicleList">
+        <article
+          v-for="vehicle in vehicles"
+          :key="vehicle.id"
+          class="vehicleCard"
+          :class="{ defaultVehicle: vehicle.is_default }"
+        >
+          <template v-if="editingId !== vehicle.id">
+            <div class="vehicleVisual">
+              <span v-if="vehicle.is_default" class="defaultBadge"><Star :size="13" /> 대표 차량</span>
+              <img :src="getVehiclePresentation(vehicle.vehicle_type).imageUrl" alt="" />
             </div>
-
-            <form v-if="editingId === v.id" class="inlineEditForm" @submit.prevent="handleUpdateVehicle(v.id)">
-              <label>
-                <span>연료 타입</span>
-                <select v-model="editForm.fuel_type" required>
-                  <option value="gasoline">휘발유</option>
-                  <option value="diesel">경유</option>
-                  <option value="lpg">LPG</option>
-                  <option value="premium_gasoline">고급 휘발유</option>
-                </select>
-              </label>
-              <label>
-                <span>연비(km/L)</span>
-                <input v-model.number="editForm.fuel_efficiency_kmpl" type="number" min="1" max="50" step="0.1" required />
-              </label>
-              <label class="checkboxRow">
-                <input v-model="editForm.is_default" type="checkbox" />
-                <span>대표 차량으로 설정</span>
-              </label>
-              <div v-if="editError" class="errorPanel compact">
-                <strong>{{ editError.code || "UPDATE_FAILED" }}</strong>
-                <span>{{ editError.message }}</span>
+            <div class="vehicleInfo">
+              <div>
+                <p>{{ getVehiclePresentation(vehicle.vehicle_type).label }}</p>
+                <h4>{{ vehicle.name }}</h4>
               </div>
-              <div class="inlineEditActions">
-                <button class="actionBtn setBtn" type="submit" :disabled="editLoading">
-                  <Save :size="16" />
-                  <span>{{ editLoading ? "저장 중" : "저장" }}</span>
-                </button>
-                <button class="actionBtn deleteBtn" type="button" :disabled="editLoading" @click="cancelEdit">
-                  <X :size="16" />
-                  <span>취소</span>
-                </button>
-              </div>
-            </form>
-
-            <div class="cardActions">
-              <button
-                v-if="!v.is_default"
-                class="actionBtn setBtn"
-                type="button"
-                title="대표 차량으로 설정"
-                @click="handleSetDefault(v.id)"
-              >
-                <CheckCircle2 :size="16" />
-                <span>대표설정</span>
+              <dl>
+                <div><dt>연료</dt><dd>{{ fuelLabels[vehicle.fuel_type] || vehicle.fuel_type }}</dd></div>
+                <div><dt>복합 연비</dt><dd>{{ Number(vehicle.fuel_efficiency_kmpl).toFixed(1) }} km/L</dd></div>
+              </dl>
+            </div>
+            <div class="vehicleActions">
+              <button v-if="!vehicle.is_default" type="button" @click="handleSetDefault(vehicle.id)">
+                <Check :size="15" /> 대표로 설정
               </button>
-              <div v-else class="defaultLabel">
-                <CheckCircle2 :size="16" />
-                <span>대표 차량</span>
-              </div>
-
-              <button
-                class="actionBtn setBtn"
-                type="button"
-                title="차량 수정"
-                @click="startEdit(v)"
-              >
-                <Pencil :size="16" />
-                <span>수정</span>
-              </button>
-
-              <button
-                class="actionBtn deleteBtn"
-                type="button"
-                title="차량 삭제"
-                @click="handleDelete(v.id)"
-              >
-                <Trash2 :size="16" />
+              <button type="button" @click="startEdit(vehicle)"><Pencil :size="15" /> 수정</button>
+              <button class="danger" type="button" @click="handleDelete(vehicle)">
+                <Trash2 :size="15" /> 삭제
               </button>
             </div>
-          </div>
-        </div>
+          </template>
+
+          <form v-else class="editForm" @submit.prevent="handleUpdate(vehicle.id)">
+            <div class="formHeading">
+              <strong>차량 정보 수정</strong>
+              <button type="button" aria-label="수정 취소" @click="cancelEdit"><X :size="17" /></button>
+            </div>
+            <label>
+              <span>차량 이름</span>
+              <input v-model="editForm.name" :maxlength="VEHICLE_NAME_MAX_LENGTH" required />
+            </label>
+            <VehicleTypePicker v-model="editForm.vehicle_type" compact />
+            <div class="fuelGrid">
+              <label><span>연료</span><select v-model="editForm.fuel_type"><option v-for="(label, value) in fuelLabels" :key="value" :value="value">{{ label }}</option></select></label>
+              <label><span>연비 (km/L)</span><input v-model.number="editForm.fuel_efficiency_kmpl" type="number" min="1" max="50" step="0.1" required /></label>
+            </div>
+            <p v-if="editError" class="formError" role="alert">{{ editError }}</p>
+            <button class="primaryAction" type="submit" :disabled="loadingAction === `edit-${vehicle.id}`">
+              <Save :size="17" /> {{ loadingAction === `edit-${vehicle.id}` ? "저장 중..." : "수정 내용 저장" }}
+            </button>
+          </form>
+        </article>
       </div>
     </section>
 
-    <!-- Right: Add Vehicle Form -->
-    <section class="panel formPanel">
-      <div class="panelHeader">
+    <section class="registerPanel" aria-labelledby="register-title">
+      <header class="sectionHeader">
         <div>
-          <p class="eyebrow">Add Vehicle</p>
-          <h2>신규 차량 등록</h2>
+          <p class="eyebrow">ADD VEHICLE</p>
+          <h3 id="register-title">새 차량 등록</h3>
         </div>
-      </div>
-      <form class="fieldGrid" @submit.prevent="handleAddVehicle">
+        <p>실제 모델명이 아닌, 알아보기 쉬운 이름을 자유롭게 입력하세요.</p>
+      </header>
+      <form class="registerForm" @submit.prevent="handleAddVehicle">
         <label>
-          <span>연료 타입</span>
-          <select v-model="form.fuel_type" required>
-            <option value="gasoline">휘발유</option>
-            <option value="diesel">경유</option>
-            <option value="lpg">LPG</option>
-            <option value="premium_gasoline">고급 휘발유</option>
-          </select>
+          <span>차량 이름 <small>{{ createForm.name.trim().length }}/{{ VEHICLE_NAME_MAX_LENGTH }}</small></span>
+          <input v-model="createForm.name" :maxlength="VEHICLE_NAME_MAX_LENGTH" placeholder="예: 출퇴근차, 가족차" required />
         </label>
-        <label>
-          <span>연비(km/L)</span>
-          <input v-model.number="form.fuel_efficiency_kmpl" type="number" min="1" max="50" step="0.1" required />
-        </label>
-        
-        <div v-if="error" class="errorPanel compact">
-          <strong>{{ error.code || "SAVE_FAILED" }}</strong>
-          <span>{{ error.message }}</span>
+        <fieldset>
+          <legend>차량 유형</legend>
+          <VehicleTypePicker v-model="createForm.vehicle_type" />
+        </fieldset>
+        <div class="fuelGrid">
+          <label><span>연료</span><select v-model="createForm.fuel_type"><option v-for="(label, value) in fuelLabels" :key="value" :value="value">{{ label }}</option></select></label>
+          <label><span>연비 (km/L)</span><input v-model.number="createForm.fuel_efficiency_kmpl" type="number" min="1" max="50" step="0.1" required /></label>
         </div>
-        
-        <p v-if="saved" class="successText">차량이 성공적으로 등록되었습니다.</p>
-        
-        <button class="primaryButton fullWidth" type="submit" :disabled="loading">
-          <Plus :size="18" />
-          <span>{{ loading ? "등록 중" : "차량 추가 등록" }}</span>
+        <p v-if="createError" class="formError" role="alert">{{ createError }}</p>
+        <p v-if="successMessage" class="formSuccess" role="status"><Check :size="15" /> {{ successMessage }}</p>
+        <button class="primaryAction" type="submit" :disabled="loadingAction === 'create'">
+          <Plus :size="18" /> {{ loadingAction === "create" ? "등록 중..." : "차량 등록하기" }}
         </button>
       </form>
     </section>
   </main>
 </template>
 
-<style scoped>
-.gridLayout {
-  display: grid;
-  grid-template-columns: 1.6fr 1fr;
-  gap: 24px;
-  align-items: start;
-}
-@media (max-width: 900px) {
-  .gridLayout {
-    grid-template-columns: 1fr;
-  }
-}
-
-.vehiclesContainer {
-  margin-top: 12px;
-}
-.noVehicles {
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  justify-content: center;
-  padding: 48px 24px;
-  background: rgba(255, 255, 255, 0.02);
-  border: 1.5px dashed rgba(255, 255, 255, 0.08);
-  border-radius: 16px;
-  text-align: center;
-}
-.emptyIcon {
-  color: var(--slate-500);
-  opacity: 0.5;
-  margin-bottom: 16px;
-}
-.noVehicles p {
-  font-size: 15px;
-  font-weight: 700;
-  color: var(--slate-300);
-}
-.noVehicles span {
-  font-size: 12px;
-  color: var(--slate-400);
-  margin-top: 4px;
-}
-
-.vehicleCardsGrid {
-  display: grid;
-  grid-template-columns: repeat(auto-fill, minmax(220px, 1fr));
-  gap: 16px;
-}
-
-.vehicleCard {
-  background: rgba(255, 255, 255, 0.03);
-  border: 1px solid rgba(255, 255, 255, 0.08);
-  border-radius: 16px;
-  padding: 16px;
-  display: flex;
-  flex-direction: column;
-  justify-content: space-between;
-  gap: 16px;
-  box-shadow: inset 0 1px 1px rgba(255,255,255,0.05);
-  transition: all 0.25s cubic-bezier(0.4, 0, 0.2, 1);
-}
-.vehicleCard:hover {
-  transform: translateY(-2px);
-  border-color: rgba(255, 255, 255, 0.15);
-  background: rgba(255, 255, 255, 0.05);
-}
-.vehicleCard.isDefault {
-  border-color: var(--primary);
-  background: rgba(0, 229, 255, 0.02);
-  box-shadow: 0 0 16px rgba(0, 229, 255, 0.12), inset 0 1px 1px rgba(255,255,255,0.1);
-}
-
-.cardMain {
-  display: flex;
-  justify-content: space-between;
-  align-items: flex-start;
-}
-.cardBadge {
-  font-size: 11px;
-  font-weight: 800;
-  padding: 4px 8px;
-  border-radius: 6px;
-  text-transform: uppercase;
-}
-.cardBadge.gasoline {
-  background: rgba(255, 171, 0, 0.15);
-  color: #ffab00;
-  border: 1px solid rgba(255, 171, 0, 0.25);
-}
-.cardBadge.premium_gasoline {
-  background: rgba(255, 86, 48, 0.15);
-  color: #ff5630;
-  border: 1px solid rgba(255, 86, 48, 0.25);
-}
-.cardBadge.diesel {
-  background: rgba(0, 184, 217, 0.15);
-  color: #00b8d9;
-  border: 1px solid rgba(0, 184, 217, 0.25);
-}
-.cardBadge.lpg {
-  background: rgba(54, 179, 126, 0.15);
-  color: #36b37e;
-  border: 1px solid rgba(54, 179, 126, 0.25);
-}
-
-.efficiency {
-  display: flex;
-  align-items: baseline;
-  gap: 2px;
-}
-.efficiency .num {
-  font-size: 20px;
-  font-weight: 900;
-  color: var(--secondary);
-}
-.efficiency .unit {
-  font-size: 11px;
-  color: var(--slate-400);
-  font-weight: 700;
-}
-
-.cardActions {
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-  border-top: 1px solid rgba(255, 255, 255, 0.05);
-  padding-top: 12px;
-  gap: 8px;
-  flex-wrap: wrap;
-}
-
-.inlineEditForm {
-  display: grid;
-  gap: 10px;
-  border-top: 1px solid rgba(255, 255, 255, 0.05);
-  padding-top: 12px;
-}
-
-.inlineEditForm label {
-  display: grid;
-  gap: 5px;
-}
-
-.inlineEditForm label span {
-  color: var(--slate-400);
-  font-size: 11px;
-  font-weight: 800;
-}
-
-.checkboxRow {
-  align-items: center;
-  display: flex !important;
-  gap: 8px;
-}
-
-.checkboxRow input {
-  width: auto;
-}
-
-.inlineEditActions {
-  display: flex;
-  gap: 8px;
-}
-
-.actionBtn {
-  background: transparent;
-  border: none;
-  cursor: pointer;
-  display: flex;
-  align-items: center;
-  gap: 6px;
-  font-size: 11.5px;
-  font-weight: 700;
-  border-radius: 6px;
-  transition: all 0.2s;
-}
-.setBtn {
-  color: var(--slate-400);
-}
-.setBtn:hover {
-  color: var(--primary);
-}
-
-.defaultLabel {
-  display: flex;
-  align-items: center;
-  gap: 6px;
-  font-size: 11.5px;
-  font-weight: 800;
-  color: var(--primary);
-  text-shadow: 0 0 8px rgba(0, 229, 255, 0.3);
-}
-
-.deleteBtn {
-  color: var(--slate-500);
-  padding: 6px;
-}
-.deleteBtn:hover {
-  color: #ff5630;
-  background: rgba(255, 86, 48, 0.1);
-}
-
-.successText {
-  color: var(--primary);
-  font-weight: 700;
-  font-size: 12.5px;
-}
-</style>
+<style scoped src="../components/vehicles/vehicleWorkspace.css"></style>

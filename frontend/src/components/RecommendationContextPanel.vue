@@ -1,7 +1,9 @@
 <script setup>
+import { computed } from "vue";
 import { Car, CreditCard, Settings } from "@lucide/vue";
+import { getVehiclePresentation } from "./vehicles/vehiclePresentation";
 
-defineProps({
+const props = defineProps({
   isAuthenticated: {
     type: Boolean,
     default: false
@@ -21,6 +23,7 @@ defineProps({
 });
 
 const emit = defineEmits(["go-vehicle", "go-cards"]);
+const vehiclePresentation = computed(() => getVehiclePresentation(props.savedVehicle?.vehicle_type));
 
 const fuelLabels = {
   gasoline: "Gasoline",
@@ -43,14 +46,15 @@ const fuelLabels = {
     <div v-if="isAuthenticated" class="contextGrid">
       <article class="contextItem">
         <div class="contextIcon">
-          <Car :size="18" />
+          <img v-if="savedVehicle" :src="vehiclePresentation.imageUrl" alt="" />
+          <Car v-else :size="18" />
         </div>
         <div>
-          <strong>{{ savedVehicle ? fuelLabels[savedVehicle.fuel_type] || savedVehicle.fuel_type : "No saved vehicle" }}</strong>
+          <strong>{{ savedVehicle ? savedVehicle.name : "No saved vehicle" }}</strong>
           <span>
             {{
               savedVehicle && useSavedVehicle
-                ? `${savedVehicle.fuel_efficiency_kmpl} km/L will be used by the backend`
+                ? `${vehiclePresentation.label} · ${fuelLabels[savedVehicle.fuel_type] || savedVehicle.fuel_type} · ${savedVehicle.fuel_efficiency_kmpl} km/L`
                 : savedVehicle
                   ? "Manual efficiency is active for this quote"
                   : "Add a vehicle to skip manual efficiency entry"

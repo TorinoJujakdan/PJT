@@ -87,9 +87,40 @@
     "VehicleInput": {
       "type": "object",
       "required": [
+        "name",
+        "vehicle_type",
+        "fuel_type",
         "fuel_efficiency_kmpl"
       ],
       "properties": {
+        "name": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 40,
+          "description": "Trimmed user-defined vehicle name; duplicates are allowed.",
+          "example": "출퇴근차"
+        },
+        "vehicle_type": {
+          "type": "string",
+          "enum": [
+            "compact",
+            "sedan",
+            "suv",
+            "large_rv",
+            "sports"
+          ],
+          "example": "sedan"
+        },
+        "fuel_type": {
+          "type": "string",
+          "enum": [
+            "gasoline",
+            "diesel",
+            "lpg",
+            "premium_gasoline"
+          ],
+          "example": "gasoline"
+        },
         "fuel_efficiency_kmpl": {
           "type": "number",
           "minimum": 1,
@@ -422,6 +453,10 @@
             },
             "meta": {
               "type": "object",
+              "required": [
+                "source",
+                "status"
+              ],
               "properties": {
                 "candidate_count": {
                   "type": "integer",
@@ -553,7 +588,7 @@
       "method": "GET",
       "path": "/me/vehicle/",
       "auth": "required",
-      "description": "로그인 사용자의 차량 연비 정보를 조회한다.",
+      "description": "로그인 사용자의 기본 차량 이름, 유형, 유종, 연비 정보를 조회한다.",
       "responses": {
         "200": {
           "$ref": "#/schemas/VehicleInput"
@@ -571,7 +606,7 @@
       "method": "PUT",
       "path": "/me/vehicle/",
       "auth": "required",
-      "description": "로그인 사용자의 차량 연비 정보를 생성 또는 수정한다.",
+      "description": "로그인 사용자의 기본 차량 이름, 유형, 유종, 연비 정보를 생성 또는 수정한다.",
       "request": {
         "$ref": "#/schemas/VehicleInput"
       },
@@ -582,7 +617,7 @@
         "400": {
           "$ref": "#/schemas/ApiError",
           "errorCodes": [
-            "INVALID_FUEL_EFFICIENCY"
+            "INVALID_VEHICLE_PROFILE"
           ]
         }
       }
@@ -724,7 +759,7 @@
       "method": "GET",
       "path": "/stations/geocode/",
       "auth": "optional",
-      "description": "사용자가 입력한 주소 또는 장소 검색어를 기반으로 네이버 Geocoding API 결과를 조회한다. 운영 UX에서는 로컬 프리셋 더미 결과를 노출하지 않는다.",
+      "description": "Search Naver Cloud Maps Geocoding first, then NAVER Developers Local Search when no normalized address result is available.",
       "query": {
         "required": [
           "query"
@@ -732,7 +767,8 @@
         "properties": {
           "query": {
             "type": "string",
-            "example": "강남역"
+            "example": "강남역",
+            "description": "Address, administrative district, building, business, or landmark name."
           }
         }
       },
@@ -764,6 +800,16 @@
                   "source": {
                     "type": "string",
                     "example": "naver_geocode"
+                  },
+                  "road_address": {
+                    "type": "string"
+                  },
+                  "jibun_address": {
+                    "type": "string"
+                  },
+                  "category": {
+                    "type": "string",
+                    "description": "Present only for NAVER Local Search results."
                   }
                 }
               }
@@ -778,8 +824,38 @@
                 "status": {
                   "type": "string",
                   "example": "ok"
+                },
+                "count": {
+                  "type": "integer"
+                },
+                "reason": {
+                  "type": "string"
+                },
+                "fallback_from": {
+                  "type": "string"
+                },
+                "fallback_reason": {
+                  "type": "string"
+                },
+                "fallback_source": {
+                  "type": "string"
+                },
+                "fallback_status": {
+                  "type": "string"
+                },
+                "fallback_count": {
+                  "type": "integer"
                 }
-              }
+              },
+              "metadataVariants": [
+                {"case": "A", "required": ["source", "status", "count"], "source": "naver_geocode", "status": "ok"},
+                {"case": "B", "required": ["source", "status", "count", "fallback_from", "fallback_reason"], "source": "naver_local_search", "status": "ok", "fallback_from": "naver_geocode", "fallback_reason": "GEOCODE_EMPTY"},
+                {"case": "C", "required": ["source", "status", "count", "fallback_from", "fallback_reason"], "source": "naver_local_search", "status": "ok", "fallback_from": "naver_geocode", "fallback_reason": "<geocode reason>"},
+                {"case": "D", "required": ["source", "status", "reason", "fallback_source", "fallback_status", "fallback_reason"], "source": "naver_geocode", "status": "unavailable", "fallback_source": "naver_local_search", "fallback_status": "unavailable"},
+                {"case": "E", "required": ["source", "status", "count", "fallback_source", "fallback_status", "fallback_reason"], "source": "naver_geocode", "status": "ok", "count": 0, "fallback_source": "naver_local_search", "fallback_status": "unavailable"},
+                {"case": "F", "required": ["source", "status", "count", "fallback_source", "fallback_status", "fallback_count"], "source": "naver_geocode", "status": "ok", "count": 0, "fallback_source": "naver_local_search", "fallback_status": "ok", "fallback_count": 0},
+                {"case": "G", "required": ["source", "status", "reason", "fallback_source", "fallback_status", "fallback_count"], "source": "naver_geocode", "status": "unavailable", "fallback_source": "naver_local_search", "fallback_status": "ok", "fallback_count": 0}
+              ]
             }
           }
         },

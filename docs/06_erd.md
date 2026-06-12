@@ -35,6 +35,8 @@ erDiagram
     VEHICLE_PROFILE {
         bigint id PK
         bigint user_id FK
+        string name
+        string vehicle_type
         string fuel_type
         decimal fuel_efficiency_kmpl
         boolean is_default
@@ -143,6 +145,12 @@ erDiagram
 `USER` belongs to the `accounts` domain.
 
 `VEHICLE_PROFILE` belongs to the `vehicles` domain.
+
+`VEHICLE_PROFILE.name` is required, trimmed before persistence, limited to 40 characters, and intentionally non-unique. `vehicle_type` is one of `compact`, `sedan`, `suv`, `large_rv`, or `sports`.
+
+Migration `vehicles.0003_reset_profiles_add_name_vehicle_type` clears only existing `VEHICLE_PROFILE` rows before adding the required identity fields. It preserves users, card data, gas stations, and fuel prices.
+
+Migration `vehicles.0004_vehicleprofile_vehicles_one_default_per_user` enforces at most one default vehicle per user. Default selection changes only through the dedicated set-default API.
 
 `CARD_POLICY`, `USER_CARD`, and `CARD_BENEFIT_SOURCE` belong to the `cards` domain.
 

@@ -2,13 +2,25 @@
   "project": "SmartFuel",
   "version": "v1.1",
   "basePath": "/api/v1",
-  "purpose": "Authenticated user's default vehicle profile.",
+  "purpose": "Authenticated user's vehicle profiles, including vehicle identity and default selection.",
   "schemas": {
     "VehicleProfile": {
       "type": "object",
-      "required": ["fuel_type", "fuel_efficiency_kmpl"],
+      "required": ["name", "vehicle_type", "fuel_type", "fuel_efficiency_kmpl"],
       "properties": {
         "id": { "type": "integer" },
+        "name": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 40,
+          "x-trimmed": true,
+          "x-unique": false,
+          "description": "Required display name. Leading and trailing whitespace is removed; duplicate names are allowed."
+        },
+        "vehicle_type": {
+          "type": "string",
+          "enum": ["compact", "sedan", "suv", "large_rv", "sports"]
+        },
         "fuel_type": {
           "type": "string",
           "enum": ["gasoline", "diesel", "lpg", "premium_gasoline"]
@@ -18,7 +30,11 @@
           "minimum": 1.0,
           "maximum": 50.0
         },
-        "is_default": { "type": "boolean" },
+        "is_default": {
+          "type": "boolean",
+          "readOnly": true,
+          "description": "Changed only through the set-default endpoint."
+        },
         "created_at": { "type": "string" },
         "updated_at": { "type": "string" }
       }
@@ -52,6 +68,87 @@
       },
       "errors": {
         "400": ["INVALID_VEHICLE_PROFILE"]
+      }
+    },
+    {
+      "method": "GET",
+      "path": "/me/vehicles/",
+      "auth": "required",
+      "response200": {
+        "properties": {
+          "vehicles": {
+            "type": "array",
+            "items": { "$ref": "#/schemas/VehicleProfile" }
+          }
+        }
+      }
+    },
+    {
+      "method": "POST",
+      "path": "/me/vehicles/",
+      "auth": "required",
+      "request": {
+        "$ref": "#/schemas/VehicleProfile"
+      },
+      "response201": {
+        "properties": {
+          "vehicle": { "$ref": "#/schemas/VehicleProfile" }
+        }
+      },
+      "errors": {
+        "400": ["INVALID_VEHICLE_PROFILE"]
+      }
+    },
+    {
+      "method": "PATCH",
+      "path": "/me/vehicles/{vehicle_id}/",
+      "auth": "required",
+      "partial": true,
+      "request": {
+        "$ref": "#/schemas/VehicleProfile"
+      },
+      "response200": {
+        "properties": {
+          "vehicle": { "$ref": "#/schemas/VehicleProfile" }
+        }
+      },
+      "errors": {
+        "400": ["INVALID_VEHICLE_PROFILE"],
+        "404": ["not found"]
+      }
+    },
+    {
+      "method": "PUT",
+      "path": "/me/vehicles/{vehicle_id}/",
+      "auth": "required",
+      "request": {
+        "$ref": "#/schemas/VehicleProfile"
+      },
+      "response200": {
+        "properties": {
+          "vehicle": { "$ref": "#/schemas/VehicleProfile" }
+        }
+      },
+      "errors": {
+        "400": ["INVALID_VEHICLE_PROFILE"],
+        "404": ["not found"]
+      }
+    },
+    {
+      "method": "DELETE",
+      "path": "/me/vehicles/{vehicle_id}/",
+      "auth": "required",
+      "response204": null,
+      "notes": "If the deleted row was the default, the first remaining vehicle becomes the default."
+    },
+    {
+      "method": "POST",
+      "path": "/me/vehicles/{vehicle_id}/set-default/",
+      "auth": "required",
+      "response200": {
+        "properties": {
+          "vehicle": { "$ref": "#/schemas/VehicleProfile" }
+        }
       }
     }
   ]

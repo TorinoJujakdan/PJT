@@ -1,0 +1,5 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 260 120" role="img" aria-label="소형차 실루엣">
+  <path fill="currentColor" d="M24 67c3-11 9-18 20-21l35-8c12-17 27-25 50-25h23c19 0 35 9 47 27l31 8c9 2 15 9 17 20l2 16h-20a24 24 0 0 0-47 0H83a24 24 0 0 0-47 0H17l1-10c1-3 3-5 6-7Zm68-29h84c-9-12-19-17-31-17h-18c-15 0-26 5-35 17Z"/>
+  <circle cx="59" cy="84" r="17" fill="none" stroke="currentColor" stroke-width="8"/>
+  <circle cx="205" cy="84" r="17" fill="none" stroke="currentColor" stroke-width="8"/>
+</svg>

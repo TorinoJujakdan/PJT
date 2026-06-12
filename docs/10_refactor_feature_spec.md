@@ -33,8 +33,8 @@ SmartFuel은 사용자의 현재 위치, 차량 연비, 주유량, 보유 카드
 | F103 | accounts | 로그아웃 | 로그인 사용자는 세션을 종료할 수 있다. | 필수 |
 | F104 | accounts | 현재 사용자 조회 | 프론트는 현재 로그인 상태와 사용자 정보를 조회할 수 있다. | 필수 |
 | F105 | accounts | 회원정보 수정 | 사용자는 email, username 등 기본 정보를 수정할 수 있다. | 선택 |
-| F106 | vehicles | 차량 프로필 생성/수정 | 사용자는 기본 연료 타입과 연비 km/L를 저장할 수 있다. | 필수 |
-| F107 | vehicles | 차량 프로필 조회 | 추천 요청 전 저장된 차량 정보를 불러올 수 있다. | 필수 |
+| F106 | vehicles | 차량 프로필 생성/수정 | 사용자는 필수 차량 이름, 차량 유형, 연료 타입, 연비 km/L를 저장할 수 있다. 이름은 앞뒤 공백을 제거하고 40자 이하로 저장하며 중복을 허용한다. | 필수 |
+| F107 | vehicles | 차량 프로필 조회 | 추천 요청 전 기본 차량 또는 사용자가 저장한 전체 차량 목록을 불러올 수 있다. | 필수 |
 | F108 | recommendations | 저장 차량 기반 추천 | 로그인 사용자가 추천 요청에서 `vehicle`을 생략하면 저장된 차량 프로필을 사용한다. | 필수 |
 | F109 | recommendations | 비로그인 추천 유지 | 비로그인 사용자는 기존처럼 요청 본문에 차량 연비를 직접 입력해 추천받을 수 있다. | 필수 |
 | F110 | cards | 내 카드 목록 조회 | 로그인 사용자는 본인이 등록한 카드 정책만 조회할 수 있다. | 필수 |
@@ -69,6 +69,12 @@ SmartFuel은 사용자의 현재 위치, 차량 연비, 주유량, 보유 카드
 | PATCH | `/api/v1/accounts/me/` | required | 회원정보 수정 |
 | GET | `/api/v1/me/vehicle/` | required | 내 차량 프로필 조회 |
 | PUT | `/api/v1/me/vehicle/` | required | 내 차량 프로필 생성/수정 |
+| GET | `/api/v1/me/vehicles/` | required | 내 차량 목록 조회 |
+| POST | `/api/v1/me/vehicles/` | required | 내 차량 추가 |
+| PATCH | `/api/v1/me/vehicles/{vehicle_id}/` | required | 내 차량 일부 수정 |
+| PUT | `/api/v1/me/vehicles/{vehicle_id}/` | required | 내 차량 전체 수정 |
+| DELETE | `/api/v1/me/vehicles/{vehicle_id}/` | required | 내 차량 삭제 |
+| POST | `/api/v1/me/vehicles/{vehicle_id}/set-default/` | required | 기본 차량 지정 |
 | GET | `/api/v1/me/cards/` | required | 내 카드 목록 조회 |
 | POST | `/api/v1/me/cards/` | required | 카드 등록 |
 | PATCH | `/api/v1/me/cards/{card_id}/` | required | 카드 수정 |
@@ -94,6 +100,8 @@ SmartFuel은 사용자의 현재 위치, 차량 연비, 주유량, 보유 카드
 | 필드 | 타입 | 설명 |
 | --- | --- | --- |
 | `user` | ForeignKey | Django User와 연결 |
+| `name` | CharField(40) | 필수 차량 이름. 앞뒤 공백 제거, 40자 이하, 중복 허용 |
+| `vehicle_type` | CharField | `compact`, `sedan`, `suv`, `large_rv`, `sports` 중 하나 |
 | `fuel_type` | CharField | `gasoline`, `diesel`, `lpg`, `premium_gasoline` 중 하나 |
 | `fuel_efficiency_kmpl` | DecimalField | 차량 연비. 허용 범위는 1.0 이상 50.0 이하 |
 | `is_default` | BooleanField | 기본 차량 여부 |
@@ -114,7 +122,7 @@ SmartFuel은 사용자의 현재 위치, 차량 연비, 주유량, 보유 카드
 | `LoginView` | 로그인 화면 |
 | `SignupView` | 회원가입 화면 |
 | `ProfileView` | 내 정보, 차량/카드 관리 진입점 |
-| `VehicleView` | 차량 연비와 연료 타입 저장/수정 화면 |
+| `VehicleView` | 차량 이름, 차량 유형, 연료 타입, 연비를 등록/수정하고 기본 차량을 선택하는 화면 |
 | `CardsView` | 카드 목록/등록/수정/삭제 화면 |
 | 공통 네비게이션 | 로그인 상태에 따라 메뉴와 안내 문구를 변경한다. |
 
@@ -143,6 +151,16 @@ SmartFuel은 사용자의 현재 위치, 차량 연비, 주유량, 보유 카드
 8. 추천 화면 UX 정리
 9. 문서와 README 갱신
 10. 전체 테스트와 빌드 검증
+
+## 10.1 차량 이름/유형 및 초기화 구현 규칙
+
+- `VehicleProfile.name`은 필수이며 저장 전에 앞뒤 공백을 제거한다.
+- 차량 이름은 최대 40자이고 고유값이 아니다. 같은 사용자를 포함해 중복 이름을 허용한다.
+- `VehicleProfile.vehicle_type`은 `compact`, `sedan`, `suv`, `large_rv`, `sports` 중 하나여야 한다.
+- 프론트엔드는 각 차량 유형을 번들된 정적 SVG 실루엣에 매핑한다. 외부 이미지 URL이나 런타임 이미지 검색을 사용하지 않는다.
+- 알 수 없는 차량 유형의 표시 fallback은 `sedan` 실루엣이다.
+- 마이그레이션 `vehicles.0003_reset_profiles_add_name_vehicle_type`은 기존 `VehicleProfile` 행만 삭제한 뒤 필수 필드를 추가한다.
+- 위 초기화는 사용자, 카드, 주유소, 유가 데이터에 영향을 주지 않는다.
 
 ---
 
