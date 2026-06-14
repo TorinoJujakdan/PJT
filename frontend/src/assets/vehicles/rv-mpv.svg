@@ -1,0 +1,7 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 320 180" role="img" aria-label="RV MPV 미니밴">
+  <defs><linearGradient id="bg" x1="0" y1="0" x2="1" y2="1"><stop stop-color="#ffa10a"/><stop offset="1" stop-color="#f18700"/></linearGradient></defs>
+  <rect x="5" y="5" width="310" height="170" rx="22" fill="url(#bg)"/>
+  <path fill="#fff" d="M51 109V58c0-14 10-23 25-23h120c15 0 28 5 39 15l34 31 23 8c12 4 18 13 18 25v9H51v-14Zm31-63v37h54V46H82Zm64 0v37h49V46h-49Zm59 2v35h49l-28-26c-6-5-13-8-21-9Z"/>
+  <circle cx="98" cy="120" r="25" fill="#fff"/><circle cx="98" cy="120" r="13" fill="#f18700"/>
+  <circle cx="255" cy="120" r="25" fill="#fff"/><circle cx="255" cy="120" r="13" fill="#f18700"/>
+</svg>

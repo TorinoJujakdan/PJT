@@ -1,35 +1,71 @@
 export const VEHICLE_NAME_MAX_LENGTH = 40;
 
+export const VEHICLE_FUEL_LABELS = Object.freeze({
+  gasoline: "휘발유",
+  diesel: "경유",
+  lpg: "LPG",
+  premium_gasoline: "고급 휘발유"
+});
+
+export const VEHICLE_FUEL_PRICE_UNITS = Object.freeze({
+  gasoline: 1650,
+  diesel: 1500,
+  lpg: 1000,
+  premium_gasoline: 1850
+});
+
+export function getVehicleFuelPriceUnit(type) {
+  return VEHICLE_FUEL_PRICE_UNITS[type] ?? VEHICLE_FUEL_PRICE_UNITS.gasoline;
+}
+
+// These are direct pixel crops from the supplied car_design.png. Keeping them
+// in this shared catalog guarantees that every vehicle surface uses the same
+// original artwork without recreating or restyling the silhouettes.
 export const VEHICLE_TYPES = Object.freeze([
-  {
-    value: "compact",
-    label: "소형차",
-    description: "도심 주행에 알맞은 작은 차체",
-    imageUrl: new URL("../../assets/vehicles/compact.svg", import.meta.url).href
-  },
   {
     value: "sedan",
     label: "세단",
-    description: "균형 잡힌 기본 승용차 형태",
-    imageUrl: new URL("../../assets/vehicles/sedan.svg", import.meta.url).href
+    imageUrl: new URL("../../assets/vehicles/sedan.png", import.meta.url).href
   },
   {
     value: "suv",
     label: "SUV",
-    description: "높은 차체와 넉넉한 적재 공간",
-    imageUrl: new URL("../../assets/vehicles/suv.svg", import.meta.url).href
+    imageUrl: new URL("../../assets/vehicles/suv.png", import.meta.url).href
   },
   {
-    value: "large_rv",
-    label: "대형/RV",
-    description: "카니발처럼 큰 다인승 차량",
-    imageUrl: new URL("../../assets/vehicles/large-rv.svg", import.meta.url).href
+    value: "rv_mpv",
+    label: "RV / MPV (미니밴)",
+    imageUrl: new URL("../../assets/vehicles/rv-mpv.png", import.meta.url).href
   },
   {
-    value: "sports",
-    label: "스포츠카",
-    description: "낮고 날렵한 고성능 차체",
-    imageUrl: new URL("../../assets/vehicles/sports.svg", import.meta.url).href
+    value: "sports_coupe",
+    label: "스포츠카 / 쿠페",
+    imageUrl: new URL("../../assets/vehicles/sports-coupe.png", import.meta.url).href
+  },
+  {
+    value: "hatchback",
+    label: "해치백",
+    imageUrl: new URL("../../assets/vehicles/hatchback.png", import.meta.url).href
+  },
+  {
+    value: "wagon",
+    label: "왜건",
+    imageUrl: new URL("../../assets/vehicles/wagon.png", import.meta.url).href
+  },
+  {
+    value: "convertible",
+    label: "컨버터블 / 로드스터",
+    imageUrl: new URL("../../assets/vehicles/convertible.png", import.meta.url).href
+  },
+  {
+    value: "pickup",
+    label: "픽업트럭",
+    imageUrl: new URL("../../assets/vehicles/pickup.png", import.meta.url).href
+  },
+  {
+    value: "micro_city",
+    label: "경차 / 초소형차",
+    imageUrl: new URL("../../assets/vehicles/micro-city.png", import.meta.url).href
   }
 ]);
 
@@ -61,17 +97,12 @@ export function buildVehiclePayload(source) {
     throw new Error("연비는 1.0~50.0km/L 범위로 입력해 주세요.");
   }
 
-  const payload = {
+  return {
     name: normalizeVehicleName(source.name),
     vehicle_type: presentation.value,
     fuel_type: source.fuel_type,
     fuel_efficiency_kmpl: efficiency
   };
-
-  if (typeof source.is_default === "boolean") {
-    payload.is_default = source.is_default;
-  }
-  return payload;
 }
 
 export function getVehicleSelectorLabel(vehicle) {

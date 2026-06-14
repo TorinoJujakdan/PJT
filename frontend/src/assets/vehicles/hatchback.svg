@@ -1,0 +1,8 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 320 180" role="img" aria-label="해치백">
+  <defs><linearGradient id="bg" x1="0" y1="0" x2="1" y2="1"><stop stop-color="#a43cbb"/><stop offset="1" stop-color="#84279f"/></linearGradient></defs>
+  <rect x="5" y="5" width="310" height="170" rx="22" fill="url(#bg)"/>
+  <path fill="#fff" d="M52 111V81l32-9 25-29c6-7 14-10 24-10h65c15 0 28 6 38 17l25 27 26 10c10 4 16 12 16 23v13H52v-12Zm69-69L96 72h54V42h-29Zm39 0v30h84l-23-23c-5-5-13-7-22-7h-39Z"/>
+  <path fill="#fff" d="m82 72-17-25-19-12 25 3 29 28-18 6Z"/>
+  <circle cx="101" cy="120" r="25" fill="#fff"/><circle cx="101" cy="120" r="13" fill="#84279f"/>
+  <circle cx="254" cy="120" r="25" fill="#fff"/><circle cx="254" cy="120" r="13" fill="#84279f"/>
+</svg>

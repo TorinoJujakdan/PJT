@@ -13,10 +13,7 @@ class VehicleProfileResetMigrationTests(TransactionTestCase):
             "stations",
             "0002_rename_stations_fu_fuel_ty_e56c8c_idx_stations_fu_fuel_ty_788131_idx_and_more",
         ),
-        (
-            "vehicles",
-            "0002_rename_vehicles_ve_user_id_9b901a_idx_vehicles_ve_user_id_24c28e_idx",
-        ),
+        ("vehicles", "0004_vehicleprofile_vehicles_one_default_per_user"),
     ]
     migrate_to = [
         ("cards", "0003_cardingestiontask"),
@@ -24,7 +21,7 @@ class VehicleProfileResetMigrationTests(TransactionTestCase):
             "stations",
             "0002_rename_stations_fu_fuel_ty_e56c8c_idx_stations_fu_fuel_ty_788131_idx_and_more",
         ),
-        ("vehicles", "0004_vehicleprofile_vehicles_one_default_per_user"),
+        ("vehicles", "0005_reset_profiles_expand_vehicle_types"),
     ]
 
     def setUp(self):
@@ -36,10 +33,13 @@ class VehicleProfileResetMigrationTests(TransactionTestCase):
         user = old_apps.get_model("auth", "User").objects.create(username="migration-user")
         old_apps.get_model("vehicles", "VehicleProfile").objects.create(
             user_id=user.id,
+            name="Legacy vehicle",
+            vehicle_type="compact",
             fuel_type="gasoline",
             fuel_efficiency_kmpl="12.0",
             is_default=True,
         )
+        self.assertEqual(old_apps.get_model("vehicles", "VehicleProfile").objects.count(), 1)
         station = old_apps.get_model("stations", "GasStation").objects.create(
             external_station_id="migration-station",
             name="Migration Station",
@@ -101,4 +101,22 @@ class VehicleProfileResetMigrationTests(TransactionTestCase):
         self.assertEqual(
             self.apps.get_model("cards", "CardCatalog").objects.count(),
             self.preserved_counts["catalog"],
+        )
+
+    def test_vehicle_type_choices_are_the_nine_canonical_values(self):
+        field = self.apps.get_model("vehicles", "VehicleProfile")._meta.get_field("vehicle_type")
+
+        self.assertEqual(
+            tuple(value for value, _label in field.choices),
+            (
+                "sedan",
+                "suv",
+                "rv_mpv",
+                "sports_coupe",
+                "hatchback",
+                "wagon",
+                "convertible",
+                "pickup",
+                "micro_city",
+            ),
         )

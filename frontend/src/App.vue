@@ -27,6 +27,7 @@ import FloatingDetailCard from "./components/FloatingDetailCard.vue";
 import AuthModal from "./components/AuthModal.vue";
 import CardsModalShell from "./components/cards/CardsModalShell.vue";
 import VehicleModalShell from "./components/vehicles/VehicleModalShell.vue";
+import { getVehicleFuelPriceUnit } from "./components/vehicles/vehiclePresentation";
 
 // Views Import for Modal overlay inclusion
 import VehicleView from "./views/VehicleView.vue";
@@ -456,13 +457,6 @@ function selectedCards() {
   ];
 }
 
-function getFuelPriceUnit(type) {
-  if (type === "diesel") return 1500;
-  if (type === "lpg") return 1000;
-  if (type === "premium_gasoline") return 1850;
-  return 1650; // gasoline
-}
-
 // 실시간 최적화 추천 요청 실행 함수
 async function requestRecommendation() {
   if (!location.latitude || !location.longitude) {
@@ -473,7 +467,7 @@ async function requestRecommendation() {
     return;
   }
 
-  const priceUnit = getFuelPriceUnit(fuel.fuel_type);
+  const priceUnit = getVehicleFuelPriceUnit(fuel.fuel_type);
   const calculatedLiters = Number((fuel.target_amount / priceUnit).toFixed(2));
 
   const request = {
@@ -570,11 +564,16 @@ onMounted(async () => {
 
 <template>
   <div class="appShellUnified">
+    <div
+      class="appBackground"
+      :inert="activeModal === 'vehicle' || activeModal === 'cards'"
+      :aria-hidden="activeModal === 'vehicle' || activeModal === 'cards' ? 'true' : undefined"
+    >
     <!-- 상단 글래스모피즘 헤더 바 -->
     <header class="topBarUnified">
       <div class="logoContainer" @click="selectedStationId = null" title="새로고침">
         <Fuel :size="22" style="color: var(--primary);" />
-        <h1>SmartFuel <span style="font-weight: 300; font-size: 14px;">실제 비용 최적화 지도</span></h1>
+        <h1>SmartFuel</h1>
       </div>
 
       <div class="navLinks">
@@ -668,6 +667,7 @@ onMounted(async () => {
         />
       </transition>
     </main>
+    </div>
 
     <!-- ==========================================
          글래스모피즘 오버레이 모달 시스템
@@ -704,7 +704,7 @@ onMounted(async () => {
           </button>
         </header>
         
-        <div v-if="activeRecommendation" class="resultSurface" style="border: none; padding: 0; box-shadow: none;">
+        <div v-if="activeRecommendation" style="border: none; padding: 0; box-shadow: none;">
           <div class="resultTop" style="margin-bottom: 16px;">
             <div>
               <p class="eyebrow" style="color: var(--primary);">{{ activeRecommendation.station.brand }}</p>

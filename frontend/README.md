@@ -27,8 +27,8 @@ Display recommendation results from the backend. Do not recompute ranking in the
 ## Vehicle Profiles
 
 - Vehicle names are required, trimmed before submission, non-unique, and limited to 40 characters.
-- Supported `vehicle_type` values are `compact`, `sedan`, `suv`, `large_rv`, and `sports`.
-- `frontend/src/components/vehicles/vehiclePresentation.js` maps each type to a bundled static SVG silhouette under `frontend/src/assets/vehicles/`.
+- Supported `vehicle_type` values are `sedan`, `suv`, `rv_mpv`, `sports_coupe`, `hatchback`, `wagon`, `convertible`, `pickup`, and `micro_city`.
+- `frontend/src/components/vehicles/vehiclePresentation.js` maps each type to a bundled independent SVG card under `frontend/src/assets/vehicles/`, based on the project `car_design.png` reference.
 - The UI uses the sedan presentation as the display fallback for an unknown type.
 - The vehicle workspace supports list, create, edit, delete, and default-vehicle selection.
 

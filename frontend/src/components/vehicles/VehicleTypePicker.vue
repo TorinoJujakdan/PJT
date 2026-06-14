@@ -13,25 +13,42 @@ defineProps({
 });
 
 const emit = defineEmits(["update:modelValue"]);
+
+function selectByKeyboard(event, index) {
+  const keys = ["ArrowRight", "ArrowDown", "ArrowLeft", "ArrowUp", "Home", "End"];
+  if (!keys.includes(event.key)) return;
+
+  event.preventDefault();
+  const options = [...event.currentTarget.parentElement.querySelectorAll('[role="radio"]')];
+  const lastIndex = options.length - 1;
+  let nextIndex = index;
+
+  if (event.key === "ArrowRight" || event.key === "ArrowDown") nextIndex = index === lastIndex ? 0 : index + 1;
+  if (event.key === "ArrowLeft" || event.key === "ArrowUp") nextIndex = index === 0 ? lastIndex : index - 1;
+  if (event.key === "Home") nextIndex = 0;
+  if (event.key === "End") nextIndex = lastIndex;
+
+  emit("update:modelValue", VEHICLE_TYPES[nextIndex].value);
+  options[nextIndex]?.focus();
+}
 </script>
 
 <template>
   <div class="typePicker" :class="{ compact }" role="radiogroup" aria-label="차량 유형">
     <button
-      v-for="type in VEHICLE_TYPES"
+      v-for="(type, index) in VEHICLE_TYPES"
       :key="type.value"
       class="typeOption"
       :class="{ selected: modelValue === type.value }"
       type="button"
       role="radio"
       :aria-checked="modelValue === type.value"
+      :tabindex="modelValue === type.value ? 0 : -1"
       @click="emit('update:modelValue', type.value)"
+      @keydown="selectByKeyboard($event, index)"
     >
-      <img :src="type.imageUrl" alt="" aria-hidden="true" />
-      <span class="typeCopy">
-        <strong>{{ type.label }}</strong>
-        <small v-if="!compact">{{ type.description }}</small>
-      </span>
+      <img :src="type.imageUrl" alt="" aria-hidden="true" :class="{ flipped: type.value === 'sports_coupe' }" />
+      <strong>{{ type.label }}</strong>
     </button>
   </div>
 </template>
@@ -39,85 +56,97 @@ const emit = defineEmits(["update:modelValue"]);
 <style scoped>
 .typePicker {
   display: grid;
-  grid-template-columns: 1fr;
-  gap: 10px;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 14px 12px;
 }
 
 .typeOption {
   min-width: 0;
-  padding: 12px;
-  border: 1px solid #d9e2ec;
-  border-radius: 14px;
-  background: #fff;
-  color: #102a43;
+  padding: 6px 6px 8px;
+  border: 2px solid transparent;
+  border-radius: 18px;
+  background: transparent;
+  color: var(--slate-900);
   display: grid;
-  grid-template-columns: 74px minmax(0, 1fr);
-  align-items: center;
-  gap: 10px;
-  text-align: left;
+  gap: 6px;
+  text-align: center;
   cursor: pointer;
-  transition: border-color 160ms ease, box-shadow 160ms ease, transform 160ms ease;
+  transition: border-color 160ms ease, box-shadow 160ms ease, transform 160ms ease, background 160ms ease;
 }
 
 .typeOption:hover {
-  border-color: #7dd3fc;
-  transform: translateY(-1px);
+  transform: translateY(-2px);
 }
 
 .typeOption:focus-visible {
-  outline: 3px solid rgba(14, 165, 233, 0.3);
-  outline-offset: 2px;
+  outline: 3px solid rgba(15, 107, 79, 0.45);
+  outline-offset: 3px;
 }
 
 .typeOption.selected {
-  border-color: #0284c7;
-  background: #f0f9ff;
-  box-shadow: 0 0 0 2px rgba(2, 132, 199, 0.12);
+  border-color: var(--primary);
+  background: rgba(15, 107, 79, 0.05);
+  box-shadow: 0 0 0 3px rgba(15, 107, 79, 0.1), 0 12px 24px rgba(15, 23, 42, 0.1);
 }
 
 .typeOption img {
+  display: block;
   width: 100%;
-  height: 44px;
+  aspect-ratio: 640 / 394;
   object-fit: contain;
-  color: #0f172a;
+  border-radius: 13px;
 }
 
-.typeCopy {
-  display: grid;
-  gap: 3px;
+.typeOption img.flipped {
+  transform: scaleX(-1);
 }
 
-.typeCopy strong {
-  font-size: 13px;
-  word-break: keep-all;
-}
-
-.typeCopy small {
-  color: #627d98;
-  font-size: 11px;
-  line-height: 1.35;
+.typeOption strong {
+  padding-inline: 5px;
+  color: var(--slate-900);
+  font-size: 12px;
+  line-height: 1.3;
   word-break: keep-all;
 }
 
 .compact {
-  grid-template-columns: repeat(5, minmax(0, 1fr));
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 9px 7px;
 }
 
 .compact .typeOption {
-  grid-template-columns: 1fr;
-  justify-items: center;
-  padding: 8px;
-  text-align: center;
+  border-radius: 13px;
 }
 
 .compact .typeOption img {
-  height: 30px;
+  border-radius: 10px;
 }
 
-@media (max-width: 560px) {
+@media (max-width: 620px) {
+  .typePicker {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 12px 9px;
+  }
+
+  .compact {
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+  }
+}
+
+@media (max-width: 380px) {
   .typePicker,
   .compact {
-    grid-template-columns: 1fr;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .typeOption {
+    transition: none;
+  }
+
+  .typeOption:hover {
+    transform: none;
   }
 }
 </style>

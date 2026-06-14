@@ -31,7 +31,9 @@ const effectivePricePerLiter = computed(() => {
 // 네이버 지도 검색 / 길찾기 연동 링크 생성
 const mapSearchUrl = computed(() => {
   if (!station.value.name) return "#";
-  const query = `${station.value.name} ${station.value.address || ''}`;
+  const addr = station.value.address || '';
+  const isUsableAddress = addr && addr !== '주소 정보 없음';
+  const query = isUsableAddress ? `${station.value.name} ${addr}` : station.value.name;
   return `https://map.naver.com/v5/search/${encodeURIComponent(query)}`;
 });
 

@@ -1,0 +1,7 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 320 180" role="img" aria-label="스포츠카 쿠페">
+  <defs><linearGradient id="bg" x1="0" y1="0" x2="1" y2="1"><stop stop-color="#f4473f"/><stop offset="1" stop-color="#df2e2b"/></linearGradient></defs>
+  <rect x="5" y="5" width="310" height="170" rx="22" fill="url(#bg)"/>
+  <path fill="#fff" d="M47 113c2-14 11-23 26-27l54-14 28-24c8-7 17-10 29-10h28c17 0 31 5 44 15l18 14 28 7 13 31-4 17H48l-1-9Zm90-42h104l-12-9c-8-7-18-10-30-10h-18c-9 0-17 3-24 9l-20 10Z"/>
+  <circle cx="101" cy="119" r="24" fill="#fff"/><circle cx="101" cy="119" r="13" fill="#df2e2b"/>
+  <circle cx="252" cy="119" r="24" fill="#fff"/><circle cx="252" cy="119" r="13" fill="#df2e2b"/>
+</svg>

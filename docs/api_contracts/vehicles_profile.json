@@ -19,7 +19,7 @@
         },
         "vehicle_type": {
           "type": "string",
-          "enum": ["compact", "sedan", "suv", "large_rv", "sports"]
+          "enum": ["sedan", "suv", "rv_mpv", "sports_coupe", "hatchback", "wagon", "convertible", "pickup", "micro_city"]
         },
         "fuel_type": {
           "type": "string",

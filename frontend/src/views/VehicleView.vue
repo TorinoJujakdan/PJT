@@ -6,6 +6,7 @@ import { addVehicle, deleteVehicle, setDefaultVehicle, updateVehicle } from "../
 import VehicleTypePicker from "../components/vehicles/VehicleTypePicker.vue";
 import {
   VEHICLE_NAME_MAX_LENGTH,
+  VEHICLE_FUEL_LABELS,
   buildVehiclePayload,
   getVehiclePresentation
 } from "../components/vehicles/vehiclePresentation";
@@ -29,8 +30,7 @@ const editForm = reactive({
   name: "",
   vehicle_type: "sedan",
   fuel_type: "gasoline",
-  fuel_efficiency_kmpl: 10,
-  is_default: false
+  fuel_efficiency_kmpl: 10
 });
 const editingId = ref(null);
 const loadingAction = ref(null);
@@ -38,12 +38,7 @@ const createError = ref("");
 const editError = ref("");
 const successMessage = ref("");
 
-const fuelLabels = Object.freeze({
-  gasoline: "휘발유",
-  diesel: "경유",
-  lpg: "LPG",
-  premium_gasoline: "고급 휘발유"
-});
+const fuelLabels = VEHICLE_FUEL_LABELS;
 
 function errorMessage(error, fallback) {
   const details = error?.payload?.details;
@@ -55,6 +50,8 @@ function errorMessage(error, fallback) {
 }
 
 async function handleAddVehicle() {
+  if (loadingAction.value) return;
+
   createError.value = "";
   successMessage.value = "";
   let payload;
@@ -88,8 +85,7 @@ function startEdit(vehicle) {
     name: vehicle.name,
     vehicle_type: vehicle.vehicle_type,
     fuel_type: vehicle.fuel_type,
-    fuel_efficiency_kmpl: Number(vehicle.fuel_efficiency_kmpl),
-    is_default: Boolean(vehicle.is_default)
+    fuel_efficiency_kmpl: Number(vehicle.fuel_efficiency_kmpl)
   });
 }
 
@@ -99,6 +95,8 @@ function cancelEdit() {
 }
 
 async function handleUpdate(vehicleId) {
+  if (loadingAction.value) return;
+
   editError.value = "";
   let payload;
   try {
@@ -122,6 +120,8 @@ async function handleUpdate(vehicleId) {
 }
 
 async function handleSetDefault(vehicleId) {
+  if (loadingAction.value) return;
+
   loadingAction.value = `default-${vehicleId}`;
   try {
     await setDefaultVehicle(vehicleId);
@@ -135,6 +135,8 @@ async function handleSetDefault(vehicleId) {
 }
 
 async function handleDelete(vehicle) {
+  if (loadingAction.value) return;
+
   if (!confirm(`‘${vehicle.name}’ 차량을 삭제할까요?`)) return;
   loadingAction.value = `delete-${vehicle.id}`;
   try {
@@ -153,19 +155,24 @@ async function handleDelete(vehicle) {
   <main class="vehicleWorkspace">
     <section class="garagePanel" aria-labelledby="garage-title">
       <header class="sectionHeader">
-        <div>
+        <div class="sectionTitleGroup">
           <p class="eyebrow">MY GARAGE</p>
-          <h3 id="garage-title">등록 차량 <span>{{ vehicles.length }}</span></h3>
+          <div class="titleRow">
+            <h3 id="garage-title">등록 차량</h3>
+            <span class="countBadge" :aria-label="`등록 차량 ${vehicles.length}대`">{{ vehicles.length }}</span>
+          </div>
         </div>
-        <p>차량 이름과 실루엣으로 여러 차량을 빠르게 구분할 수 있습니다.</p>
+        <p>저장한 차량의 연료와 연비를 한곳에서 관리하고 추천 조건에 바로 적용하세요.</p>
       </header>
 
       <div v-if="!vehicles.length" class="emptyGarage">
         <div class="emptySilhouette">
           <img :src="getVehiclePresentation('sedan').imageUrl" alt="" />
         </div>
-        <strong>아직 등록한 차량이 없습니다</strong>
-        <span>오른쪽 등록 양식에서 첫 차량을 추가해 보세요.</span>
+        <div>
+          <strong>아직 등록한 차량이 없습니다</strong>
+          <span>차량을 등록하면 추천 화면에서 연비를 다시 입력하지 않아도 됩니다.</span>
+        </div>
       </div>
 
       <div v-else class="vehicleList">
@@ -177,26 +184,44 @@ async function handleDelete(vehicle) {
         >
           <template v-if="editingId !== vehicle.id">
             <div class="vehicleVisual">
-              <span v-if="vehicle.is_default" class="defaultBadge"><Star :size="13" /> 대표 차량</span>
+              <span v-if="vehicle.is_default" class="defaultBadge"><Star :size="13" fill="currentColor" /> 대표 차량</span>
               <img :src="getVehiclePresentation(vehicle.vehicle_type).imageUrl" alt="" />
             </div>
             <div class="vehicleInfo">
-              <div>
-                <p>{{ getVehiclePresentation(vehicle.vehicle_type).label }}</p>
+              <div class="vehicleIdentity">
+                <p class="vehicleTypeLabel">{{ getVehiclePresentation(vehicle.vehicle_type).label }}</p>
                 <h4>{{ vehicle.name }}</h4>
               </div>
-              <dl>
-                <div><dt>연료</dt><dd>{{ fuelLabels[vehicle.fuel_type] || vehicle.fuel_type }}</dd></div>
-                <div><dt>복합 연비</dt><dd>{{ Number(vehicle.fuel_efficiency_kmpl).toFixed(1) }} km/L</dd></div>
+              <dl class="vehicleStats">
+                <div>
+                  <dt>연료</dt>
+                  <dd>{{ fuelLabels[vehicle.fuel_type] || vehicle.fuel_type }}</dd>
+                </div>
+                <div>
+                  <dt>복합 연비</dt>
+                  <dd>{{ Number(vehicle.fuel_efficiency_kmpl).toFixed(1) }} <span>km/L</span></dd>
+                </div>
               </dl>
             </div>
             <div class="vehicleActions">
-              <button v-if="!vehicle.is_default" type="button" @click="handleSetDefault(vehicle.id)">
-                <Check :size="15" /> 대표로 설정
+              <button
+                v-if="!vehicle.is_default"
+                type="button"
+                :disabled="Boolean(loadingAction)"
+                @click="handleSetDefault(vehicle.id)"
+              >
+                <Check :size="15" /> {{ loadingAction === `default-${vehicle.id}` ? "변경 중..." : "대표로 설정" }}
               </button>
-              <button type="button" @click="startEdit(vehicle)"><Pencil :size="15" /> 수정</button>
-              <button class="danger" type="button" @click="handleDelete(vehicle)">
-                <Trash2 :size="15" /> 삭제
+              <button type="button" :disabled="Boolean(loadingAction)" @click="startEdit(vehicle)">
+                <Pencil :size="15" /> 수정
+              </button>
+              <button
+                class="danger"
+                type="button"
+                :disabled="Boolean(loadingAction)"
+                @click="handleDelete(vehicle)"
+              >
+                <Trash2 :size="15" /> {{ loadingAction === `delete-${vehicle.id}` ? "삭제 중..." : "삭제" }}
               </button>
             </div>
           </template>
@@ -204,7 +229,7 @@ async function handleDelete(vehicle) {
           <form v-else class="editForm" @submit.prevent="handleUpdate(vehicle.id)">
             <div class="formHeading">
               <strong>차량 정보 수정</strong>
-              <button type="button" aria-label="수정 취소" @click="cancelEdit"><X :size="17" /></button>
+              <button type="button" aria-label="수정 취소" :disabled="Boolean(loadingAction)" @click="cancelEdit"><X :size="17" /></button>
             </div>
             <label>
               <span>차량 이름</span>
@@ -216,7 +241,7 @@ async function handleDelete(vehicle) {
               <label><span>연비 (km/L)</span><input v-model.number="editForm.fuel_efficiency_kmpl" type="number" min="1" max="50" step="0.1" required /></label>
             </div>
             <p v-if="editError" class="formError" role="alert">{{ editError }}</p>
-            <button class="primaryAction" type="submit" :disabled="loadingAction === `edit-${vehicle.id}`">
+            <button class="primaryAction" type="submit" :disabled="Boolean(loadingAction)">
               <Save :size="17" /> {{ loadingAction === `edit-${vehicle.id}` ? "저장 중..." : "수정 내용 저장" }}
             </button>
           </form>
@@ -226,11 +251,11 @@ async function handleDelete(vehicle) {
 
     <section class="registerPanel" aria-labelledby="register-title">
       <header class="sectionHeader">
-        <div>
+        <div class="sectionTitleGroup">
           <p class="eyebrow">ADD VEHICLE</p>
           <h3 id="register-title">새 차량 등록</h3>
         </div>
-        <p>실제 모델명이 아닌, 알아보기 쉬운 이름을 자유롭게 입력하세요.</p>
+        <p>차량을 구분하기 쉬운 이름과 기본 주행 정보를 입력하세요.</p>
       </header>
       <form class="registerForm" @submit.prevent="handleAddVehicle">
         <label>
@@ -245,9 +270,10 @@ async function handleDelete(vehicle) {
           <label><span>연료</span><select v-model="createForm.fuel_type"><option v-for="(label, value) in fuelLabels" :key="value" :value="value">{{ label }}</option></select></label>
           <label><span>연비 (km/L)</span><input v-model.number="createForm.fuel_efficiency_kmpl" type="number" min="1" max="50" step="0.1" required /></label>
         </div>
+        <p class="formHint">입력한 연비는 주유소별 예상 비용 계산에 사용됩니다.</p>
         <p v-if="createError" class="formError" role="alert">{{ createError }}</p>
         <p v-if="successMessage" class="formSuccess" role="status"><Check :size="15" /> {{ successMessage }}</p>
-        <button class="primaryAction" type="submit" :disabled="loadingAction === 'create'">
+        <button class="primaryAction" type="submit" :disabled="Boolean(loadingAction)">
           <Plus :size="18" /> {{ loadingAction === "create" ? "등록 중..." : "차량 등록하기" }}
         </button>
       </form>

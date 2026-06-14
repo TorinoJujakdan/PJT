@@ -217,7 +217,7 @@ def save_opinet_price_rows(rows, collected_at=None):
             allowed_fields = {"name", "brand", "address", "latitude", "longitude", "is_self"}
             defaults = {key: value for key, value in station_data.items() if key in allowed_fields}
             if not defaults.get("address"):
-                defaults["address"] = "주소 정보 없음"
+                defaults["address"] = ""
 
             _station, created = GasStation.objects.update_or_create(
                 external_station_id=external_id,

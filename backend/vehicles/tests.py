@@ -6,6 +6,18 @@ from .models import VehicleProfile
 
 
 class VehicleProfileAPITests(TestCase):
+    vehicle_types = (
+        "sedan",
+        "suv",
+        "rv_mpv",
+        "sports_coupe",
+        "hatchback",
+        "wagon",
+        "convertible",
+        "pickup",
+        "micro_city",
+    )
+
     def setUp(self):
         self.client = APIClient()
         self.user = get_user_model().objects.create_user(username="vehicle-user", password="pass12345")
@@ -57,7 +69,7 @@ class VehicleProfileAPITests(TestCase):
             "/api/v1/me/vehicle/",
             {
                 "name": "연비 오류 차량",
-                "vehicle_type": "compact",
+                "vehicle_type": "micro_city",
                 "fuel_type": "gasoline",
                 "fuel_efficiency_kmpl": "0.5",
             },
@@ -82,7 +94,7 @@ class VehicleProfileAPITests(TestCase):
             f"/api/v1/me/vehicles/{profile.id}/",
             {
                 "name": "수정 차량",
-                "vehicle_type": "sports",
+                "vehicle_type": "sports_coupe",
                 "fuel_type": "diesel",
                 "fuel_efficiency_kmpl": "14.5",
             },
@@ -92,7 +104,7 @@ class VehicleProfileAPITests(TestCase):
         self.assertEqual(response.status_code, 200)
         data = response.json()["vehicle"]
         self.assertEqual(data["name"], "수정 차량")
-        self.assertEqual(data["vehicle_type"], "sports")
+        self.assertEqual(data["vehicle_type"], "sports_coupe")
         self.assertEqual(data["fuel_type"], "diesel")
         self.assertEqual(data["fuel_efficiency_kmpl"], "14.5")
         profile.refresh_from_db()
@@ -103,7 +115,7 @@ class VehicleProfileAPITests(TestCase):
         first = VehicleProfile.objects.create(
             user=self.user,
             name="첫 번째 차량",
-            vehicle_type="compact",
+            vehicle_type="micro_city",
             fuel_type="gasoline",
             fuel_efficiency_kmpl="10.0",
             is_default=True,
@@ -152,7 +164,7 @@ class VehicleProfileAPITests(TestCase):
         profile = VehicleProfile.objects.create(
             user=other_user,
             name="다른 사용자 차량",
-            vehicle_type="large_rv",
+            vehicle_type="rv_mpv",
             fuel_type="gasoline",
             fuel_efficiency_kmpl="10.0",
             is_default=True,
@@ -208,7 +220,7 @@ class VehicleProfileAPITests(TestCase):
             "/api/v1/me/vehicles/",
             {
                 "name": "가" * 41,
-                "vehicle_type": "large_rv",
+                "vehicle_type": "rv_mpv",
                 "fuel_type": "diesel",
                 "fuel_efficiency_kmpl": "9.0",
             },
@@ -248,7 +260,7 @@ class VehicleProfileAPITests(TestCase):
         second = VehicleProfile.objects.create(
             user=self.user,
             name="다음 차량",
-            vehicle_type="compact",
+            vehicle_type="micro_city",
             fuel_type="gasoline",
             fuel_efficiency_kmpl="14.0",
             is_default=False,
@@ -259,3 +271,79 @@ class VehicleProfileAPITests(TestCase):
         self.assertEqual(response.status_code, 204)
         second.refresh_from_db()
         self.assertTrue(second.is_default)
+
+    def test_post_accepts_all_nine_vehicle_types(self):
+        self.client.force_authenticate(self.user)
+
+        for index, vehicle_type in enumerate(self.vehicle_types):
+            response = self.client.post(
+                "/api/v1/me/vehicles/",
+                {
+                    "name": f"차량 {index}",
+                    "vehicle_type": vehicle_type,
+                    "fuel_type": "gasoline",
+                    "fuel_efficiency_kmpl": "12.0",
+                },
+                format="json",
+            )
+
+            self.assertEqual(response.status_code, 201, vehicle_type)
+            self.assertEqual(response.json()["vehicle"]["vehicle_type"], vehicle_type)
+
+    def test_put_and_patch_accept_all_nine_vehicle_types(self):
+        self.client.force_authenticate(self.user)
+        profile = VehicleProfile.objects.create(
+            user=self.user,
+            name="유형 검증 차량",
+            vehicle_type="sedan",
+            fuel_type="gasoline",
+            fuel_efficiency_kmpl="12.0",
+            is_default=True,
+        )
+
+        for index, vehicle_type in enumerate(self.vehicle_types):
+            put_response = self.client.put(
+                f"/api/v1/me/vehicles/{profile.id}/",
+                {
+                    "name": f"PUT 차량 {index}",
+                    "vehicle_type": vehicle_type,
+                    "fuel_type": "gasoline",
+                    "fuel_efficiency_kmpl": "12.0",
+                },
+                format="json",
+            )
+
+            self.assertEqual(put_response.status_code, 200, vehicle_type)
+            self.assertEqual(put_response.json()["vehicle"]["vehicle_type"], vehicle_type)
+            profile.refresh_from_db()
+            self.assertEqual(profile.vehicle_type, vehicle_type)
+
+        for vehicle_type in self.vehicle_types:
+            patch_response = self.client.patch(
+                f"/api/v1/me/vehicles/{profile.id}/",
+                {"vehicle_type": vehicle_type},
+                format="json",
+            )
+
+            self.assertEqual(patch_response.status_code, 200, vehicle_type)
+            self.assertEqual(patch_response.json()["vehicle"]["vehicle_type"], vehicle_type)
+            profile.refresh_from_db()
+            self.assertEqual(profile.vehicle_type, vehicle_type)
+
+    def test_post_rejects_legacy_vehicle_types(self):
+        self.client.force_authenticate(self.user)
+
+        for vehicle_type in ("compact", "large_rv", "sports"):
+            response = self.client.post(
+                "/api/v1/me/vehicles/",
+                {
+                    "name": "이전 유형",
+                    "vehicle_type": vehicle_type,
+                    "fuel_type": "gasoline",
+                    "fuel_efficiency_kmpl": "12.0",
+                },
+                format="json",
+            )
+
+            self.assertEqual(response.status_code, 400, vehicle_type)
+            self.assertEqual(response.json()["code"], "INVALID_VEHICLE_PROFILE")

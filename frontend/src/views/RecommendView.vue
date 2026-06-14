@@ -9,6 +9,7 @@ import RecommendationContextPanel from "../components/RecommendationContextPanel
 import RecommendationMap from "../components/RecommendationMap.vue";
 import RecommendationResult from "../components/RecommendationResult.vue";
 import {
+  getVehicleFuelPriceUnit,
   getVehiclePresentation,
   getVehicleSelectorLabel
 } from "../components/vehicles/vehiclePresentation";
@@ -166,13 +167,6 @@ function selectedCards() {
   ];
 }
 
-function getFuelPriceUnit(type) {
-  if (type === "diesel") return 1500;
-  if (type === "lpg") return 1000;
-  if (type === "premium_gasoline") return 1850;
-  return 1650; // gasoline
-}
-
 async function requestRecommendation() {
   if (!hasResolvedLocation.value) {
     recommendationStore.error = {
@@ -182,7 +176,7 @@ async function requestRecommendation() {
     return;
   }
 
-  const priceUnit = getFuelPriceUnit(fuel.fuel_type);
+  const priceUnit = getVehicleFuelPriceUnit(fuel.fuel_type);
   const calculatedLiters = Number((fuel.target_amount / priceUnit).toFixed(2));
 
   const request = {

@@ -1,9 +1,12 @@
+from django.contrib.auth import get_user_model
 from django.db import transaction
 from django.shortcuts import get_object_or_404
 from rest_framework import status
 from rest_framework.permissions import IsAuthenticated
 from rest_framework.response import Response
 from rest_framework.views import APIView
+
+User = get_user_model()
 
 from .models import VehicleProfile
 from .serializers import VehicleProfileSerializer
@@ -57,7 +60,7 @@ class MyVehicleProfilesAPIView(APIView):
             return error_response("INVALID_VEHICLE_PROFILE", status.HTTP_400_BAD_REQUEST, serializer.errors)
 
         with transaction.atomic():
-            type(request.user).objects.select_for_update().get(pk=request.user.pk)
+            User.objects.select_for_update().get(pk=request.user.pk)
             is_default = not VehicleProfile.objects.filter(user=request.user).exists()
             profile = serializer.save(user=request.user, is_default=is_default)
         return Response({"vehicle": VehicleProfileSerializer(profile).data}, status=status.HTTP_201_CREATED)
@@ -86,7 +89,7 @@ class MyVehicleProfileDetailAPIView(APIView):
 
     def delete(self, request, pk):
         with transaction.atomic():
-            type(request.user).objects.select_for_update().get(pk=request.user.pk)
+            User.objects.select_for_update().get(pk=request.user.pk)
             profile = get_object_or_404(
                 VehicleProfile.objects.select_for_update(),
                 user=request.user,
@@ -109,7 +112,7 @@ class SetDefaultVehicleAPIView(APIView):
 
     def post(self, request, pk):
         with transaction.atomic():
-            type(request.user).objects.select_for_update().get(pk=request.user.pk)
+            User.objects.select_for_update().get(pk=request.user.pk)
             profile = get_object_or_404(
                 VehicleProfile.objects.select_for_update(),
                 user=request.user,

@@ -1,5 +1,11 @@
-<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 300 110" role="img" aria-label="스포츠카 실루엣">
-  <path fill="currentColor" d="M14 67c3-8 10-13 22-16l61-13c22-18 45-25 76-25h20c26 0 45 9 66 29l24 7c8 3 12 8 13 16l1 15h-27a24 24 0 0 0-47 0H91a24 24 0 0 0-47 0H9l2-8c0-2 1-4 3-5Zm105-30h108c-12-10-24-15-38-15h-17c-20 0-36 4-53 15Z"/>
-  <circle cx="67" cy="80" r="17" fill="none" stroke="currentColor" stroke-width="8"/>
-  <circle cx="247" cy="80" r="17" fill="none" stroke="currentColor" stroke-width="8"/>
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 380 145" role="img" aria-label="스포츠카 측면 픽토그램">
+  <g stroke-linecap="round" stroke-linejoin="round">
+    <path d="M27 92c5-13 16-21 33-25l74-16 34-22c12-8 26-12 42-12h43c21 0 39 7 55 23l20 20 25 8c12 4 18 12 19 24l1 15H27V92Z" fill="#dff3e9" stroke="#0f6b4f" stroke-width="5"/>
+    <path d="M147 50h149l-11-10c-9-8-21-12-35-12h-38c-14 0-27 4-38 11l-27 11Z" fill="#f8fafc" stroke="#0f6b4f" stroke-width="4"/>
+    <path d="m222 28-8 55M300 51l18 32M132 53l-18 30M30 84h38M337 84h31" fill="none" stroke="#8bb9a8" stroke-width="4"/>
+    <circle cx="91" cy="105" r="22" fill="#fff" stroke="#1f2937" stroke-width="7"/>
+    <circle cx="91" cy="105" r="8" fill="#f59e0b"/>
+    <circle cx="307" cy="105" r="22" fill="#fff" stroke="#1f2937" stroke-width="7"/>
+    <circle cx="307" cy="105" r="8" fill="#f59e0b"/>
+  </g>
 </svg>
