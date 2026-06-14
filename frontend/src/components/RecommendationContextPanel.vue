@@ -1,7 +1,7 @@
 <script setup>
 import { computed } from "vue";
 import { Car, CreditCard, Settings } from "@lucide/vue";
-import { getVehiclePresentation } from "./vehicles/vehiclePresentation";
+import { getVehiclePresentation, VEHICLE_FUEL_LABELS } from "./vehicles/vehiclePresentation";
 
 const props = defineProps({
   isAuthenticated: {
@@ -25,20 +25,15 @@ const props = defineProps({
 const emit = defineEmits(["go-vehicle", "go-cards"]);
 const vehiclePresentation = computed(() => getVehiclePresentation(props.savedVehicle?.vehicle_type));
 
-const fuelLabels = {
-  gasoline: "Gasoline",
-  diesel: "Diesel",
-  lpg: "LPG",
-  premium_gasoline: "Premium gasoline"
-};
+const fuelLabels = VEHICLE_FUEL_LABELS;
 </script>
 
 <template>
   <section class="panel contextPanel">
     <div class="panelHeader">
       <div>
-        <p class="eyebrow">Context</p>
-        <h2>Your setup</h2>
+        <p class="eyebrow">MY SETTINGS</p>
+        <h2>현재 적용 설정</h2>
       </div>
       <Settings :size="20" />
     </div>
@@ -50,18 +45,18 @@ const fuelLabels = {
           <Car v-else :size="18" />
         </div>
         <div>
-          <strong>{{ savedVehicle ? savedVehicle.name : "No saved vehicle" }}</strong>
+          <strong>{{ savedVehicle ? savedVehicle.name : "등록 차량 없음" }}</strong>
           <span>
             {{
               savedVehicle && useSavedVehicle
                 ? `${vehiclePresentation.label} · ${fuelLabels[savedVehicle.fuel_type] || savedVehicle.fuel_type} · ${savedVehicle.fuel_efficiency_kmpl} km/L`
                 : savedVehicle
-                  ? "Manual efficiency is active for this quote"
-                  : "Add a vehicle to skip manual efficiency entry"
+                  ? "이번 추천에는 직접 입력한 연비를 적용합니다"
+                  : "차량을 등록하면 연비를 다시 입력하지 않아도 됩니다"
             }}
           </span>
         </div>
-        <button class="iconButton" type="button" title="Vehicle settings" @click="emit('go-vehicle')">
+        <button class="iconButton" type="button" title="차량 설정" aria-label="차량 설정 열기" @click="emit('go-vehicle')">
           <Settings :size="17" />
         </button>
       </article>
@@ -71,17 +66,17 @@ const fuelLabels = {
           <CreditCard :size="18" />
         </div>
         <div>
-          <strong>{{ savedCards.length }} active card{{ savedCards.length === 1 ? "" : "s" }}</strong>
-          <span>Confirmed saved cards are included by the backend.</span>
+          <strong>적용 카드 {{ savedCards.length }}개</strong>
+          <span>등록한 할인 카드가 추천 비용 계산에 반영됩니다.</span>
         </div>
-        <button class="iconButton" type="button" title="Card settings" @click="emit('go-cards')">
+        <button class="iconButton" type="button" title="카드 설정" aria-label="카드 설정 열기" @click="emit('go-cards')">
           <Settings :size="17" />
         </button>
       </article>
     </div>
 
     <p v-else class="summaryText">
-      Anonymous quotes use the vehicle efficiency entered below. Sign in to reuse saved vehicle and card settings.
+      로그인하면 저장한 차량 연비와 할인 카드를 추천 조건에 바로 적용할 수 있습니다.
     </p>
   </section>
 </template>

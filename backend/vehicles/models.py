@@ -6,11 +6,15 @@ from stations.models import FuelPrice
 
 class VehicleProfile(models.Model):
     class VehicleType(models.TextChoices):
-        COMPACT = "compact", "Compact"
         SEDAN = "sedan", "Sedan"
         SUV = "suv", "SUV"
-        LARGE_RV = "large_rv", "Large RV"
-        SPORTS = "sports", "Sports"
+        RV_MPV = "rv_mpv", "RV / MPV"
+        SPORTS_COUPE = "sports_coupe", "Sports car / Coupe"
+        HATCHBACK = "hatchback", "Hatchback"
+        WAGON = "wagon", "Wagon"
+        CONVERTIBLE = "convertible", "Convertible / Roadster"
+        PICKUP = "pickup", "Pickup truck"
+        MICRO_CITY = "micro_city", "Micro / City car"
 
     user = models.ForeignKey(settings.AUTH_USER_MODEL, related_name="vehicle_profiles", on_delete=models.CASCADE)
     name = models.CharField(max_length=40)

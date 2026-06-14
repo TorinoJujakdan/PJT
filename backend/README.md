@@ -58,9 +58,10 @@ cd backend
 ## Data Boundaries
 
 - Recommendation ranking and cost calculation stay in `stations/services.py`.
-- Vehicle names are required, trimmed, non-unique, and limited to 40 characters. `vehicle_type` accepts only `compact`, `sedan`, `suv`, `large_rv`, or `sports`.
+- Vehicle names are required, trimmed, non-unique, and limited to 40 characters. `vehicle_type` accepts only `sedan`, `suv`, `rv_mpv`, `sports_coupe`, `hatchback`, `wagon`, `convertible`, `pickup`, or `micro_city`.
 - Migration `vehicles.0003_reset_profiles_add_name_vehicle_type` deletes only `VehicleProfile` rows. User accounts, cards, stations, and fuel-price rows are preserved.
 - Migration `vehicles.0004_vehicleprofile_vehicles_one_default_per_user` enforces one default vehicle at most per user; clients change it through the set-default endpoint.
+- Migration `vehicles.0005_reset_profiles_expand_vehicle_types` intentionally deletes existing vehicle profiles and replaces the five-type choices metadata with the nine-type contract.
 - `CardCatalog` rows collected from Selenium remain `unverified` and are not used for ranking until a user confirms them into `CardPolicy` or an admin verifies them.
 - Card ingestion is run through management commands, not through the recommendation request path.
 

@@ -1,5 +1,11 @@
-<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 300 130" role="img" aria-label="대형 RV 실루엣">
-  <path fill="currentColor" d="M12 31c0-11 7-18 18-18h184c9 0 16 4 21 11l27 35 18 7c7 3 11 9 12 18l1 10h-28a27 27 0 0 0-53 0H92a27 27 0 0 0-53 0H13L12 31Zm24 8h186l-13-17H36v17Z"/>
-  <circle cx="65" cy="94" r="20" fill="none" stroke="currentColor" stroke-width="8"/>
-  <circle cx="238" cy="94" r="20" fill="none" stroke="currentColor" stroke-width="8"/>
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 390 175" role="img" aria-label="대형 RV 측면 픽토그램">
+  <g stroke-linecap="round" stroke-linejoin="round">
+    <path d="M28 36c0-14 9-23 23-23h239c10 0 19 4 25 12l36 45 14 6c10 5 16 14 17 27l1 27H28V36Z" fill="#dff3e9" stroke="#0f6b4f" stroke-width="5"/>
+    <path d="M55 25h226c6 0 11 2 15 7l29 37H55V25Z" fill="#f8fafc" stroke="#0f6b4f" stroke-width="4"/>
+    <path d="M113 25v73M175 25v73M237 25v73M300 39l-5 59M32 92h30M347 91h31" fill="none" stroke="#8bb9a8" stroke-width="4"/>
+    <circle cx="91" cy="129" r="26" fill="#fff" stroke="#1f2937" stroke-width="7"/>
+    <circle cx="91" cy="129" r="8" fill="#f59e0b"/>
+    <circle cx="313" cy="129" r="26" fill="#fff" stroke="#1f2937" stroke-width="7"/>
+    <circle cx="313" cy="129" r="8" fill="#f59e0b"/>
+  </g>
 </svg>

@@ -103,11 +103,15 @@
         "vehicle_type": {
           "type": "string",
           "enum": [
-            "compact",
             "sedan",
             "suv",
-            "large_rv",
-            "sports"
+            "rv_mpv",
+            "sports_coupe",
+            "hatchback",
+            "wagon",
+            "convertible",
+            "pickup",
+            "micro_city"
           ],
           "example": "sedan"
         },

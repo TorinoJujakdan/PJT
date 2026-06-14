@@ -1,5 +1,10 @@
 <script setup>
 import { computed } from "vue";
+import {
+  VEHICLE_FUEL_LABELS,
+  getVehicleFuelPriceUnit
+} from "./vehicles/vehiclePresentation";
+
 const props = defineProps({
   isReadOnly: {
     type: Boolean,
@@ -8,16 +13,10 @@ const props = defineProps({
 });
 
 const model = defineModel({ required: true });
-
-function getFuelPriceUnit(type) {
-  if (type === "diesel") return 1500;
-  if (type === "lpg") return 1000;
-  if (type === "premium_gasoline") return 1850;
-  return 1650; // gasoline
-}
+const fuelLabels = VEHICLE_FUEL_LABELS;
 
 const calculatedLiters = computed(() => {
-  const price = getFuelPriceUnit(model.value.fuel_type);
+  const price = getVehicleFuelPriceUnit(model.value.fuel_type);
   const amount = Number(model.value.target_amount) || 0;
   return (amount / price).toFixed(1);
 });
@@ -35,10 +34,7 @@ const calculatedLiters = computed(() => {
       <label>
         <span>유종</span>
         <select v-model="model.fuel_type" :disabled="isReadOnly">
-          <option value="gasoline">휘발유</option>
-          <option value="diesel">경유</option>
-          <option value="lpg">LPG</option>
-          <option value="premium_gasoline">고급 휘발유</option>
+          <option v-for="(label, value) in fuelLabels" :key="value" :value="value">{{ label }}</option>
         </select>
 
       </label>

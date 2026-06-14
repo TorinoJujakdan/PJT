@@ -1,0 +1,8 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 320 180" role="img" aria-label="픽업트럭">
+  <defs><linearGradient id="bg" x1="0" y1="0" x2="1" y2="1"><stop stop-color="#ead4aa"/><stop offset="1" stop-color="#d9bb83"/></linearGradient></defs>
+  <rect x="5" y="5" width="310" height="170" rx="22" fill="url(#bg)"/>
+  <path fill="#fff" d="M43 78h92V44c0-10 7-17 17-17h38c12 0 22 4 31 12l29 28 37 9c14 3 22 13 22 27v20H43V78Zm112-38v37h68l-24-25c-7-8-15-12-25-12h-19Z"/>
+  <path fill="#fff" d="M43 89h101v22H43z"/>
+  <circle cx="93" cy="120" r="26" fill="#fff"/><circle cx="93" cy="120" r="13" fill="#d9bb83"/>
+  <circle cx="258" cy="120" r="26" fill="#fff"/><circle cx="258" cy="120" r="13" fill="#d9bb83"/>
+</svg>

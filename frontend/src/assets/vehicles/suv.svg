@@ -1,5 +1,8 @@
-<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 280 130" role="img" aria-label="SUV 실루엣">
-  <path fill="currentColor" d="M15 73c1-13 8-21 20-24l40-9 19-26c4-6 10-9 18-9h83c8 0 14 3 19 9l25 32 25 7c8 3 13 10 14 21l1 18h-24a26 26 0 0 0-51 0H91a26 26 0 0 0-51 0H12l1-11c0-4 1-6 2-8Zm73-34h118l-18-24h-77c-5 0-8 2-11 6L88 39Z"/>
-  <circle cx="65" cy="92" r="19" fill="none" stroke="currentColor" stroke-width="8"/>
-  <circle cx="230" cy="92" r="19" fill="none" stroke="currentColor" stroke-width="8"/>
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 320 180" role="img" aria-label="SUV">
+  <defs><linearGradient id="bg" x1="0" y1="0" x2="1" y2="1"><stop stop-color="#55be61"/><stop offset="1" stop-color="#3ba94c"/></linearGradient></defs>
+  <rect x="5" y="5" width="310" height="170" rx="22" fill="url(#bg)"/>
+  <path fill="#fff" d="M48 113V80l21-3 19-35h102c13 0 23 4 33 13l30 27 29 8c12 4 18 12 18 25v9H48v-11Zm60-65L94 78h57V48h-43Zm52 0v30h69l-27-23c-5-5-12-7-20-7h-22Z"/>
+  <path fill="#fff" d="M103 35h102l9 11H94l9-11Z"/>
+  <circle cx="92" cy="121" r="27" fill="#fff"/><circle cx="92" cy="121" r="14" fill="#3ba94c"/>
+  <circle cx="249" cy="121" r="27" fill="#fff"/><circle cx="249" cy="121" r="14" fill="#3ba94c"/>
 </svg>

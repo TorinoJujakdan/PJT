@@ -1,0 +1,7 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 320 180" role="img" aria-label="경차 초소형차">
+  <defs><linearGradient id="bg" x1="0" y1="0" x2="1" y2="1"><stop stop-color="#7fe0b2"/><stop offset="1" stop-color="#58c995"/></linearGradient></defs>
+  <rect x="5" y="5" width="310" height="170" rx="22" fill="url(#bg)"/>
+  <path fill="#fff" d="M77 111V78l19-8 18-29c6-9 15-14 27-14h50c13 0 23 5 32 15l24 29 18 8c12 5 18 14 18 27v17H77v-12Zm51-70-17 29h47V41h-30Zm40 0v29h63l-20-23c-4-4-10-6-18-6h-25Z"/>
+  <circle cx="118" cy="119" r="25" fill="#fff"/><circle cx="118" cy="119" r="13" fill="#58c995"/>
+  <circle cx="242" cy="119" r="25" fill="#fff"/><circle cx="242" cy="119" r="13" fill="#58c995"/>
+</svg>

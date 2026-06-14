@@ -101,7 +101,7 @@ SmartFuel은 사용자의 현재 위치, 차량 연비, 주유량, 보유 카드
 | --- | --- | --- |
 | `user` | ForeignKey | Django User와 연결 |
 | `name` | CharField(40) | 필수 차량 이름. 앞뒤 공백 제거, 40자 이하, 중복 허용 |
-| `vehicle_type` | CharField | `compact`, `sedan`, `suv`, `large_rv`, `sports` 중 하나 |
+| `vehicle_type` | CharField | `sedan`, `suv`, `rv_mpv`, `sports_coupe`, `hatchback`, `wagon`, `convertible`, `pickup`, `micro_city` 중 하나 |
 | `fuel_type` | CharField | `gasoline`, `diesel`, `lpg`, `premium_gasoline` 중 하나 |
 | `fuel_efficiency_kmpl` | DecimalField | 차량 연비. 허용 범위는 1.0 이상 50.0 이하 |
 | `is_default` | BooleanField | 기본 차량 여부 |
@@ -156,8 +156,9 @@ SmartFuel은 사용자의 현재 위치, 차량 연비, 주유량, 보유 카드
 
 - `VehicleProfile.name`은 필수이며 저장 전에 앞뒤 공백을 제거한다.
 - 차량 이름은 최대 40자이고 고유값이 아니다. 같은 사용자를 포함해 중복 이름을 허용한다.
-- `VehicleProfile.vehicle_type`은 `compact`, `sedan`, `suv`, `large_rv`, `sports` 중 하나여야 한다.
-- 프론트엔드는 각 차량 유형을 번들된 정적 SVG 실루엣에 매핑한다. 외부 이미지 URL이나 런타임 이미지 검색을 사용하지 않는다.
+- `VehicleProfile.vehicle_type`은 `sedan`, `suv`, `rv_mpv`, `sports_coupe`, `hatchback`, `wagon`, `convertible`, `pickup`, `micro_city` 중 하나여야 한다.
+- 마이그레이션 `vehicles.0005_reset_profiles_expand_vehicle_types`은 기존 차량 프로필을 삭제한 뒤 9종 Django field choices 계약을 적용한다.
+- 프론트엔드는 각 차량 유형을 `car_design.png`를 참고해 제작한 독립 정적 SVG 카드에 매핑한다. 외부 이미지 URL이나 런타임 이미지 검색을 사용하지 않는다.
 - 알 수 없는 차량 유형의 표시 fallback은 `sedan` 실루엣이다.
 - 마이그레이션 `vehicles.0003_reset_profiles_add_name_vehicle_type`은 기존 `VehicleProfile` 행만 삭제한 뒤 필수 필드를 추가한다.
 - 위 초기화는 사용자, 카드, 주유소, 유가 데이터에 영향을 주지 않는다.

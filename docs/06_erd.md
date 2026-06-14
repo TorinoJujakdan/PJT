@@ -146,7 +146,7 @@ erDiagram
 
 `VEHICLE_PROFILE` belongs to the `vehicles` domain.
 
-`VEHICLE_PROFILE.name` is required, trimmed before persistence, limited to 40 characters, and intentionally non-unique. `vehicle_type` is one of `compact`, `sedan`, `suv`, `large_rv`, or `sports`.
+`VEHICLE_PROFILE.name` is required, trimmed before persistence, limited to 40 characters, and intentionally non-unique. `vehicle_type` is one of `sedan`, `suv`, `rv_mpv`, `sports_coupe`, `hatchback`, `wagon`, `convertible`, `pickup`, or `micro_city`.
 
 Migration `vehicles.0003_reset_profiles_add_name_vehicle_type` clears only existing `VEHICLE_PROFILE` rows before adding the required identity fields. It preserves users, card data, gas stations, and fuel prices.
 
