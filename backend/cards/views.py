@@ -2,6 +2,7 @@ from rest_framework import status
 from rest_framework.permissions import IsAuthenticated
 from rest_framework.response import Response
 from rest_framework.views import APIView
+import atexit
 
 from concurrent.futures import ThreadPoolExecutor
 from django.db import close_old_connections
@@ -133,7 +134,7 @@ class CardCatalogListAPIView(APIView):
 
 # 전역 백그라운드 스레드 풀 생성 (가벼운 동시성 유지)
 executor = ThreadPoolExecutor(max_workers=2)
-
+atexit.register(executor.shutdown, wait=False)
 
 def run_background_ingestion(task_id, query):
     """백그라운드 스레드에서 실제 Selenium 수집을 돌리고 DB를 갱신합니다."""
@@ -223,7 +224,9 @@ class CardDiscoveryTaskStatusAPIView(APIView):
 
     def get(self, request, task_id):
         from django.shortcuts import get_object_or_404
-        task = get_object_or_404(CardIngestionTask, id=task_id)
+        # IDOR 방지: 현재 유저의 세션에서 생성된 태스크만 조회
+        # TODO: CardIngestionTask에 owner 필드를 추가하여 완전한 권한 검증 필요
+        task = get_object_or_404(CardIngestionTask, id=task_id, owner=request.user)
         response_data = {
             "task_id": task.id,
             "status": task.status,

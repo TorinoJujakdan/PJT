@@ -4,24 +4,14 @@ from fastapi import FastAPI, Query
 from fastapi.middleware.cors import CORSMiddleware
 
 
+import os
+from dotenv import load_dotenv
+
 def _load_backend_env():
     """Load backend/.env for standalone uvicorn runs without leaking secrets."""
     env_path = Path(__file__).resolve().parents[1] / ".env"
-    if not env_path.exists():
-        return
-
-    import os
-
-    for raw_line in env_path.read_text(encoding="utf-8").splitlines():
-        line = raw_line.strip()
-        if not line or line.startswith("#") or "=" not in line:
-            continue
-        key, value = line.split("=", 1)
-        key = key.strip()
-        value = value.strip().strip('"').strip("'")
-        if key and key not in os.environ:
-            os.environ[key] = value
-
+    if env_path.exists():
+        load_dotenv(env_path)
 
 _load_backend_env()
 
