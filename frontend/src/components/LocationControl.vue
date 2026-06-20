@@ -284,13 +284,13 @@ async function searchNow() {
     if (requestId !== searchRequestId) return searchResults.value;
     searchResults.value = results;
     if (!searchResults.value.length) {
-      setMessage("?? ??? ????.", "info");
+      setMessage("검색 결과가 없습니다.", "info");
     }
     return searchResults.value;
   } catch (error) {
     if (requestId !== searchRequestId) return searchResults.value;
     searchResults.value = [];
-    setMessage(error.message || "?? ??? ???? ?????.", "error");
+    setMessage(error.message || "검색 중 오류가 발생했습니다.", "error");
     return [];
   } finally {
     if (requestId === searchRequestId) {

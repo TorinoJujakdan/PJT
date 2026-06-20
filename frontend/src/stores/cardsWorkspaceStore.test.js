@@ -2,30 +2,33 @@ import assert from "node:assert/strict";
 import test from "node:test";
 
 import {
+  blankCardDraft,
   cardsWorkspaceStore,
+  createCardDraftCopy,
   markCardsWorkspaceClean,
   markCardsWorkspaceDirty,
+  replaceCardDraft,
   resetCardsWorkspace,
 } from "./cardsWorkspaceStore.js";
 
-test("카드 작업 상태는 뷰가 다시 열려도 유지된다", () => {
+test("keeps card workspace values while the view stays mounted", () => {
   resetCardsWorkspace();
 
   cardsWorkspaceStore.activeTab = "manual";
-  cardsWorkspaceStore.catalogQuery = "국민";
-  cardsWorkspaceStore.manualDraft.card_name = "국민 오일카드";
+  cardsWorkspaceStore.catalogQuery = "KB";
+  cardsWorkspaceStore.manualDraft.card_name = "KB Oil Card";
   markCardsWorkspaceDirty("manual");
 
   assert.equal(cardsWorkspaceStore.activeTab, "manual");
-  assert.equal(cardsWorkspaceStore.catalogQuery, "국민");
-  assert.equal(cardsWorkspaceStore.manualDraft.card_name, "국민 오일카드");
+  assert.equal(cardsWorkspaceStore.catalogQuery, "KB");
+  assert.equal(cardsWorkspaceStore.manualDraft.card_name, "KB Oil Card");
   assert.equal(cardsWorkspaceStore.isDirty, true);
 });
 
-test("명시적 초기화는 카드 작업 상태를 기본값으로 되돌린다", () => {
+test("reset restores the card workspace defaults", () => {
   cardsWorkspaceStore.activeTab = "saved";
-  cardsWorkspaceStore.catalogQuery = "테스트";
-  cardsWorkspaceStore.manualDraft.card_name = "테스트 카드";
+  cardsWorkspaceStore.catalogQuery = "test";
+  cardsWorkspaceStore.manualDraft.card_name = "Test Card";
 
   resetCardsWorkspace();
 
@@ -35,19 +38,19 @@ test("명시적 초기화는 카드 작업 상태를 기본값으로 되돌린�
   assert.equal(cardsWorkspaceStore.isDirty, false);
 });
 
-test("저장 완료 표시는 입력값을 지우지 않고 dirty 상태만 해제한다", () => {
+test("cleaning dirty state does not erase in-progress draft values", () => {
   resetCardsWorkspace();
-  cardsWorkspaceStore.manualDraft.card_name = "신한 오일카드";
+  cardsWorkspaceStore.manualDraft.card_name = "Shinhan Oil Card";
   cardsWorkspaceStore.dirtyAreas.manual = true;
   cardsWorkspaceStore.isDirty = true;
 
   markCardsWorkspaceClean();
 
-  assert.equal(cardsWorkspaceStore.manualDraft.card_name, "신한 오일카드");
+  assert.equal(cardsWorkspaceStore.manualDraft.card_name, "Shinhan Oil Card");
   assert.equal(cardsWorkspaceStore.isDirty, false);
 });
 
-test("한 흐름을 저장해도 다른 탭의 작성 중 상태는 유지된다", () => {
+test("cleaning one area preserves another dirty area", () => {
   resetCardsWorkspace();
   markCardsWorkspaceDirty("manual");
   markCardsWorkspaceDirty("catalog");
@@ -57,4 +60,26 @@ test("한 흐름을 저장해도 다른 탭의 작성 중 상태는 유지된다
   assert.equal(cardsWorkspaceStore.dirtyAreas.catalog, false);
   assert.equal(cardsWorkspaceStore.dirtyAreas.manual, true);
   assert.equal(cardsWorkspaceStore.isDirty, true);
+});
+
+test("local card draft copies are isolated from their source while typing", () => {
+  const source = { card_name: "Source Card", discount_value: 120 };
+  const draft = createCardDraftCopy(source);
+
+  draft.card_name = "Local Input";
+
+  assert.equal(source.card_name, "Source Card");
+  assert.equal(draft.discount_type, blankCardDraft.discount_type);
+  assert.equal(draft.card_name, "Local Input");
+});
+
+test("replacing a draft preserves defaults while applying submitted values", () => {
+  const target = createCardDraftCopy({ card_name: "Before", issuer_name: "A" });
+
+  replaceCardDraft(target, { card_name: "After", issuer_name: "B", discount_value: 150 });
+
+  assert.equal(target.card_name, "After");
+  assert.equal(target.issuer_name, "B");
+  assert.equal(target.discount_value, 150);
+  assert.equal(target.brand_scope, blankCardDraft.brand_scope);
 });

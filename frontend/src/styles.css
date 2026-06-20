@@ -40,6 +40,9 @@
 
 * {
   box-sizing: border-box;
+}
+
+button, a, input, select, textarea, .panel, .card, .tabItem, .menuItem {
   transition: background-color 0.2s ease, border-color 0.2s ease, box-shadow 0.2s ease, transform 0.2s ease;
 }
 

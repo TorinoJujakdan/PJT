@@ -1,8 +1,9 @@
 <script setup>
 import { reactive, ref } from "vue";
-import { Check, Pencil, Plus, Save, Star, Trash2, X } from "@lucide/vue";
+import { Check, Pencil, Save, Star, Trash2, X } from "@lucide/vue";
 
-import { addVehicle, deleteVehicle, setDefaultVehicle, updateVehicle } from "../api/vehicles";
+import { deleteVehicle, setDefaultVehicle, updateVehicle } from "../api/vehicles";
+import VehicleCreateForm from "../components/vehicles/VehicleCreateForm.vue";
 import VehicleTypePicker from "../components/vehicles/VehicleTypePicker.vue";
 import {
   VEHICLE_NAME_MAX_LENGTH,
@@ -20,12 +21,6 @@ defineProps({
 
 const emit = defineEmits(["changed"]);
 
-const createForm = reactive({
-  name: "",
-  vehicle_type: "sedan",
-  fuel_type: "gasoline",
-  fuel_efficiency_kmpl: 10
-});
 const editForm = reactive({
   name: "",
   vehicle_type: "sedan",
@@ -34,7 +29,7 @@ const editForm = reactive({
 });
 const editingId = ref(null);
 const loadingAction = ref(null);
-const createError = ref("");
+const actionError = ref("");
 const editError = ref("");
 const successMessage = ref("");
 
@@ -47,35 +42,6 @@ function errorMessage(error, fallback) {
     if (first) return String(first);
   }
   return error?.payload?.message || error?.message || fallback;
-}
-
-async function handleAddVehicle() {
-  if (loadingAction.value) return;
-
-  createError.value = "";
-  successMessage.value = "";
-  let payload;
-  try {
-    payload = buildVehiclePayload(createForm);
-  } catch (error) {
-    createError.value = error.message;
-    return;
-  }
-
-  loadingAction.value = "create";
-  try {
-    await addVehicle(payload);
-    createForm.name = "";
-    createForm.vehicle_type = "sedan";
-    createForm.fuel_type = "gasoline";
-    createForm.fuel_efficiency_kmpl = 10;
-    successMessage.value = "차량이 등록되었습니다.";
-    emit("changed");
-  } catch (error) {
-    createError.value = errorMessage(error, "차량 등록에 실패했습니다.");
-  } finally {
-    loadingAction.value = null;
-  }
 }
 
 function startEdit(vehicle) {
@@ -94,10 +60,24 @@ function cancelEdit() {
   editError.value = "";
 }
 
+function handleCreateStart() {
+  actionError.value = "";
+  successMessage.value = "";
+  loadingAction.value = "create";
+}
+
+function handleCreateEnd() {
+  if (loadingAction.value === "create") {
+    loadingAction.value = null;
+  }
+}
+
 async function handleUpdate(vehicleId) {
   if (loadingAction.value) return;
 
+  actionError.value = "";
   editError.value = "";
+  successMessage.value = "";
   let payload;
   try {
     payload = buildVehiclePayload(editForm);
@@ -122,13 +102,15 @@ async function handleUpdate(vehicleId) {
 async function handleSetDefault(vehicleId) {
   if (loadingAction.value) return;
 
+  actionError.value = "";
+  successMessage.value = "";
   loadingAction.value = `default-${vehicleId}`;
   try {
     await setDefaultVehicle(vehicleId);
     successMessage.value = "대표 차량을 변경했습니다.";
     emit("changed");
   } catch (error) {
-    createError.value = errorMessage(error, "대표 차량 설정에 실패했습니다.");
+    actionError.value = errorMessage(error, "대표 차량 설정에 실패했습니다.");
   } finally {
     loadingAction.value = null;
   }
@@ -138,13 +120,15 @@ async function handleDelete(vehicle) {
   if (loadingAction.value) return;
 
   if (!confirm(`‘${vehicle.name}’ 차량을 삭제할까요?`)) return;
+  actionError.value = "";
+  successMessage.value = "";
   loadingAction.value = `delete-${vehicle.id}`;
   try {
     await deleteVehicle(vehicle.id);
     successMessage.value = "차량을 삭제했습니다.";
     emit("changed");
   } catch (error) {
-    createError.value = errorMessage(error, "차량 삭제에 실패했습니다.");
+    actionError.value = errorMessage(error, "차량 삭제에 실패했습니다.");
   } finally {
     loadingAction.value = null;
   }
@@ -163,6 +147,8 @@ async function handleDelete(vehicle) {
           </div>
         </div>
         <p>저장한 차량의 연료와 연비를 한곳에서 관리하고 추천 조건에 바로 적용하세요.</p>
+        <p v-if="actionError" class="formError" role="alert">{{ actionError }}</p>
+        <p v-if="successMessage" class="formSuccess" role="status"><Check :size="15" /> {{ successMessage }}</p>
       </header>
 
       <div v-if="!vehicles.length" class="emptyGarage">
@@ -249,35 +235,12 @@ async function handleDelete(vehicle) {
       </div>
     </section>
 
-    <section class="registerPanel" aria-labelledby="register-title">
-      <header class="sectionHeader">
-        <div class="sectionTitleGroup">
-          <p class="eyebrow">ADD VEHICLE</p>
-          <h3 id="register-title">새 차량 등록</h3>
-        </div>
-        <p>차량을 구분하기 쉬운 이름과 기본 주행 정보를 입력하세요.</p>
-      </header>
-      <form class="registerForm" @submit.prevent="handleAddVehicle">
-        <label>
-          <span>차량 이름 <small>{{ createForm.name.trim().length }}/{{ VEHICLE_NAME_MAX_LENGTH }}</small></span>
-          <input v-model="createForm.name" :maxlength="VEHICLE_NAME_MAX_LENGTH" placeholder="예: 출퇴근차, 가족차" required />
-        </label>
-        <fieldset>
-          <legend>차량 유형</legend>
-          <VehicleTypePicker v-model="createForm.vehicle_type" />
-        </fieldset>
-        <div class="fuelGrid">
-          <label><span>연료</span><select v-model="createForm.fuel_type"><option v-for="(label, value) in fuelLabels" :key="value" :value="value">{{ label }}</option></select></label>
-          <label><span>연비 (km/L)</span><input v-model.number="createForm.fuel_efficiency_kmpl" type="number" min="1" max="50" step="0.1" required /></label>
-        </div>
-        <p class="formHint">입력한 연비는 주유소별 예상 비용 계산에 사용됩니다.</p>
-        <p v-if="createError" class="formError" role="alert">{{ createError }}</p>
-        <p v-if="successMessage" class="formSuccess" role="status"><Check :size="15" /> {{ successMessage }}</p>
-        <button class="primaryAction" type="submit" :disabled="Boolean(loadingAction)">
-          <Plus :size="18" /> {{ loadingAction === "create" ? "등록 중..." : "차량 등록하기" }}
-        </button>
-      </form>
-    </section>
+    <VehicleCreateForm
+      :action-pending="Boolean(loadingAction)"
+      @changed="emit('changed')"
+      @create-start="handleCreateStart"
+      @create-end="handleCreateEnd"
+    />
   </main>
 </template>
 

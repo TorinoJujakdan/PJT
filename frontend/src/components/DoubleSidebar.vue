@@ -178,31 +178,31 @@ function isPastData(station) {
     <nav class="iconSidebar" aria-label="사이드바 메뉴">
       <div class="tabList">
         <!-- 로고 대신 아이콘으로 연결 -->
-        <div class="tabItem" :class="{ active: activeTab === 'location' && sidebarOpen }" @click="handleTabClick('location')" title="위치 설정">
-          <Search :size="20" />
+        <button type="button" class="tabItem" :class="{ active: activeTab === 'location' && sidebarOpen }" @click="handleTabClick('location')" aria-label="위치 설정" title="위치 설정">
+          <Search :size="20" aria-hidden="true" />
           <span>위치</span>
-        </div>
+        </button>
         
-        <div class="tabItem" :class="{ active: activeTab === 'vehicle_card' && sidebarOpen }" @click="handleTabClick('vehicle_card')" title="차량 & 카드 설정">
-          <Car :size="20" />
+        <button type="button" class="tabItem" :class="{ active: activeTab === 'vehicle_card' && sidebarOpen }" @click="handleTabClick('vehicle_card')" aria-label="차량 및 카드 설정" title="차량 & 카드 설정">
+          <Car :size="20" aria-hidden="true" />
           <span>차량/카드</span>
-        </div>
+        </button>
 
-        <div class="tabItem" :class="{ active: activeTab === 'settings' && sidebarOpen }" @click="handleTabClick('settings')" title="필터 및 우선순위">
-          <Sliders :size="20" />
+        <button type="button" class="tabItem" :class="{ active: activeTab === 'settings' && sidebarOpen }" @click="handleTabClick('settings')" aria-label="필터 및 우선순위 설정" title="필터 및 우선순위">
+          <Sliders :size="20" aria-hidden="true" />
           <span>설정</span>
-        </div>
+        </button>
       </div>
 
       <div class="bottomActions">
-        <button class="actionItem" type="button" title="도움말">
-          <HelpCircle :size="18" />
+        <button class="actionItem" type="button" title="도움말" aria-label="도움말">
+          <HelpCircle :size="18" aria-hidden="true" />
         </button>
-        <button v-if="isAuthenticated" class="actionItem logout" type="button" @click="emit('logout')" title="로그아웃">
-          <LogOut :size="18" />
+        <button v-if="isAuthenticated" class="actionItem logout" type="button" @click="emit('logout')" title="로그아웃" aria-label="로그아웃">
+          <LogOut :size="18" aria-hidden="true" />
         </button>
-        <button v-else class="actionItem" type="button" @click="emit('login')" title="로그인">
-          <LogIn :size="18" />
+        <button v-else class="actionItem" type="button" @click="emit('login')" title="로그인" aria-label="로그인">
+          <LogIn :size="18" aria-hidden="true" />
         </button>
       </div>
     </nav>

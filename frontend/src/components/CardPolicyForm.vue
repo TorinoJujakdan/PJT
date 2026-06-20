@@ -93,7 +93,7 @@ function applyMyCard(cardId) {
       </div>
       <label class="switchControl">
         <input v-model="model.enabled" type="checkbox" />
-        <span>{{ model.enabled ? "비활성" : "활성" }}</span>
+        <span>{{ model.enabled ? "활성" : "비활성" }}</span>
       </label>
     </div>
 
