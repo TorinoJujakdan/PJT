@@ -1,4 +1,5 @@
 import os
+import logging
 import json
 import urllib.parse
 import urllib.request
@@ -7,6 +8,7 @@ from django.utils import timezone
 
 from stations.models import FuelPrice, GasStation
 
+logger = logging.getLogger(__name__)
 
 class OpinetConfigurationError(RuntimeError):
     pass
@@ -118,8 +120,8 @@ def normalize_opinet_station_row(row):
     if x and y:
         try:
             lat, lon = katec_to_wgs84(x, y)
-        except (ValueError, TypeError, Exception):
-            pass
+        except (ValueError, TypeError) as exc:
+            logger.debug("KATEC→WGS84 conversion failed for station %s: %s", station_id, exc)
 
     res = {
         "external_station_id": station_id,
@@ -195,8 +197,8 @@ class OpinetClient:
                     if "PRODCD" not in r:
                         r["PRODCD"] = prodcd
                     all_collected_rows.append(r)
-            except Exception:
-                pass
+            except (ValueError, TypeError, urllib.error.URLError, json.JSONDecodeError) as exc:
+                logger.warning("Opinet aroundAll.do failed for prodcd=%s: %s", prodcd, exc, exc_info=True)
                 
         return all_collected_rows
 
