@@ -63,9 +63,9 @@ function switchMode(newMode) {
 
 <template>
   <div class="glassModalOverlay" @click.self="emit('close')">
-    <div class="glassModalContainer">
+    <div class="glassModalContainer" role="dialog" aria-modal="true" aria-labelledby="auth-modal-title">
       <header class="glassModalHeader">
-        <h2>{{ mode === 'login' ? '로그인' : '회원가입' }}</h2>
+        <h2 id="auth-modal-title">{{ mode === 'login' ? '로그인' : '회원가입' }}</h2>
         <button class="glassModalCloseBtn" type="button" @click="emit('close')" aria-label="닫기">
           <X :size="16" />
         </button>

@@ -99,7 +99,7 @@ const isPastData = computed(() => {
     </div>
 
     <div class="actionRow">
-      <a :href="mapSearchUrl" target="_blank" class="primaryBtnSmall" style="text-decoration: none;">
+      <a :href="mapSearchUrl" target="_blank" rel="noopener noreferrer" class="primaryBtnSmall" style="text-decoration: none;">
         <Navigation :size="15" />
         <span>길찾기 (네이버)</span>
       </a>

@@ -325,7 +325,7 @@ watch(
       selectedVehicleId.value = "manual";
     }
   },
-  { immediate: true, deep: true }
+  { immediate: true }
 );
 
 watch(selectedVehicleId, (id) => {
@@ -508,7 +508,7 @@ async function requestRecommendation() {
   try {
     await recommendationStore.quote(request);
   } catch (error) {
-    console.error("추천 계산 실패:", error);
+    // 추천 계산 에러는 UI에서 처리 (프로덕션 콘솔 출력 제거)
   } finally {
     refreshLoading.value = false;
   }

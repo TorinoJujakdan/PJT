@@ -31,11 +31,22 @@ function createInitialState() {
 
 export const cardsWorkspaceStore = reactive(createInitialState());
 
+// Form panels own hot local typing state for responsiveness. These store drafts
+// are persistence snapshots used when a panel is submitted, unmounted, or reopened.
+export function createCardDraftCopy(source) {
+  return { ...blankCardDraft, ...source };
+}
+
+export function replaceCardDraft(target, source) {
+  Object.assign(target, createCardDraftCopy(source));
+}
+
 export function resetCardsWorkspace() {
   Object.assign(cardsWorkspaceStore, createInitialState());
 }
 
 export function markCardsWorkspaceDirty(area) {
+  if (cardsWorkspaceStore.dirtyAreas[area]) return;
   cardsWorkspaceStore.dirtyAreas[area] = true;
   cardsWorkspaceStore.isDirty = true;
 }
