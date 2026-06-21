@@ -7,7 +7,7 @@ from urllib.parse import urljoin, urlparse
 
 from django.utils import timezone
 
-from .models import CardCatalog, CardPolicy
+from .models import CardBenefitTier, CardCatalog, CardPolicy
 
 
 DEFAULT_ALLOWED_DOMAINS = {"card-search.naver.com"}
@@ -64,18 +64,11 @@ def normalize_candidate(candidate, source_url):
     name = " ".join((candidate.card_name or "").split())
     issuer = " ".join((candidate.issuer_name or "").split())
     if not name:
-        return None
+        return None, None
 
-    return {
+    catalog_data = {
         "card_name": name[:120],
         "issuer_name": issuer[:120],
-        "discount_type": candidate.discount_type,
-        "discount_value": candidate.discount_value,
-        "brand_scope": (candidate.brand_scope or "all")[:32],
-        "min_payment_amount": candidate.min_payment_amount,
-        "max_discount_amount": candidate.max_discount_amount,
-        "monthly_discount_limit": candidate.monthly_discount_limit,
-        "monthly_remaining_discount": candidate.monthly_remaining_discount,
         "card_image_url": candidate.card_image_url[:200] if candidate.card_image_url else "",
         "source_url": (candidate.source_url or source_url)[:200],
         "source_title": (candidate.source_title or name)[:255],
@@ -85,6 +78,18 @@ def normalize_candidate(candidate, source_url):
         "confidence": candidate.confidence,
         "collected_at": timezone.now(),
     }
+
+    tier_data = {
+        "fuel_type": "ALL",
+        "min_performance_amount": 0,
+        "discount_type": candidate.discount_type,
+        "discount_value": candidate.discount_value,
+        "brand_scope": (candidate.brand_scope or "all")[:32],
+        "min_payment_amount": candidate.min_payment_amount,
+        "monthly_discount_limit": candidate.monthly_discount_limit,
+    }
+
+    return catalog_data, tier_data
 
 
 def infer_issuer_name(card_name):
@@ -519,8 +524,8 @@ def extract_candidates_from_rows(rows, source_url, limit=None):
 def save_candidates(candidates, source_url):
     saved = []
     for candidate in candidates:
-        data = normalize_candidate(candidate, source_url)
-        if not data:
+        catalog_data, tier_data = normalize_candidate(candidate, source_url)
+        if not catalog_data:
             continue
 
         # Auto-verification logic:
@@ -529,27 +534,43 @@ def save_candidates(candidates, source_url):
         if (
             candidate.confidence is not None
             and candidate.confidence >= 0.85
-            and data["discount_value"] > 0
-            and data["card_name"]
-            and data["issuer_name"]
+            and tier_data["discount_value"] > 0
+            and catalog_data["card_name"]
+            and catalog_data["issuer_name"]
         ):
-            data["verification_status"] = CardPolicy.VerificationStatus.ADMIN_VERIFIED
+            catalog_data["verification_status"] = CardPolicy.VerificationStatus.ADMIN_VERIFIED
         else:
-            data["verification_status"] = CardPolicy.VerificationStatus.UNVERIFIED
+            catalog_data["verification_status"] = CardPolicy.VerificationStatus.UNVERIFIED
 
-        catalog_card = CardCatalog.objects.filter(source_url=data["source_url"]).first()
+        catalog_card = CardCatalog.objects.filter(source_url=catalog_data["source_url"]).first()
         if catalog_card is None:
             catalog_card = CardCatalog.objects.filter(
-                card_name=data["card_name"],
+                card_name=catalog_data["card_name"],
                 source_type=CardPolicy.SourceType.SELENIUM,
             ).first()
 
         if catalog_card is None:
-            catalog_card = CardCatalog.objects.create(**data)
+            catalog_card = CardCatalog.objects.create(**catalog_data)
         else:
-            for field_name, value in data.items():
+            for field_name, value in catalog_data.items():
                 setattr(catalog_card, field_name, value)
             catalog_card.save()
+
+        # Save or update the benefit tier for this catalog card
+        if tier_data and tier_data["discount_value"] > 0:
+            CardBenefitTier.objects.update_or_create(
+                card_catalog=catalog_card,
+                fuel_type=tier_data["fuel_type"],
+                min_performance_amount=tier_data["min_performance_amount"],
+                defaults={
+                    "discount_type": tier_data["discount_type"],
+                    "discount_value": tier_data["discount_value"],
+                    "brand_scope": tier_data["brand_scope"],
+                    "min_payment_amount": tier_data["min_payment_amount"],
+                    "monthly_discount_limit": tier_data["monthly_discount_limit"],
+                },
+            )
+
         saved.append(catalog_card)
     return saved
 
