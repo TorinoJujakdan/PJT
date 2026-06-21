@@ -172,6 +172,7 @@ class CardIngestionTask(models.Model):
         SUCCESS = "SUCCESS", "수집 완료"
         FAILED = "FAILED", "실패"
 
+    owner = models.ForeignKey(settings.AUTH_USER_MODEL, related_name="ingestion_tasks", on_delete=models.CASCADE)
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)
     status = models.CharField(max_length=20, choices=Status.choices, default=Status.PENDING)

@@ -209,7 +209,7 @@ class CardDiscoveryAPIView(APIView):
             )
 
         # 1. 태스크 레코드 생성
-        task = CardIngestionTask.objects.create(query=query)
+        task = CardIngestionTask.objects.create(query=query, owner=request.user)
 
         # 2. 스레드 풀에 작업 위임 (즉시 리턴)
         executor.submit(run_background_ingestion, task.id, query)
@@ -230,9 +230,8 @@ class CardDiscoveryTaskStatusAPIView(APIView):
 
     def get(self, request, task_id):
         from django.shortcuts import get_object_or_404
-        # IDOR 방지: 현재 유저의 세션에서 생성된 태스크만 조회
-        # TODO: CardIngestionTask에 owner 필드를 추가하여 완전한 권한 검증 필요
-        task = get_object_or_404(CardIngestionTask, id=task_id)
+        # IDOR 방지: 현재 유저가 생성한 태스크만 조회 가능
+        task = get_object_or_404(CardIngestionTask, id=task_id, owner=request.user)
         response_data = {
             "task_id": task.id,
             "status": task.status,
