@@ -3,7 +3,7 @@ from django.test import TestCase
 from rest_framework.test import APIClient
 from unittest.mock import patch
 
-from .models import CardCatalog, CardPolicy
+from .models import CardBenefitTier, CardCatalog, CardPolicy
 
 
 class CardPolicyAPITests(TestCase):
@@ -199,23 +199,31 @@ class CardPolicyAPITests(TestCase):
         self.assertEqual(response.json()["code"], "INVALID_CARD_POLICY")
 
     def test_catalog_search_returns_unverified_candidates(self):
-        CardCatalog.objects.create(
+        catalog1 = CardCatalog.objects.create(
             card_name="KB국민 굿데이카드",
             issuer_name="KB국민카드",
-            discount_type=CardPolicy.DiscountType.PER_LITER,
-            discount_value=60,
             source_url="https://card-search.naver.com/card/1",
             source_type=CardPolicy.SourceType.SELENIUM,
             verification_status=CardPolicy.VerificationStatus.UNVERIFIED,
         )
-        CardCatalog.objects.create(
+        CardBenefitTier.objects.create(
+            card_catalog=catalog1,
+            fuel_type="ALL",
+            discount_type=CardPolicy.DiscountType.PER_LITER,
+            discount_value=60,
+        )
+        catalog2 = CardCatalog.objects.create(
             card_name="신한카드 Deep Oil",
             issuer_name="신한카드",
-            discount_type=CardPolicy.DiscountType.PERCENTAGE,
-            discount_value=10,
             source_url="https://card-search.naver.com/card/2",
             source_type=CardPolicy.SourceType.SELENIUM,
             verification_status=CardPolicy.VerificationStatus.UNVERIFIED,
+        )
+        CardBenefitTier.objects.create(
+            card_catalog=catalog2,
+            fuel_type="ALL",
+            discount_type=CardPolicy.DiscountType.PERCENTAGE,
+            discount_value=10,
         )
 
         self.client.force_authenticate(self.user)
@@ -231,13 +239,17 @@ class CardPolicyAPITests(TestCase):
         catalog = CardCatalog.objects.create(
             card_name="KB국민 굿데이카드",
             issuer_name="KB국민카드",
-            discount_type=CardPolicy.DiscountType.PER_LITER,
-            discount_value=60,
-            brand_scope="all",
             source_url="https://card-search.naver.com/card/1",
             source_title="KB국민 굿데이카드",
             source_type=CardPolicy.SourceType.SELENIUM,
             verification_status=CardPolicy.VerificationStatus.UNVERIFIED,
+        )
+        CardBenefitTier.objects.create(
+            card_catalog=catalog,
+            fuel_type="ALL",
+            discount_type=CardPolicy.DiscountType.PER_LITER,
+            discount_value=60,
+            brand_scope="all",
         )
 
         self.client.force_authenticate(self.user)
@@ -254,7 +266,7 @@ class CardPolicyAPITests(TestCase):
         self.assertEqual(response.status_code, 201)
         data = response.json()
         self.assertEqual(data["card_name"], "KB국민 굿데이카드")
-        self.assertEqual(data["source_type"], "selenium")
+        self.assertEqual(data["source_type"], "catalog")
         self.assertEqual(data["verification_status"], "user_confirmed")
         self.assertEqual(CardPolicy.objects.filter(owner=self.user).count(), 1)
 
@@ -262,12 +274,16 @@ class CardPolicyAPITests(TestCase):
         catalog = CardCatalog.objects.create(
             card_name="삼성카드 taptap S",
             issuer_name="삼성카드",
-            discount_type=CardPolicy.DiscountType.FIXED_AMOUNT,
-            discount_value=2000,
-            brand_scope="all",
             source_url="https://card-search.naver.com/card/2",
             source_type=CardPolicy.SourceType.SELENIUM,
             verification_status=CardPolicy.VerificationStatus.UNVERIFIED,
+        )
+        CardBenefitTier.objects.create(
+            card_catalog=catalog,
+            fuel_type="ALL",
+            discount_type=CardPolicy.DiscountType.FIXED_AMOUNT,
+            discount_value=2000,
+            brand_scope="all",
         )
 
         self.client.force_authenticate(self.user)
@@ -294,9 +310,13 @@ class CardPolicyAPITests(TestCase):
         catalog = CardCatalog.objects.create(
             card_name="Broken Percent",
             issuer_name="Test",
+            source_url="https://card-search.naver.com/card/3",
+        )
+        CardBenefitTier.objects.create(
+            card_catalog=catalog,
+            fuel_type="ALL",
             discount_type=CardPolicy.DiscountType.PER_LITER,
             discount_value=50,
-            source_url="https://card-search.naver.com/card/3",
         )
 
         self.client.force_authenticate(self.user)
