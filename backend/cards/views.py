@@ -64,24 +64,34 @@ class MyCardPolicyFromCatalogAPIView(APIView):
         if catalog is None:
             return error_response("CARD_CATALOG_NOT_FOUND", status.HTTP_404_NOT_FOUND)
 
+        # CardBenefitTier에서 첫 번째 혜택 구간의 기본값을 가져옵니다.
+        default_tier = catalog.benefit_tiers.first()
+        default_discount_type = default_tier.discount_type if default_tier else CardPolicy.DiscountType.PER_LITER
+        default_discount_value = default_tier.discount_value if default_tier else 0
+        default_brand_scope = default_tier.brand_scope if default_tier else "all"
+        default_min_payment = default_tier.min_payment_amount if default_tier else None
+        default_monthly_limit = default_tier.monthly_discount_limit if default_tier else None
+
         policy = CardPolicy.objects.create(
             owner=request.user,
+            linked_catalog=catalog,
             card_name=catalog.card_name,
             issuer_name=catalog.issuer_name,
-            discount_type=serializer.validated_data.get("discount_type", catalog.discount_type),
-            discount_value=serializer.validated_data.get("discount_value", catalog.discount_value),
-            brand_scope=serializer.validated_data.get("brand_scope", catalog.brand_scope),
-            min_payment_amount=serializer.validated_data.get("min_payment_amount", catalog.min_payment_amount),
-            max_discount_amount=serializer.validated_data.get("max_discount_amount", catalog.max_discount_amount),
+            discount_type=serializer.validated_data.get("discount_type", default_discount_type),
+            discount_value=serializer.validated_data.get("discount_value", default_discount_value),
+            brand_scope=serializer.validated_data.get("brand_scope", default_brand_scope),
+            min_payment_amount=serializer.validated_data.get("min_payment_amount", default_min_payment),
+            max_discount_amount=serializer.validated_data.get("max_discount_amount", None),
             monthly_discount_limit=serializer.validated_data.get(
                 "monthly_discount_limit",
-                catalog.monthly_discount_limit,
+                default_monthly_limit,
             ),
             monthly_remaining_discount=serializer.validated_data.get(
                 "monthly_remaining_discount",
-                catalog.monthly_remaining_discount,
+                None,
             ),
-            source_type=CardPolicy.SourceType.SELENIUM,
+            previous_month_spending=serializer.validated_data.get("previous_month_spending", None),
+            source_type=CardPolicy.SourceType.CATALOG,
             verification_status=CardPolicy.VerificationStatus.USER_CONFIRMED,
             card_image_url=catalog.card_image_url,
             source_url=catalog.source_url,
@@ -116,17 +126,14 @@ class CardCatalogListAPIView(APIView):
     permission_classes = [IsAuthenticated]
 
     def get(self, request):
-        queryset = CardCatalog.objects.all()
+        queryset = CardCatalog.objects.prefetch_related("benefit_tiers").all()
         query = (request.query_params.get("query") or "").strip()
         issuer_name = (request.query_params.get("issuer_name") or "").strip()
-        brand_scope = (request.query_params.get("brand_scope") or "").strip()
 
         if query:
             queryset = queryset.filter(card_name__icontains=query)
         if issuer_name:
             queryset = queryset.filter(issuer_name__icontains=issuer_name)
-        if brand_scope:
-            queryset = queryset.filter(brand_scope=brand_scope)
 
         serializer = CardCatalogSerializer(queryset[:50], many=True)
         return Response({"cards": serializer.data})
@@ -203,7 +210,7 @@ class CardDiscoveryAPIView(APIView):
             )
 
         # 1. 태스크 레코드 생성
-        task = CardIngestionTask.objects.create(query=query)
+        task = CardIngestionTask.objects.create(query=query, owner=request.user)
 
         # 2. 스레드 풀에 작업 위임 (즉시 리턴)
         executor.submit(run_background_ingestion, task.id, query)
@@ -239,4 +246,3 @@ class CardDiscoveryTaskStatusAPIView(APIView):
             response_data["candidates"] = CardCatalogSerializer(cards, many=True).data
 
         return Response(response_data)
-
