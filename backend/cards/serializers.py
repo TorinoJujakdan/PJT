@@ -1,6 +1,6 @@
 from rest_framework import serializers
 
-from .models import CardCatalog, CardPolicy
+from .models import CardBenefitTier, CardCatalog, CardPolicy
 
 
 class CardPolicySerializer(serializers.ModelSerializer):
@@ -14,6 +14,7 @@ class CardPolicySerializer(serializers.ModelSerializer):
         model = CardPolicy
         fields = [
             "card_id",
+            "linked_catalog",
             "card_name",
             "issuer_name",
             "discount_type",
@@ -23,6 +24,7 @@ class CardPolicySerializer(serializers.ModelSerializer):
             "max_discount_amount",
             "monthly_discount_limit",
             "monthly_remaining_discount",
+            "previous_month_spending",
             "source_type",
             "verification_status",
             "card_image_url",
@@ -53,8 +55,25 @@ class CardPolicySerializer(serializers.ModelSerializer):
         )
 
 
+class CardBenefitTierSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = CardBenefitTier
+        fields = [
+            "id",
+            "fuel_type",
+            "min_performance_amount",
+            "max_performance_amount",
+            "discount_type",
+            "discount_value",
+            "brand_scope",
+            "min_payment_amount",
+            "monthly_discount_limit",
+        ]
+
+
 class CardCatalogSerializer(serializers.ModelSerializer):
     catalog_card_id = serializers.IntegerField(source="id", read_only=True)
+    benefit_tiers = CardBenefitTierSerializer(many=True, read_only=True)
 
     class Meta:
         model = CardCatalog
@@ -62,13 +81,6 @@ class CardCatalogSerializer(serializers.ModelSerializer):
             "catalog_card_id",
             "card_name",
             "issuer_name",
-            "discount_type",
-            "discount_value",
-            "brand_scope",
-            "min_payment_amount",
-            "max_discount_amount",
-            "monthly_discount_limit",
-            "monthly_remaining_discount",
             "card_image_url",
             "source_url",
             "source_title",
@@ -77,6 +89,7 @@ class CardCatalogSerializer(serializers.ModelSerializer):
             "raw_summary",
             "confidence",
             "collected_at",
+            "benefit_tiers",
         ]
 
 
@@ -89,6 +102,7 @@ class CardFromCatalogSerializer(serializers.Serializer):
     max_discount_amount = serializers.IntegerField(required=False, allow_null=True, min_value=0)
     monthly_discount_limit = serializers.IntegerField(required=False, allow_null=True, min_value=0)
     monthly_remaining_discount = serializers.IntegerField(required=False, allow_null=True, min_value=0)
+    previous_month_spending = serializers.IntegerField(required=False, allow_null=True, min_value=0)
     user_memo = serializers.CharField(required=False, allow_blank=True)
 
     def validate(self, attrs):
