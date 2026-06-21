@@ -1,6 +1,8 @@
 from rest_framework import status
 from rest_framework.response import Response
 from rest_framework.views import APIView
+from rest_framework.throttling import AnonRateThrottle
+from rest_framework.throttling import AnonRateThrottle
 
 from cards.models import CardPolicy
 from vehicles.models import VehicleProfile
@@ -131,7 +133,9 @@ class NearbyStationAPIView(APIView):
 
 
 class RecommendationQuoteAPIView(APIView):
+    authentication_classes = []
     permission_classes = []
+    throttle_classes = [AnonRateThrottle]
 
     def post(self, request):
         serializer = RecommendationQuoteRequestSerializer(data=request.data)
@@ -234,9 +238,10 @@ class RecommendationQuoteAPIView(APIView):
 class GeocodeAPIView(APIView):
     authentication_classes = []
     permission_classes = []
+    throttle_classes = [AnonRateThrottle]
 
     def get(self, request):
-        query = request.query_params.get("query", "").strip()
+        query = request.query_params.get("query", "").strip()[:120]
         if not query:
             return Response(
                 {
@@ -255,6 +260,7 @@ class GeocodeAPIView(APIView):
 class ReverseGeocodeAPIView(APIView):
     authentication_classes = []
     permission_classes = []
+    throttle_classes = [AnonRateThrottle]
 
     def get(self, request):
         serializer = LocationSerializer(data=request.query_params)
@@ -271,6 +277,7 @@ class ReverseGeocodeAPIView(APIView):
 class RefreshNearbyStationsAPIView(APIView):
     authentication_classes = []
     permission_classes = []
+    throttle_classes = [AnonRateThrottle]
 
     def post(self, request):
         serializer = StationRefreshRequestSerializer(data=request.data)
