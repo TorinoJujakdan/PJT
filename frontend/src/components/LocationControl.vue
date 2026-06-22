@@ -125,6 +125,15 @@ function rememberRecentLocation(item) {
   writeRecentLocations(recentLocations.value);
 }
 
+function removeRecentLocation(item) {
+  const key = coordsKey(item.latitude, item.longitude);
+  recentLocations.value = recentLocations.value.filter(
+    (recent) => coordsKey(recent.latitude, recent.longitude) !== key
+  );
+  writeRecentLocations(recentLocations.value);
+  setMessage("최근 위치 태그를 삭제했습니다.", "success");
+}
+
 function setMessage(text, type = "info") {
   message.value = text;
   messageType.value = type;
@@ -524,17 +533,31 @@ onBeforeUnmount(() => {
       </transition>
     </div>
 
-    <div v-if="recentLocations.length" class="recentList">
-      <button
+    <div v-if="recentLocations.length" class="recentList" aria-label="최근 위치 바로가기">
+      <div
         v-for="item in recentLocations"
         :key="`${item.latitude}-${item.longitude}-${item.saved_at}`"
         class="recentItem"
-        type="button"
-        @click="applyStoredLocation(item, '최근 위치')"
       >
-        <MapPin :size="13" />
-        <span>{{ item.name || item.address }}</span>
-      </button>
+        <button
+          class="recentItemSelect"
+          type="button"
+          :title="`${item.name || item.address} 위치로 설정`"
+          @click="applyStoredLocation(item, '최근 위치')"
+        >
+          <MapPin :size="13" />
+          <span>{{ item.name || item.address }}</span>
+        </button>
+        <button
+          class="recentItemRemove"
+          type="button"
+          :aria-label="`${item.name || item.address} 최근 위치 삭제`"
+          title="최근 위치 삭제"
+          @click="removeRecentLocation(item)"
+        >
+          <X :size="12" />
+        </button>
+      </div>
     </div>
 
     <input v-model.number="model.latitude" type="hidden" />
@@ -569,8 +592,7 @@ onBeforeUnmount(() => {
   margin-bottom: 12px;
 }
 
-.presetButton,
-.recentItem {
+.presetButton {
   align-items: center;
   background: var(--white);
   border: 1px solid var(--slate-200);
@@ -587,8 +609,7 @@ onBeforeUnmount(() => {
   padding: 0 10px;
 }
 
-.presetButton:hover,
-.recentItem:hover {
+.presetButton:hover {
   background: var(--primary-light);
   border-color: rgba(15, 107, 79, 0.22);
   color: var(--primary);
@@ -639,15 +660,64 @@ onBeforeUnmount(() => {
 }
 
 .recentItem {
-  justify-content: flex-start;
+  align-items: center;
+  background: var(--white);
+  border: 1px solid var(--slate-200);
+  border-radius: var(--radius-sm);
+  color: var(--slate-700);
+  display: inline-flex;
   max-width: 100%;
+  min-height: 34px;
+  min-width: 0;
+  overflow: hidden;
 }
 
-.recentItem span {
+.recentItem:focus-within,
+.recentItem:hover {
+  background: var(--primary-light);
+  border-color: rgba(15, 107, 79, 0.22);
+  color: var(--primary);
+}
+
+.recentItemSelect,
+.recentItemRemove {
+  align-items: center;
+  background: transparent;
+  border: 0;
+  color: inherit;
+  cursor: pointer;
+  display: inline-flex;
+  font-size: 12px;
+  font-weight: 800;
+  min-height: 32px;
+}
+
+.recentItemSelect {
+  gap: 7px;
+  justify-content: flex-start;
+  min-width: 0;
+  padding: 0 6px 0 10px;
+}
+
+.recentItemSelect span {
   min-width: 0;
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
+}
+
+.recentItemRemove {
+  border-left: 1px solid var(--slate-200);
+  color: var(--slate-400);
+  justify-content: center;
+  padding: 0;
+  width: 28px;
+}
+
+.recentItemRemove:hover,
+.recentItemRemove:focus-visible {
+  background: rgba(185, 28, 28, 0.08);
+  color: #b91c1c;
 }
 
 .inputLabel {
