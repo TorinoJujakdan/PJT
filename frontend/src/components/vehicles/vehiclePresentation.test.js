@@ -53,6 +53,8 @@ test("vehicle type catalog exposes nine canonical distinct static silhouettes", 
     "경차"
   ]);
   assert.equal(new Set(VEHICLE_TYPES.map(({ imageUrl }) => imageUrl)).size, 9);
+  assert.equal(getVehiclePresentation("sports_coupe").imageClass, "vehicleImageFlipped");
+  assert.equal(getVehiclePresentation("sedan").imageClass, undefined);
   assert.ok(VEHICLE_TYPES.every((type) => !Object.hasOwn(type, "description")));
 });
 

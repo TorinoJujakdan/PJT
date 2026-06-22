@@ -41,7 +41,7 @@ const fuelLabels = VEHICLE_FUEL_LABELS;
     <div v-if="isAuthenticated" class="contextGrid">
       <article class="contextItem">
         <div class="contextIcon">
-          <img v-if="savedVehicle" :src="vehiclePresentation.imageUrl" alt="" />
+          <img v-if="savedVehicle" :src="vehiclePresentation.imageUrl" :class="vehiclePresentation.imageClass" alt="" />
           <Car v-else :size="18" />
         </div>
         <div>

@@ -40,7 +40,8 @@ export const VEHICLE_TYPES = Object.freeze([
   {
     value: "sports_coupe",
     label: "쿠페",
-    imageUrl: new URL("../../assets/vehicles/sports-coupe.png", import.meta.url).href
+    imageUrl: new URL("../../assets/vehicles/sports-coupe.png", import.meta.url).href,
+    imageClass: "vehicleImageFlipped"
   },
   {
     value: "hatchback",

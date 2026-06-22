@@ -243,7 +243,7 @@ async function requestRecommendation() {
             <h2>시뮬레이션 차량 선택</h2>
           </div>
         </div>
-        
+
         <div class="fieldGrid">
           <label>
             <span>주유할 차량</span>
@@ -264,6 +264,7 @@ async function requestRecommendation() {
         <div v-if="selectedSavedVehicle" class="selectedVehiclePreview">
           <img
             :src="getVehiclePresentation(selectedSavedVehicle.vehicle_type).imageUrl"
+            :class="getVehiclePresentation(selectedSavedVehicle.vehicle_type).imageClass"
             alt=""
           />
           <div>
@@ -274,7 +275,7 @@ async function requestRecommendation() {
             </span>
           </div>
         </div>
-        
+
         <p class="hintText" style="margin-top: 10px;">
           선택한 차량의 유종과 연비가 계산 모델에 실시간 적용됩니다.<br />
           등록된 내 할인 카드 {{ savedCards.length }}개가 추천 계산에 자동 포함됩니다.
