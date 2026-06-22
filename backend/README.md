@@ -72,6 +72,29 @@ cd backend
 - `NAVER_LOCAL_CLIENT_ID` / `NAVER_LOCAL_CLIENT_SECRET`: optional NAVER Developers Search credentials for registered businesses, buildings, and landmarks. `NAVER_SEARCH_*` and `NAVER_OPENAPI_*` aliases are also accepted. Cloud Maps `NAVER_CLIENT_*` credentials are intentionally not used for Local Search.
 - `CARD_INGESTION_ALLOWED_DOMAINS`: comma-separated allowlist for card ingestion sources.
 
+## 초기 데이터 설정 (Initial Data Setup)
+
+Migration 적용 후 카드 카탈로그 데이터를 DB에 로드해야 합니다.  
+`fixtures/card_data.json` 파일은 자동으로 반영되지 않으므로 아래 명령어를 **반드시 한 번 실행**해야 카드 검색이 정상적으로 동작합니다.
+
+```powershell
+cd backend
+..\\.venv\\Scripts\\python.exe manage.py migrate
+..\\.venv\\Scripts\\python.exe manage.py loaddata cards/fixtures/card_data.json
+```
+
+> **주의**: `loaddata`를 실행하지 않으면 카드 검색 결과가 빈 값으로 나옵니다.
+
+로드 완료 후 아래 명령어로 데이터가 정상 입력되었는지 확인할 수 있습니다:
+
+```powershell
+..\\.venv\\Scripts\\python.exe manage.py shell -c "from cards.models import CardCatalog; print('CardCatalog:', CardCatalog.objects.count())"
+```
+
+정상이라면 `CardCatalog: 152` 와 같이 출력됩니다.
+
+---
+
 ## Card Ingestion
 
 ```powershell

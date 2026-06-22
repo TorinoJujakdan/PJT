@@ -68,7 +68,17 @@ copy frontend\.env.example frontend\.env
 .venv\Scripts\python backend\manage.py migrate
 ```
 
-### 6단계: 서버 실행
+### 6단계: 초기 카드 데이터 로드 ⚠️
+
+카드 검색 기능을 사용하려면 **반드시 한 번** 아래 명령어를 실행해야 합니다.
+
+```powershell
+.venv\Scripts\python backend\manage.py loaddata backend\cards\fixtures\card_data.json
+```
+
+> **주의**: 이 단계를 건너뛰면 카드 검색 결과가 빈 값으로 나옵니다.
+
+### 7단계: 서버 실행
 
 ```powershell
 # 방법 1: 원클릭 실행 (권장)
