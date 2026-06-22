@@ -34,12 +34,12 @@ export const VEHICLE_TYPES = Object.freeze([
   },
   {
     value: "rv_mpv",
-    label: "RV / MPV (미니밴)",
+    label: "RV / MPV",
     imageUrl: new URL("../../assets/vehicles/rv-mpv.png", import.meta.url).href
   },
   {
     value: "sports_coupe",
-    label: "스포츠카 / 쿠페",
+    label: "쿠페",
     imageUrl: new URL("../../assets/vehicles/sports-coupe.png", import.meta.url).href
   },
   {
@@ -54,7 +54,7 @@ export const VEHICLE_TYPES = Object.freeze([
   },
   {
     value: "convertible",
-    label: "컨버터블 / 로드스터",
+    label: "로드스터",
     imageUrl: new URL("../../assets/vehicles/convertible.png", import.meta.url).href
   },
   {
@@ -64,7 +64,7 @@ export const VEHICLE_TYPES = Object.freeze([
   },
   {
     value: "micro_city",
-    label: "경차 / 초소형차",
+    label: "경차",
     imageUrl: new URL("../../assets/vehicles/micro-city.png", import.meta.url).href
   }
 ]);

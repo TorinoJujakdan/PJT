@@ -1398,6 +1398,45 @@ select:focus {
   text-decoration: underline;
 }
 
+.loginRequiredSection {
+  display: grid;
+  justify-items: center;
+  gap: 16px;
+  padding: 28px 18px;
+  text-align: center;
+}
+
+.loginRequiredIcon {
+  display: inline-grid;
+  width: 48px;
+  height: 48px;
+  place-items: center;
+  border-radius: 999px;
+  background: var(--primary-light);
+  color: var(--primary);
+}
+
+.loginRequiredCopy {
+  display: grid;
+  gap: 8px;
+}
+
+.loginRequiredCopy h3 {
+  margin: 0;
+  color: var(--slate-900);
+  font-size: 17px;
+  font-weight: 900;
+  letter-spacing: -0.02em;
+}
+
+.loginRequiredCopy p {
+  margin: 0;
+  color: var(--slate-600);
+  font-size: 13px;
+  font-weight: 600;
+  line-height: 1.6;
+}
+
 /* Embedded Fuel Checkbox Card */
 .cardCheckboxGroup {
   display: grid;

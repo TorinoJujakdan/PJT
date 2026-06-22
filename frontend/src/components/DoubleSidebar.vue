@@ -1,7 +1,6 @@
 <script setup>
 import { computed, ref, watch } from "vue";
 import { 
-  Car, 
   ChevronDown,
   ChevronUp,
   CreditCard, 
@@ -17,7 +16,6 @@ import {
 
 import LocationControl from "./LocationControl.vue";
 import FuelTargetControl from "./FuelTargetControl.vue";
-import CardPolicyForm from "./CardPolicyForm.vue";
 import {
   getVehiclePresentation,
   getVehicleSelectorLabel
@@ -184,8 +182,8 @@ function isPastData(station) {
         </button>
         
         <button type="button" class="tabItem" :class="{ active: activeTab === 'vehicle_card' && sidebarOpen }" @click="handleTabClick('vehicle_card')" aria-label="차량 및 카드 설정" title="차량 & 카드 설정">
-          <Car :size="20" aria-hidden="true" />
-          <span>차량/카드</span>
+          <Fuel :size="20" aria-hidden="true" />
+          <span>주유</span>
         </button>
 
         <button type="button" class="tabItem" :class="{ active: activeTab === 'settings' && sidebarOpen }" @click="handleTabClick('settings')" aria-label="필터 및 우선순위 설정" title="필터 및 우선순위">
@@ -300,12 +298,21 @@ function isPastData(station) {
             </p>
           </div>
 
-          <!-- 비로그인 사용자의 연료 연비 수동 제어 -->
-          <div v-else class="sidebarSection">
-            <div class="sidebarSectionHeader">
-              <h3>차량 및 수동 연비</h3>
+          <!-- Anonymous vehicle/card login prompt -->
+          <div v-else class="sidebarSection loginRequiredSection">
+            <div class="loginRequiredIcon">
+              <LogIn :size="22" aria-hidden="true" />
             </div>
-            <FuelTargetControl v-model="localFuel" :is-read-only="false" />
+            <div class="loginRequiredCopy">
+              <h3>로그인하여 확인해 보세요</h3>
+              <p>
+                차량과 할인 카드를 등록하면 저장된 연비와 카드 혜택을 추천 계산에 자동으로 적용할 수 있습니다.
+              </p>
+            </div>
+            <button class="primaryButton fullWidth" type="button" @click="emit('login')">
+              <LogIn :size="16" aria-hidden="true" />
+              <span>로그인하기</span>
+            </button>
           </div>
 
           <!-- 할인 카드 설정 영역 -->
@@ -333,8 +340,6 @@ function isPastData(station) {
             </p>
           </div>
 
-          <!-- 비로그인 사용자의 카드 시뮬레이터 -->
-          <CardPolicyForm v-else v-model="localCard" :cards="[]" />
         </div>
       </template>
 
