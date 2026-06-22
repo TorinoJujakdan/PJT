@@ -105,31 +105,9 @@ const response = computed(() => recommendationStore.response);
 const recommendation = computed(() => response.value?.recommendation || null);
 const rawCandidates = computed(() => response.value?.candidates || []);
 
-// 우선순위 정렬 필터를 거친 최종 후보 리스트
+// 추천 우선순위 정렬은 백엔드가 결정하므로 응답 순서를 그대로 표시한다.
 const candidates = computed(() => {
-  if (!rawCandidates.value.length) return [];
-  const list = [...rawCandidates.value];
-  
-  if (priority.value === "price") {
-    // 실질 주유 가격 (할인 반영) 순 정렬
-    return list.sort((a, b) => {
-      const aLiters = a.cost_breakdown?.target_liters || 1;
-      const aDiscount = a.cost_breakdown?.card_discount_amount || 0;
-      const aPrice = a.station?.fuel_price_per_liter - (aDiscount / aLiters);
-
-      const bLiters = b.cost_breakdown?.target_liters || 1;
-      const bDiscount = b.cost_breakdown?.card_discount_amount || 0;
-      const bPrice = b.station?.fuel_price_per_liter - (bDiscount / bLiters);
-      
-      return aPrice - bPrice;
-    });
-  } else if (priority.value === "distance") {
-    // 이동 거리 순 정렬
-    return list.sort((a, b) => a.station?.distance_km - b.station?.distance_km);
-  }
-  
-  // 기본 'optimal' : 백엔드가 돌려준 정렬 그대로 유지 (하네스 원칙 준수)
-  return list;
+  return rawCandidates.value;
 });
 
 const activeRecommendation = computed(() => {
@@ -477,6 +455,7 @@ async function requestRecommendation() {
     },
     fuel_type: fuel.fuel_type,
     radius_km: searchRadiusKm.value,
+    recommendation_priority: priority.value,
     target_liters: calculatedLiters,
     travel_mode: fuel.travel_mode,
     cards: selectedCards(),

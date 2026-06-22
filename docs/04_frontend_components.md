@@ -113,6 +113,7 @@ Displays:
 Displays alternative candidates returned by the API.
 
 Sorting is already decided by the backend.
+The frontend sends `recommendation_priority` with the quote request and renders the returned recommendation/candidate order without recalculating rank locally.
 
 ### `RecommendationContextPanel.vue`
 

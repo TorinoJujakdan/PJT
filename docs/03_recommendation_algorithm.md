@@ -329,11 +329,33 @@ Rules:
 
 ## 6. Ranking Rules
 
+Recommendation requests may set `recommendation_priority`.
+
+### `optimal` (default)
+
 Candidates are sorted by:
 
 1. `effective_total_cost` ascending
 2. `distance_km` ascending
 3. `fuel_price_per_liter` ascending
+4. `station_id` ascending
+
+### `price`
+
+Candidates are sorted by the displayed fuel price, not by card-adjusted or travel-adjusted cost:
+
+1. `fuel_price_per_liter` ascending
+2. `distance_km` ascending
+3. `effective_total_cost` ascending
+4. `station_id` ascending
+
+### `distance`
+
+Candidates are sorted by backend-calculated distance. Use navigation route distance when available; keep the existing Haversine distance fallback when route lookup fails:
+
+1. `distance_km` ascending
+2. `fuel_price_per_liter` ascending
+3. `effective_total_cost` ascending
 4. `station_id` ascending
 
 The first candidate after sorting is the recommendation.

@@ -163,6 +163,7 @@ class RecommendationQuoteAPIView(APIView):
             fuel_efficiency_kmpl=fuel_efficiency_kmpl,
             travel_mode=data["travel_mode"],
             user_cards=user_cards,
+            recommendation_priority=data["recommendation_priority"],
         )
 
         if not recommendations:
@@ -188,12 +189,13 @@ class RecommendationQuoteAPIView(APIView):
                 "candidate_count": len(serialized_candidates),
                 "radius_km": data["radius_km"],
                 "distance_source": recommendations[0].distance_source if recommendations else "haversine",
+                "recommendation_priority": data["recommendation_priority"],
                 "station_data_state": "database",
                 "external_station_refresh": refresh_result["status"],
                 "external_station_refresh_reason": refresh_result.get("reason"),
                 "external_station_refresh_summary": refresh_result.get("summary"),
                 "external_station_refresh_meta": refresh_result.get("meta"),
-                "algorithm_version": "2026-05-26.v3-all-candidate-directions",
+                "algorithm_version": "2026-06-22.v4-priority-ranking",
                 "map_display": {
                     "coordinate_source": "station_summary",
                     "rank_source": "backend_recommendation_order",

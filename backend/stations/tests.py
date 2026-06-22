@@ -317,6 +317,111 @@ class RecommendationQuoteAPITests(TestCase):
         self.assertNotIn("route_path", data["candidates"][1]["station"])
         self.assertEqual(data["candidates"][1]["station"]["station_id"], near_station.id)
 
+    def test_price_priority_selects_lowest_displayed_fuel_price(self):
+        cheap_far_station = self._create_station_with_price(
+            external_station_id="PRIORITY-PRICE-CHEAP",
+            name="Priority Price Cheap Station",
+            latitude=35.01,
+            longitude=129.0,
+            price_per_liter=900,
+            brand=GasStation.Brand.SK,
+        )
+        discounted_expensive_station = self._create_station_with_price(
+            external_station_id="PRIORITY-PRICE-DISCOUNTED",
+            name="Priority Price Discounted Station",
+            latitude=35.0,
+            longitude=129.0,
+            price_per_liter=1000,
+            brand=GasStation.Brand.GS,
+        )
+        self.fetch_directions_parallel.return_value = {
+            cheap_far_station.id: {
+                "distance_km": 20.0,
+                "duration_min": 30.0,
+                "distance_source": "naver_directions",
+                "route_path": [],
+            },
+            discounted_expensive_station.id: {
+                "distance_km": 1.0,
+                "duration_min": 3.0,
+                "distance_source": "naver_directions",
+                "route_path": [],
+            },
+        }
+
+        response = self.client.post(
+            "/api/v1/recommendations/quote/",
+            {
+                "location": {"latitude": 35.0, "longitude": 129.0},
+                "fuel_type": "gasoline",
+                "target_liters": 10,
+                "radius_km": 5,
+                "recommendation_priority": "price",
+                "vehicle": {"fuel_efficiency_kmpl": 10},
+                "cards": [
+                    {
+                        "card_name": "GS Discount",
+                        "issuer_name": "Smart Bank",
+                        "discount_type": "per_liter",
+                        "discount_value": 300,
+                        "brand_scope": "GS",
+                    }
+                ],
+            },
+            format="json",
+        )
+
+        self.assertEqual(response.status_code, 200)
+        data = response.json()
+        self.assertEqual(data["meta"]["recommendation_priority"], "price")
+        self.assertEqual(data["recommendation"]["station"]["station_id"], cheap_far_station.id)
+        self.assertEqual(data["recommendation"]["station"]["fuel_price_per_liter"], 900)
+        self.assertEqual(data["candidates"][0]["station"]["station_id"], cheap_far_station.id)
+
+    def test_distance_priority_selects_nearest_with_haversine_fallback(self):
+        routed_station = self._create_station_with_price(
+            external_station_id="PRIORITY-DISTANCE-ROUTED",
+            name="Priority Distance Routed Station",
+            latitude=35.01,
+            longitude=129.0,
+            price_per_liter=900,
+        )
+        fallback_station = self._create_station_with_price(
+            external_station_id="PRIORITY-DISTANCE-FALLBACK",
+            name="Priority Distance Fallback Station",
+            latitude=35.0,
+            longitude=129.0,
+            price_per_liter=1100,
+        )
+        self.fetch_directions_parallel.return_value = {
+            routed_station.id: {
+                "distance_km": 5.0,
+                "duration_min": 10.0,
+                "distance_source": "naver_directions",
+                "route_path": [],
+            }
+        }
+
+        response = self.client.post(
+            "/api/v1/recommendations/quote/",
+            {
+                "location": {"latitude": 35.0, "longitude": 129.0},
+                "fuel_type": "gasoline",
+                "target_liters": 10,
+                "radius_km": 5,
+                "recommendation_priority": "distance",
+                "vehicle": {"fuel_efficiency_kmpl": 10},
+            },
+            format="json",
+        )
+
+        self.assertEqual(response.status_code, 200)
+        data = response.json()
+        self.assertEqual(data["meta"]["recommendation_priority"], "distance")
+        self.assertEqual(data["recommendation"]["station"]["station_id"], fallback_station.id)
+        self.assertEqual(data["recommendation"]["station"]["distance_source"], "haversine")
+        self.assertEqual(data["candidates"][0]["station"]["station_id"], fallback_station.id)
+
     def test_quote_refreshes_opinet_with_selected_departure_location(self):
         fetch_price_rows = Mock(return_value=[])
         with patch.dict("os.environ", {"OPINET_API_KEY": "test-key"}, clear=False), patch(
@@ -797,7 +902,7 @@ class RecommendationQuoteAPITests(TestCase):
         recommendation = data["recommendation"]
         reason = recommendation["reason"]
 
-        self.assertEqual(data["meta"]["algorithm_version"], "2026-05-26.v3-all-candidate-directions")
+        self.assertEqual(data["meta"]["algorithm_version"], "2026-06-22.v4-priority-ranking")
         self.assertIn("Smart Bank", reason)
         self.assertIn("GS Saver", reason)
         self.assertIn("최종 예상 비용", reason)
