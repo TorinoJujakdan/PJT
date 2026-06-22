@@ -35,25 +35,3 @@ coverage/
 .DS_Store
 Thumbs.db
 
-# Local agent/runtime files
-.omx/
-.docs/
-harness/
-
-# Generated QA artifacts
-artifacts/
-/frontend/*-smoke.png
-
-# oh-my-agent (oma) — do not commit
-.agents/
-.claude/
-.codex/
-.cursor/
-.grok/
-.qwen/
-.serena/
-.antigravitycli/
-.migration-backup/
-.mcp.json
-AGENTS.md
-CLAUDE.md
