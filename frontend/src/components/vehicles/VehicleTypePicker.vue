@@ -47,7 +47,7 @@ function selectByKeyboard(event, index) {
       @click="emit('update:modelValue', type.value)"
       @keydown="selectByKeyboard($event, index)"
     >
-      <img :src="type.imageUrl" alt="" aria-hidden="true" :class="{ flipped: type.value === 'sports_coupe' }" />
+      <img :src="type.imageUrl" alt="" aria-hidden="true" :class="type.imageClass" />
       <strong>{{ type.label }}</strong>
     </button>
   </div>
@@ -97,9 +97,6 @@ function selectByKeyboard(event, index) {
   border-radius: 13px;
 }
 
-.typeOption img.flipped {
-  transform: scaleX(-1);
-}
 
 .typeOption strong {
   padding-inline: 5px;

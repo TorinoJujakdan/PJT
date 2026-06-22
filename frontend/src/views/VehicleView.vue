@@ -171,7 +171,11 @@ async function handleDelete(vehicle) {
           <template v-if="editingId !== vehicle.id">
             <div class="vehicleVisual">
               <span v-if="vehicle.is_default" class="defaultBadge"><Star :size="13" fill="currentColor" /> 대표 차량</span>
-              <img :src="getVehiclePresentation(vehicle.vehicle_type).imageUrl" alt="" />
+              <img
+                :src="getVehiclePresentation(vehicle.vehicle_type).imageUrl"
+                :class="getVehiclePresentation(vehicle.vehicle_type).imageClass"
+                alt=""
+              />
             </div>
             <div class="vehicleInfo">
               <div class="vehicleIdentity">

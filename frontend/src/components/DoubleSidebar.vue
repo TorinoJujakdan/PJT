@@ -273,6 +273,7 @@ function isPastData(station) {
             <div v-if="selectedSavedVehicle" class="selectedVehiclePreview">
               <img
                 :src="getVehiclePresentation(selectedSavedVehicle.vehicle_type).imageUrl"
+                :class="getVehiclePresentation(selectedSavedVehicle.vehicle_type).imageClass"
                 alt=""
               />
               <div>
