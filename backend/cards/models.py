@@ -48,6 +48,8 @@ class CardPolicy(models.Model):
         default=VerificationStatus.USER_CONFIRMED,
     )
     card_image_url = models.URLField(blank=True)
+    card_image_original_url = models.URLField(blank=True)
+    card_image_file = models.FileField(upload_to="card_images/policies/", blank=True)
     source_url = models.URLField(blank=True)
     source_title = models.CharField(max_length=255, blank=True)
     user_memo = models.TextField(blank=True)
@@ -82,6 +84,8 @@ class CardCatalog(models.Model):
     card_name = models.CharField(max_length=120)
     issuer_name = models.CharField(max_length=120, blank=True)
     card_image_url = models.URLField(blank=True)
+    card_image_original_url = models.URLField(blank=True)
+    card_image_file = models.FileField(upload_to="card_images/catalog/", blank=True)
     source_url = models.URLField(blank=True, unique=True)
     source_title = models.CharField(max_length=255, blank=True)
     source_type = models.CharField(
@@ -95,6 +99,7 @@ class CardCatalog(models.Model):
         default=CardPolicy.VerificationStatus.UNVERIFIED,
     )
     raw_summary = models.TextField(blank=True)
+    normalized_data = models.JSONField(default=dict, blank=True)
     confidence = models.DecimalField(max_digits=4, decimal_places=2, null=True, blank=True)
     collected_at = models.DateTimeField(null=True, blank=True)
     created_at = models.DateTimeField(auto_now_add=True)

@@ -94,6 +94,8 @@ class MyCardPolicyFromCatalogAPIView(APIView):
             source_type=CardPolicy.SourceType.CATALOG,
             verification_status=CardPolicy.VerificationStatus.USER_CONFIRMED,
             card_image_url=catalog.card_image_url,
+            card_image_original_url=catalog.card_image_original_url,
+            card_image_file=catalog.card_image_file,
             source_url=catalog.source_url,
             source_title=catalog.source_title,
             user_memo=serializer.validated_data.get("user_memo", ""),

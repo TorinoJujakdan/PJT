@@ -21,6 +21,9 @@
         "monthly_discount_limit": { "type": "integer", "nullable": true },
         "monthly_remaining_discount": { "type": "integer", "nullable": true },
         "card_image_url": { "type": "string", "nullable": true },
+        "card_image_original_url": { "type": "string", "nullable": true },
+        "card_image_file": { "type": "string", "nullable": true },
+        "normalized_data": { "type": "object" },
         "source_url": { "type": "string", "nullable": true },
         "source_title": { "type": "string", "nullable": true },
         "source_type": { "type": "string", "enum": ["selenium"] },
@@ -49,6 +52,8 @@
         "source_type": { "type": "string", "enum": ["selenium"] },
         "verification_status": { "type": "string", "enum": ["user_confirmed"] },
         "card_image_url": { "type": "string", "nullable": true },
+        "card_image_original_url": { "type": "string", "nullable": true },
+        "card_image_file": { "type": "string", "nullable": true },
         "source_url": { "type": "string", "nullable": true },
         "user_memo": { "type": "string", "nullable": true }
       }
