@@ -44,10 +44,16 @@ harness/
 artifacts/
 /frontend/*-smoke.png
 
-# oh-my-agent runtime (local artifacts — do not commit)
-.antigravitycli/
-.agents/results/
-.agents/state/
-.agents/backup/
-.migration-backup/
+# oh-my-agent (oma) — do not commit
+.agents/
+.claude/
+.codex/
+.cursor/
+.grok/
+.qwen/
 .serena/
+.antigravitycli/
+.migration-backup/
+.mcp.json
+AGENTS.md
+CLAUDE.md
