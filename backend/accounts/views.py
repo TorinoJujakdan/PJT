@@ -5,6 +5,7 @@ from rest_framework import status
 from rest_framework.permissions import AllowAny, IsAuthenticated
 from rest_framework.response import Response
 from rest_framework.views import APIView
+from rest_framework.throttling import AnonRateThrottle
 
 from .serializers import LoginSerializer, SignupSerializer, UserSerializer
 
@@ -30,6 +31,7 @@ def error_response(code, http_status, details=None):
 
 class SignupAPIView(APIView):
     permission_classes = [AllowAny]
+    throttle_classes = [AnonRateThrottle]
 
     def post(self, request):
         serializer = SignupSerializer(data=request.data)
@@ -42,6 +44,8 @@ class SignupAPIView(APIView):
 
 class LoginAPIView(APIView):
     permission_classes = [AllowAny]
+    throttle_classes = [AnonRateThrottle]
+    throttle_classes = [AnonRateThrottle]
 
     def post(self, request):
         serializer = LoginSerializer(data=request.data)
@@ -70,7 +74,8 @@ class LogoutAPIView(APIView):
 
 @method_decorator(ensure_csrf_cookie, name="dispatch")
 class MeAPIView(APIView):
-    permission_classes = [AllowAny]
+    def get_permissions(self):
+        return [AllowAny()]
 
     def get(self, request):
         if not request.user or not request.user.is_authenticated:
