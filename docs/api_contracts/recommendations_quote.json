@@ -56,6 +56,16 @@
         "maximum": 30,
         "default": 15
       },
+      "recommendation_priority": {
+        "type": "string",
+        "enum": [
+          "optimal",
+          "price",
+          "distance"
+        ],
+        "default": "optimal",
+        "description": "Backend ranking priority. optimal ranks by effective total cost; price ranks by displayed fuel_price_per_liter; distance ranks by backend distance with Haversine fallback."
+      },
       "travel_mode": {
         "type": "string",
         "enum": [
@@ -198,6 +208,14 @@
             "enum": [
               "haversine",
               "navigation_api"
+            ]
+          },
+          "recommendation_priority": {
+            "type": "string",
+            "enum": [
+              "optimal",
+              "price",
+              "distance"
             ]
           },
           "algorithm_version": {
@@ -356,6 +374,7 @@
     "Authenticated users' active saved CardPolicy records are included automatically.",
     "Slice 1 and 2 may omit vehicle and card calculations only when the task explicitly limits scope.",
     "Slice 4 may use manual, user_confirmed, or admin_verified card policies. It must not use unverified Naver discovery results in ranking.",
-    "Map display must use recommendation.station and candidates[].station latitude/longitude only for presentation. Frontend map rendering must not recompute rank, distance, or cost."
+    "Map display must use recommendation.station and candidates[].station latitude/longitude only for presentation. Frontend map rendering must not recompute rank, distance, or cost.",
+    "Recommendation priority must be applied by the backend; frontend controls only send recommendation_priority and render returned order."
   ]
 }

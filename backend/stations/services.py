@@ -15,6 +15,9 @@ from .models import FuelPrice, GasStation
 EARTH_RADIUS_KM = 6371.0
 DEFAULT_RADIUS_KM = 15.0
 MAX_RADIUS_KM = 30.0
+RECOMMENDATION_PRIORITY_OPTIMAL = "optimal"
+RECOMMENDATION_PRIORITY_PRICE = "price"
+RECOMMENDATION_PRIORITY_DISTANCE = "distance"
 
 
 @dataclass(frozen=True)
@@ -334,6 +337,7 @@ def quote_travel_cost_recommendations(
     fuel_efficiency_kmpl,
     travel_mode,
     user_cards=None,
+    recommendation_priority=RECOMMENDATION_PRIORITY_OPTIMAL,
 ):
     candidates = get_station_candidates(location=location, radius_km=radius_km, fuel_type=fuel_type)
     if not candidates:
@@ -454,15 +458,29 @@ def quote_travel_cost_recommendations(
     )
 
     # 6단계: 최종 정렬 및 각 추천 사유(reason) 빌드
-    sorted_finals = sorted(
-        final_recommendations,
-        key=lambda item: (
+    if recommendation_priority == RECOMMENDATION_PRIORITY_PRICE:
+        sort_key = lambda item: (
+            item.candidate.fuel_price_per_liter,
+            item.candidate.distance_km,
+            item.effective_total_cost,
+            item.candidate.station.id,
+        )
+    elif recommendation_priority == RECOMMENDATION_PRIORITY_DISTANCE:
+        sort_key = lambda item: (
+            item.candidate.distance_km,
+            item.candidate.fuel_price_per_liter,
+            item.effective_total_cost,
+            item.candidate.station.id,
+        )
+    else:
+        sort_key = lambda item: (
             item.effective_total_cost,
             item.candidate.distance_km,
             item.candidate.fuel_price_per_liter,
             item.candidate.station.id,
-        ),
-    )
+        )
+
+    sorted_finals = sorted(final_recommendations, key=sort_key)
 
     cheapest_candidate = min(
         [r.candidate for r in sorted_finals],
@@ -550,4 +568,5 @@ def quote_fuel_price_only_recommendations(location, radius_km, fuel_type, target
         target_liters=target_liters,
         fuel_efficiency_kmpl=1_000_000,
         travel_mode="one_way",
+        recommendation_priority=RECOMMENDATION_PRIORITY_PRICE,
     )

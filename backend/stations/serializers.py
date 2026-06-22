@@ -53,10 +53,22 @@ class RecommendationCardPolicySerializer(serializers.Serializer):
 
 
 class RecommendationQuoteRequestSerializer(serializers.Serializer):
+    class RecommendationPriority:
+        OPTIMAL = "optimal"
+        PRICE = "price"
+        DISTANCE = "distance"
+
+        choices = (OPTIMAL, PRICE, DISTANCE)
+
     location = LocationSerializer()
     fuel_type = serializers.ChoiceField(choices=FuelPrice.FuelType.choices)
     target_liters = serializers.FloatField(min_value=1, max_value=150)
     radius_km = serializers.FloatField(min_value=1, max_value=30, required=False, default=15)
+    recommendation_priority = serializers.ChoiceField(
+        choices=RecommendationPriority.choices,
+        required=False,
+        default=RecommendationPriority.OPTIMAL,
+    )
     travel_mode = serializers.ChoiceField(
         choices=["round_trip", "one_way"],
         required=False,
