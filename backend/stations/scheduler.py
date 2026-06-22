@@ -1,5 +1,4 @@
 import logging
-import os
 from django.core.management import call_command
 
 logger = logging.getLogger(__name__)
@@ -10,7 +9,7 @@ def sync_opinet_job():
         call_command("sync_opinet_prices")
         logger.info("Scheduled Opinet prices synchronization completed successfully.")
     except Exception as e:
-        logger.error(f"Error executing scheduled Opinet prices synchronization: {e}", exc_info=True)
+        logger.error("Error executing scheduled Opinet prices synchronization: %s", e, exc_info=True)
 
 def sync_cards_job():
     logger.info("Starting scheduled Naver Card benefits synchronization...")
@@ -18,7 +17,7 @@ def sync_cards_job():
         call_command("ingest_card_search", "--limit=30")
         logger.info("Scheduled Naver Card benefits synchronization completed successfully.")
     except Exception as e:
-        logger.error(f"Error executing scheduled card benefits ingestion: {e}", exc_info=True)
+        logger.error("Error executing scheduled card benefits ingestion: %s", e, exc_info=True)
 
 
 def start_scheduler():
@@ -72,4 +71,4 @@ def start_scheduler():
         scheduler.start()
         logger.info("APScheduler initialized successfully. Opinet prices daily (05:01, 17:01) & Card benefits daily (03:00) scheduled.")
     except Exception as e:
-        logger.error(f"Failed to start APScheduler: {e}", exc_info=True)
+        logger.error("Failed to start APScheduler: %s", e, exc_info=True)

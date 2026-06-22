@@ -3,7 +3,7 @@ from decimal import Decimal
 from django.test import TestCase
 from django.utils import timezone
 
-from .models import CardCatalog, CardPolicy
+from .models import CardBenefitTier, CardCatalog, CardPolicy
 from .selenium_ingestion import (
     CardIngestionError,
     ScrapedCardCandidate,
@@ -270,9 +270,6 @@ KB국민 굿데이카드
         CardCatalog.objects.create(
             card_name="신한카드 Deep Oil",
             issuer_name="신한카드",
-            discount_type=CardPolicy.DiscountType.PERCENTAGE,
-            discount_value=10,
-            brand_scope="all",
             source_url=detail_url,
             source_type=CardPolicy.SourceType.SELENIUM,
             verification_status=CardPolicy.VerificationStatus.UNVERIFIED,
@@ -297,8 +294,12 @@ KB국민 굿데이카드
         self.assertEqual(len(saved), 1)
         self.assertEqual(CardCatalog.objects.count(), 1)
         catalog = CardCatalog.objects.get()
-        self.assertEqual(catalog.brand_scope, "GS")
-        self.assertEqual(catalog.min_payment_amount, 30000)
-        self.assertEqual(catalog.max_discount_amount, 5000)
-        self.assertEqual(catalog.monthly_discount_limit, 20000)
         self.assertEqual(catalog.verification_status, CardPolicy.VerificationStatus.UNVERIFIED)
+        # Tier에서 할인 정보 검증
+        tier = CardBenefitTier.objects.get(card_catalog=catalog)
+        self.assertEqual(tier.brand_scope, "GS")
+        self.assertEqual(tier.discount_type, CardPolicy.DiscountType.PERCENTAGE)
+        self.assertEqual(tier.discount_value, Decimal("10"))
+        self.assertEqual(tier.min_payment_amount, 30000)
+        self.assertEqual(tier.monthly_discount_limit, 20000)
+
