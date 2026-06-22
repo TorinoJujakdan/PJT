@@ -90,15 +90,16 @@ async function handleAddVehicle() {
         <span>차량 이름 <small>{{ createForm.name.trim().length }}/{{ VEHICLE_NAME_MAX_LENGTH }}</small></span>
         <input v-model="createForm.name" :maxlength="VEHICLE_NAME_MAX_LENGTH" placeholder="예: 출퇴근차, 가족차" required />
       </label>
-      <fieldset>
+      <fieldset class="vehicleTypeField">
         <legend>차량 유형</legend>
-        <VehicleTypePicker v-model="createForm.vehicle_type" />
+        <div class="vehicleTypeBox">
+          <VehicleTypePicker v-model="createForm.vehicle_type" />
+        </div>
       </fieldset>
-      <div class="fuelGrid">
+      <div class="fuelGrid registerFuelGrid">
         <label><span>연료</span><select v-model="createForm.fuel_type"><option v-for="(label, value) in fuelLabels" :key="value" :value="value">{{ label }}</option></select></label>
-        <label><span>연비 (km/L)</span><input v-model.number="createForm.fuel_efficiency_kmpl" type="number" min="1" max="50" step="0.1" required /></label>
+        <label class="efficiencyField"><span>연비 (km/L)</span><input v-model.number="createForm.fuel_efficiency_kmpl" type="number" min="1" max="50" step="0.1" required /></label>
       </div>
-      <p class="formHint">입력한 연비는 주유소별 예상 비용 계산에 사용됩니다.</p>
       <p v-if="errorMessage" class="formError" role="alert">{{ errorMessage }}</p>
       <p v-if="successMessage" class="formSuccess" role="status"><Check :size="15" /> {{ successMessage }}</p>
       <button class="primaryAction cardPrimaryButton" type="submit" :disabled="loading || actionPending">
@@ -107,3 +108,63 @@ async function handleAddVehicle() {
     </form>
   </section>
 </template>
+
+<style scoped>
+.vehicleTypeField {
+  min-inline-size: 0;
+  margin: 12px 0 12px;
+  padding: 0;
+  border: 0;
+}
+
+.vehicleTypeField legend {
+  width: 100%;
+  margin: 0 0 7px;
+  padding: 0;
+  color: var(--slate-600);
+  font-size: 13px;
+  font-weight: 700;
+  line-height: 1.2;
+}
+
+.vehicleTypeBox {
+  border: 1.5px solid var(--slate-200);
+  border-radius: var(--radius-sm);
+  background: var(--slate-50);
+  padding: 12px;
+  transition: border-color 160ms ease, box-shadow 160ms ease, background 160ms ease;
+}
+
+.vehicleTypeBox:focus-within {
+  border-color: var(--primary);
+  background: var(--white);
+  box-shadow: 0 0 0 3px rgba(15, 107, 79, 0.15);
+}
+
+.vehicleTypeBox :deep(.typePicker) {
+  gap: 12px 10px;
+}
+
+.vehicleTypeBox :deep(.typeOption) {
+  padding: 4px 4px 7px;
+}
+
+.registerFuelGrid {
+  grid-template-columns: 1fr;
+  gap: 0;
+}
+
+.registerFuelGrid .efficiencyField {
+  margin-top: 18px;
+}
+
+.primaryAction {
+  margin-top: 12px;
+}
+
+@media (max-width: 460px) {
+  .vehicleTypeBox {
+    padding: 10px;
+  }
+}
+</style>

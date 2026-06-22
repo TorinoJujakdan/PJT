@@ -44,13 +44,13 @@ test("vehicle type catalog exposes nine canonical distinct static silhouettes", 
   assert.deepEqual(VEHICLE_TYPES.map(({ label }) => label), [
     "세단",
     "SUV",
-    "RV / MPV (미니밴)",
-    "스포츠카 / 쿠페",
+    "RV / MPV",
+    "쿠페",
     "해치백",
     "왜건",
-    "컨버터블 / 로드스터",
+    "로드스터",
     "픽업트럭",
-    "경차 / 초소형차"
+    "경차"
   ]);
   assert.equal(new Set(VEHICLE_TYPES.map(({ imageUrl }) => imageUrl)).size, 9);
   assert.ok(VEHICLE_TYPES.every((type) => !Object.hasOwn(type, "description")));
@@ -111,6 +111,6 @@ test("selector label puts the saved name first", () => {
       fuel_efficiency_kmpl: "15.2",
       is_default: true
     }),
-    "출퇴근차 · 경차 / 초소형차 · 15.2 km/L · 대표"
+    "출퇴근차 · 경차 · 15.2 km/L · 대표"
   );
 });
