@@ -365,7 +365,6 @@ async function handleAuthenticated(user) {
   auth.user = user;
   activeModal.value = null;
   await Promise.all([loadVehicles(), loadCards()]);
-  requestRecommendation(); // 로그인 성공 시 최적가 자동 추천 새로고침
 }
 
 function openModal(modalType, extra = null) {
