@@ -2895,3 +2895,6 @@ body.modalOpen {
   }
 }
 
+.vehicleImageFlipped {
+  transform: scaleX(-1);
+}

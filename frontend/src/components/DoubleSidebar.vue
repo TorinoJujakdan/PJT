@@ -1,17 +1,15 @@
 <script setup>
 import { computed, ref, watch } from "vue";
-import { 
+import {
   ChevronDown,
   ChevronUp,
-  CreditCard, 
-  Fuel, 
-  HelpCircle, 
-  LogIn, 
-  LogOut, 
-  MapPin, 
-  Search, 
-  Sliders, 
-  X 
+  CreditCard,
+  ListChecks,
+  LogIn,
+  LogOut,
+  MapPin,
+  Search,
+  Sliders
 } from "@lucide/vue";
 
 import LocationControl from "./LocationControl.vue";
@@ -180,10 +178,10 @@ function isPastData(station) {
           <Search :size="20" aria-hidden="true" />
           <span>위치</span>
         </button>
-        
-        <button type="button" class="tabItem" :class="{ active: activeTab === 'vehicle_card' && sidebarOpen }" @click="handleTabClick('vehicle_card')" aria-label="차량 및 카드 설정" title="차량 & 카드 설정">
-          <Fuel :size="20" aria-hidden="true" />
-          <span>주유</span>
+
+        <button type="button" class="tabItem" :class="{ active: activeTab === 'vehicle_card' && sidebarOpen }" @click="handleTabClick('vehicle_card')" aria-label="차량·카드 조건 설정" title="차량·카드 조건 설정">
+          <ListChecks :size="20" aria-hidden="true" />
+          <span>조건</span>
         </button>
 
         <button type="button" class="tabItem" :class="{ active: activeTab === 'settings' && sidebarOpen }" @click="handleTabClick('settings')" aria-label="필터 및 우선순위 설정" title="필터 및 우선순위">
@@ -193,9 +191,6 @@ function isPastData(station) {
       </div>
 
       <div class="bottomActions">
-        <button class="actionItem" type="button" title="도움말" aria-label="도움말">
-          <HelpCircle :size="18" aria-hidden="true" />
-        </button>
         <button v-if="isAuthenticated" class="actionItem logout" type="button" @click="emit('logout')" title="로그아웃" aria-label="로그아웃">
           <LogOut :size="18" aria-hidden="true" />
         </button>
@@ -235,10 +230,10 @@ function isPastData(station) {
 
 
           <!-- 검색 실행 버튼 -->
-          <button 
-            class="primaryButton fullWidth" 
-            type="button" 
-            :disabled="loading || !hasResolvedLocation" 
+          <button
+            class="primaryButton fullWidth"
+            type="button"
+            :disabled="loading || !hasResolvedLocation"
             @click="emit('request-recommendation')"
           >
             <Search :size="16" />
@@ -259,7 +254,7 @@ function isPastData(station) {
               <h3>등록 차량 목록</h3>
               <button class="inlineFormLink" type="button" @click="emit('go-vehicle-settings')">내 차량 관리 &gt;</button>
             </div>
-            
+
             <label style="margin-top: 6px;">
               <span>시뮬레이션 주유 차량</span>
               <select v-model="localSelectedVehicleId" :disabled="!savedVehicles.length">
@@ -278,6 +273,7 @@ function isPastData(station) {
             <div v-if="selectedSavedVehicle" class="selectedVehiclePreview">
               <img
                 :src="getVehiclePresentation(selectedSavedVehicle.vehicle_type).imageUrl"
+                :class="getVehiclePresentation(selectedSavedVehicle.vehicle_type).imageClass"
                 alt=""
               />
               <div>
@@ -326,9 +322,9 @@ function isPastData(station) {
             </p>
             <!-- 간단 체크박스 리스트 -->
             <div class="cardCheckboxGroup" v-if="savedCards.length">
-              <div 
-                v-for="c in savedCards" 
-                :key="c.card_id" 
+              <div
+                v-for="c in savedCards"
+                :key="c.card_id"
                 class="cardCheckboxItem checked"
               >
                 <CreditCard :size="12" />
@@ -384,10 +380,10 @@ function isPastData(station) {
 
       <!-- 2.4 공통: 주유소 후보 검색 결과 테이블 (사이드바 하단에 상시 또는 결과 발생 시 노출) -->
       <div v-if="candidates.length" class="sidebarCandidatesSection">
-        <button 
-          class="candidatesAccordionHeader" 
-          type="button" 
-          @click="toggleCandidates" 
+        <button
+          class="candidatesAccordionHeader"
+          type="button"
+          @click="toggleCandidates"
           :aria-expanded="candidatesExpanded"
         >
           <span>📍 근처 추천 주유소 목록 ({{ candidates.length }}개)</span>
@@ -396,8 +392,8 @@ function isPastData(station) {
         </button>
         <transition name="accordionSlide">
           <div v-show="candidatesExpanded" class="sidebarCandidateList">
-            <div 
-              v-for="candidate in candidates" 
+            <div
+              v-for="candidate in candidates"
               :key="candidate.station.station_id"
               class="sidebarCandidateRow"
               :class="{ active: selectedStationId === candidate.station.station_id }"
