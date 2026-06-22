@@ -6,6 +6,8 @@ from .models import CardBenefitTier, CardCatalog, CardPolicy
 class CardPolicySerializer(serializers.ModelSerializer):
     card_id = serializers.CharField(source="id", read_only=True)
     card_image_url = serializers.URLField(required=False, allow_blank=True)
+    card_image_file = serializers.FileField(read_only=True)
+    card_image_original_url = serializers.URLField(read_only=True)
     source_url = serializers.URLField(required=False, allow_blank=True)
     source_title = serializers.CharField(required=False, allow_blank=True)
     user_memo = serializers.CharField(required=False, allow_blank=True)
@@ -28,6 +30,8 @@ class CardPolicySerializer(serializers.ModelSerializer):
             "source_type",
             "verification_status",
             "card_image_url",
+            "card_image_original_url",
+            "card_image_file",
             "source_url",
             "source_title",
             "user_memo",
@@ -74,6 +78,7 @@ class CardBenefitTierSerializer(serializers.ModelSerializer):
 class CardCatalogSerializer(serializers.ModelSerializer):
     catalog_card_id = serializers.IntegerField(source="id", read_only=True)
     benefit_tiers = CardBenefitTierSerializer(many=True, read_only=True)
+    card_image_file = serializers.FileField(read_only=True)
 
     class Meta:
         model = CardCatalog
@@ -82,11 +87,14 @@ class CardCatalogSerializer(serializers.ModelSerializer):
             "card_name",
             "issuer_name",
             "card_image_url",
+            "card_image_original_url",
+            "card_image_file",
             "source_url",
             "source_title",
             "source_type",
             "verification_status",
             "raw_summary",
+            "normalized_data",
             "confidence",
             "collected_at",
             "benefit_tiers",
