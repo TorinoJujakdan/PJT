@@ -3,11 +3,6 @@ from django.db import models
 
 
 class CommunityPost(models.Model):
-    station = models.ForeignKey(
-        "stations.GasStation",
-        related_name="community_posts",
-        on_delete=models.CASCADE,
-    )
     author = models.ForeignKey(
         settings.AUTH_USER_MODEL,
         related_name="community_posts",
@@ -22,7 +17,6 @@ class CommunityPost(models.Model):
     class Meta:
         ordering = ["-created_at", "-id"]
         indexes = [
-            models.Index(fields=["station", "-created_at"]),
             models.Index(fields=["author", "-created_at"]),
             models.Index(fields=["-created_at"]),
         ]
