@@ -416,20 +416,26 @@ def enrich_candidate_from_detail_text(candidate, detail_text, source_url=None, s
 
     base_confidence = candidate.confidence or Decimal("0.60")
     
-    # [고도화] 데이터 정합성 정밀 크로스 검증 (감점 페널티 로직 추가)
+    # [고도화] 데이터 정합성 정밀 크로스 검증
     penalty = Decimal("0.00")
-    
-    # 1) 리터당 할인인데 할인액이 대한민국 평균 주유 할인을 대폭 초과하거나 극소한 경우 (예: 500원 초과 혹은 20원 미만)
+
+    # 1) 리터당 할인인데 할인액이 비현실적인 경우 → 값 자체를 원복 (hard block)
     if discount_type == CardPolicy.DiscountType.PER_LITER:
         if discount_value > Decimal("500") or discount_value < Decimal("20"):
+            # 신규 회원 이벤트 등 비현실적 값 차단 — 이전 candidate 값으로 되돌림
+            discount_type = candidate.discount_type
+            discount_value = candidate.discount_value
             penalty += Decimal("0.35")
-            
-    # 2) 할인율(PERCENTAGE)인데 50%를 초과하는 비현실적인 주유 할인인 경우
+
+    # 2) 할인율(PERCENTAGE)인데 50%를 초과하는 비현실적 할인인 경우 → hard block
+    #    예) "신규 회원 최대 100% 캐시백"이 주유 할인으로 잘못 파싱되는 케이스 방지
     elif discount_type == CardPolicy.DiscountType.PERCENTAGE:
         if discount_value > Decimal("50") or discount_value < Decimal("1"):
+            discount_type = candidate.discount_type
+            discount_value = candidate.discount_value
             penalty += Decimal("0.30")
-            
-    # 3) 상세 요약 텍스트 상에서 영화/커피 등 노이즈 혜택이 주유와 혼용되어 파싱 정확도가 우려될 경우
+
+    # 3) 상세 요약 텍스트 상에서 영화/커피 등 노이즈 혜택이 주유와 혼용된 경우
     if any(token in fuel_summary for token in ["영화", "커피", "극장", "스타벅스"]):
         penalty += Decimal("0.05")
 
@@ -437,7 +443,7 @@ def enrich_candidate_from_detail_text(candidate, detail_text, source_url=None, s
     confidence = base_confidence + (Decimal("0.04") * Decimal(found_fields)) - penalty
     if found_fields == 0:
         confidence = min(base_confidence, Decimal("0.60")) - penalty
-    
+
     confidence = max(Decimal("0.00"), min(Decimal("0.95"), confidence))
 
     return replace(

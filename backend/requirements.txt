@@ -8,3 +8,5 @@ pyproj>=3.7.2
 uvicorn[standard]>=0.32,<1.0
 python-dotenv>=1.0
 django-cors-headers>=4.3
+requests>=2.32,<3.0
+pydantic>=2.0,<3.0

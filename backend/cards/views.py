@@ -14,6 +14,8 @@ from .serializers import (
     CardPolicySerializer,
 )
 from .selenium_ingestion import discover_card_benefits, scrape_card_search_candidates, save_candidates
+from .ai_normalization import save_ai_normalized_candidates
+from .gms_client import GmsConfigurationError, GmsRequestError, normalize_card_fuel_benefit
 
 
 
@@ -150,18 +152,40 @@ executor = ThreadPoolExecutor(max_workers=2)
 atexit.register(executor.shutdown, wait=False)
 
 def run_background_ingestion(task_id, query):
-    """백그라운드 스레드에서 실제 Selenium 수집을 돌리고 DB를 갱신합니다."""
+    """백그라운드 스레드에서 실제 Selenium 수집을 돌리고 DB를 갱신합니다.
+
+    수집 흐름:
+    1. Selenium으로 네이버 카드검색 목록 + 각 카드 상세 페이지 방문
+       (include_detail=True → min_payment, monthly_limit 원문 확보)
+    2. GMS LLM(Gemini)으로 주유 혜택 섹션을 직접 청킹·추출 → DB 저장
+       GMS 호출 실패 시 정규식 파싱(save_candidates)으로 자동 fallback
+    """
     close_old_connections()
     try:
         task = CardIngestionTask.objects.get(id=task_id)
         task.status = CardIngestionTask.Status.PROCESSING
         task.save()
 
-        # 1. 셀레니움 수집 구동 (최대 10개 수집 제한으로 빠르게 응답)
-        candidates = scrape_card_search_candidates(limit=10)
+        SOURCE_URL = "https://card-search.naver.com/list"
 
-        # 2. 자동 검증 및 DB 저장
-        saved_cards = save_candidates(candidates, "https://card-search.naver.com/list")
+        # 1. Selenium 수집 — 상세 페이지 방문으로 혜택 원문 전체 확보
+        candidates = scrape_card_search_candidates(
+            limit=10,
+            include_detail=True,    # 상세 페이지 방문 → min_payment, monthly_limit 수집
+            detail_wait_seconds=1,
+        )
+
+        # 2. GMS LLM으로 청킹·추출 → DB 저장
+        #    실패 시 정규식 파싱(save_candidates)으로 graceful fallback
+        try:
+            saved_cards = save_ai_normalized_candidates(
+                candidates,
+                source_url=SOURCE_URL,
+                normalizer=normalize_card_fuel_benefit,
+            )
+        except (GmsConfigurationError, GmsRequestError, Exception):
+            # GMS 장애·설정 오류 시 기존 정규식 방식으로 fallback
+            saved_cards = save_candidates(candidates, SOURCE_URL)
 
         # 3. 태스크 결과 매핑 및 완료 처리
         task.results.add(*saved_cards)
