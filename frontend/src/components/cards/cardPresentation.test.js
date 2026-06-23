@@ -48,3 +48,18 @@ test("쓰기 payload에는 서버 응답 전용 필드가 포함되지 않는다
   assert.equal("source_type" in cardPayload(draft), false);
   assert.deepEqual(catalogCardPayload({ ...draft, catalog_card_id: 3 }).catalog_card_id, 3);
 });
+
+test("쓰기 payload에는 전월 실적 입력값을 숫자 또는 null로 포함한다", () => {
+  const draft = {
+    card_name: "카드",
+    issuer_name: "카드사",
+    discount_type: "per_liter",
+    discount_value: 80,
+    brand_scope: "all",
+    previous_month_spending: "300000",
+  };
+
+  assert.equal(cardPayload(draft).previous_month_spending, 300000);
+  assert.equal(cardPayload({ ...draft, previous_month_spending: "" }).previous_month_spending, null);
+  assert.equal(catalogCardPayload({ ...draft, catalog_card_id: 3 }).previous_month_spending, 300000);
+});

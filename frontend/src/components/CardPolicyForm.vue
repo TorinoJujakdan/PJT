@@ -21,7 +21,8 @@ const cardPresets = [
     brand: "all",
     minPay: 20000,
     maxLimit: 15000,
-    remaining: 15000
+    remaining: 15000,
+    previousMonthSpending: 300000
   },
   {
     name: "삼성 iD Auto",
@@ -31,7 +32,8 @@ const cardPresets = [
     brand: "all",
     minPay: 30000,
     maxLimit: 20000,
-    remaining: 20000
+    remaining: 20000,
+    previousMonthSpending: 300000
   },
   {
     name: "S-OIL 신한 MyCar",
@@ -41,7 +43,8 @@ const cardPresets = [
     brand: "S_OIL",
     minPay: null,
     maxLimit: 15000,
-    remaining: 12000
+    remaining: 12000,
+    previousMonthSpending: null
   },
   {
     name: "현대카드 M3 Edition3",
@@ -51,7 +54,8 @@ const cardPresets = [
     brand: "GS",
     minPay: 50000,
     maxLimit: 30000,
-    remaining: 30000
+    remaining: 30000,
+    previousMonthSpending: 500000
   }
 ];
 
@@ -65,6 +69,7 @@ function applyPreset(preset) {
   model.value.min_payment_amount = preset.minPay;
   model.value.max_discount_amount = preset.maxLimit;
   model.value.monthly_remaining_discount = preset.remaining;
+  model.value.previous_month_spending = preset.previousMonthSpending;
 }
 
 function applyMyCard(cardId) {
@@ -81,6 +86,7 @@ function applyMyCard(cardId) {
   model.value.min_payment_amount = card.min_payment_amount;
   model.value.max_discount_amount = card.max_discount_amount;
   model.value.monthly_remaining_discount = card.monthly_remaining_discount;
+  model.value.previous_month_spending = card.previous_month_spending;
 }
 </script>
 
@@ -198,6 +204,11 @@ function applyMyCard(cardId) {
       <label>
         <span>이번 달 남은 한도 (원)</span>
         <input v-model.number="model.monthly_remaining_discount" type="number" min="0" step="1000" placeholder="한도 무제한" />
+      </label>
+
+      <label>
+        <span>전월 실적 (원)</span>
+        <input v-model.number="model.previous_month_spending" type="number" min="0" step="10000" placeholder="조건 없음" />
       </label>
     </div>
   </section>

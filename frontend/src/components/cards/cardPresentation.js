@@ -70,6 +70,7 @@ export function cardPayload(draft) {
     max_discount_amount: optionalNumber(draft.max_discount_amount),
     monthly_discount_limit: optionalNumber(draft.monthly_discount_limit),
     monthly_remaining_discount: optionalNumber(draft.monthly_remaining_discount),
+    previous_month_spending: optionalNumber(draft.previous_month_spending),
     user_memo: draft.user_memo || "",
   };
 }
