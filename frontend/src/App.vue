@@ -6,6 +6,7 @@ import {
   Fuel,
   LogIn,
   LogOut,
+  MessageSquare,
   User,
   UserPlus,
   X,
@@ -16,9 +17,11 @@ import RecommendationMap from "./components/RecommendationMap.vue";
 import FloatingDetailCard from "./components/FloatingDetailCard.vue";
 import AuthModal from "./components/AuthModal.vue";
 import CardsModalShell from "./components/cards/CardsModalShell.vue";
+import CommunityModalShell from "./components/community/CommunityModalShell.vue";
 import VehicleModalShell from "./components/vehicles/VehicleModalShell.vue";
 import VehicleView from "./views/VehicleView.vue";
 import CardsView from "./views/CardsView.vue";
+import CommunityView from "./views/CommunityView.vue";
 import { useAuthSession } from "./composables/useAuthSession";
 import { useModalState } from "./composables/useModalState";
 import { useSmartFuelDashboard } from "./composables/useSmartFuelDashboard";
@@ -78,8 +81,8 @@ onMounted(refreshMe);
   <div class="appShellUnified">
     <div
       class="appBackground"
-      :inert="activeModal === 'vehicle' || activeModal === 'cards'"
-      :aria-hidden="activeModal === 'vehicle' || activeModal === 'cards' ? 'true' : undefined"
+      :inert="activeModal === 'vehicle' || activeModal === 'cards' || activeModal === 'community'"
+      :aria-hidden="activeModal === 'vehicle' || activeModal === 'cards' || activeModal === 'community' ? 'true' : undefined"
     >
     <!-- 상단 글래스모피즘 헤더 바 -->
     <header class="topBarUnified">
@@ -89,26 +92,36 @@ onMounted(refreshMe);
       </div>
 
       <div class="navLinks">
-        <button 
-          v-if="isAuthenticated" 
-          class="linkBtn" 
-          :class="{ active: activeModal === 'vehicle' }" 
-          type="button" 
+        <button
+          v-if="isAuthenticated"
+          class="linkBtn"
+          :class="{ active: activeModal === 'vehicle' }"
+          type="button"
           @click="openModal('vehicle')"
         >
           <Car :size="15" />
           <span>내 차량 설정</span>
         </button>
 
-        <button 
-          v-if="isAuthenticated" 
-          class="linkBtn" 
-          :class="{ active: activeModal === 'cards' }" 
-          type="button" 
+        <button
+          v-if="isAuthenticated"
+          class="linkBtn"
+          :class="{ active: activeModal === 'cards' }"
+          type="button"
           @click="openModal('cards')"
         >
           <CreditCard :size="15" />
           <span>할인 카드 관리</span>
+        </button>
+
+        <button
+          class="linkBtn"
+          :class="{ active: activeModal === 'community' }"
+          type="button"
+          @click="openModal('community')"
+        >
+          <MessageSquare :size="15" />
+          <span>커뮤니티</span>
         </button>
       </div>
 
@@ -205,6 +218,15 @@ onMounted(refreshMe);
     <CardsModalShell v-if="activeModal === 'cards'" @close="closeModal">
       <CardsView :cards="cards" @changed="loadCards" />
     </CardsModalShell>
+
+
+    <CommunityModalShell v-if="activeModal === 'community'" @close="closeModal">
+      <CommunityView
+        :is-authenticated="isAuthenticated"
+        :user="auth.user"
+        @login="openModal('auth', 'login')"
+      />
+    </CommunityModalShell>
 
     <!-- 4. 주유소 최종 상세 분석 분석 팝업 모달 -->
     <div v-if="activeModal === 'detail'" class="glassModalOverlay" @click.self="closeModal">
