@@ -429,9 +429,10 @@ def quote_travel_cost_recommendations(
     location,
     radius_km,
     fuel_type,
-    target_liters,
-    fuel_efficiency_kmpl,
-    travel_mode,
+    target_liters=None,
+    target_amount=None,
+    fuel_efficiency_kmpl=None,
+    travel_mode="round_trip",
     user_cards=None,
     recommendation_priority=RECOMMENDATION_PRIORITY_OPTIMAL,
 ):
@@ -441,7 +442,10 @@ def quote_travel_cost_recommendations(
 
     # 1단계: 모든 후보에 대해 임시 직선거리 기반 비용 및 임시 baseline 계산
     draft_baseline_cost = min(
-        calculate_refuel_cost(candidate.fuel_price_per_liter, target_liters)
+        (
+            int(target_amount) if target_amount is not None
+            else calculate_refuel_cost(candidate.fuel_price_per_liter, target_liters)
+        )
         + calculate_travel_cost(
             candidate.distance_km,
             fuel_efficiency_kmpl,
@@ -453,7 +457,15 @@ def quote_travel_cost_recommendations(
 
     draft_recommendations = []
     for candidate in candidates:
-        refuel_cost = calculate_refuel_cost(candidate.fuel_price_per_liter, target_liters)
+        # target_amount 방식: 각 후보 단가로 독립적으로 리터 계산, 주유비는 목표 금액으로 고정
+        if target_amount is not None:
+            price = max(candidate.fuel_price_per_liter, 1)  # ZeroDivision 방어
+            cand_target_liters = round(target_amount / price, 2)
+            refuel_cost = int(target_amount)
+        else:
+            cand_target_liters = float(target_liters)
+            refuel_cost = calculate_refuel_cost(candidate.fuel_price_per_liter, cand_target_liters)
+
         travel_cost = calculate_travel_cost(
             candidate.distance_km,
             fuel_efficiency_kmpl,
@@ -463,14 +475,14 @@ def quote_travel_cost_recommendations(
         card_discount_amount, selected_card = calculate_card_discount(
             candidate,
             refuel_cost,
-            target_liters,
+            cand_target_liters,
             user_cards,
         )
         effective_total_cost = refuel_cost - card_discount_amount + travel_cost
         draft_recommendations.append(
             FuelPriceRecommendation(
                 candidate=candidate,
-                target_liters=round(float(target_liters), 2),
+                target_liters=round(float(cand_target_liters), 2),
                 refuel_cost=refuel_cost,
                 card_discount_amount=card_discount_amount,
                 travel_cost=travel_cost,
