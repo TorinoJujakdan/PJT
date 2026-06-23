@@ -1,7 +1,5 @@
 from rest_framework import serializers
 
-from stations.models import GasStation
-
 from .models import CommunityPost
 
 
@@ -11,7 +9,6 @@ MAX_TAG_LENGTH = 20
 
 
 class CommunityPostSerializer(serializers.ModelSerializer):
-    station = serializers.SerializerMethodField()
     author = serializers.SerializerMethodField()
     can_edit = serializers.SerializerMethodField()
 
@@ -19,7 +16,6 @@ class CommunityPostSerializer(serializers.ModelSerializer):
         model = CommunityPost
         fields = [
             "id",
-            "station",
             "author",
             "title",
             "content",
@@ -28,14 +24,6 @@ class CommunityPostSerializer(serializers.ModelSerializer):
             "updated_at",
             "can_edit",
         ]
-
-    def get_station(self, obj):
-        return {
-            "station_id": obj.station_id,
-            "name": obj.station.name,
-            "brand": obj.station.brand,
-            "address": obj.station.address,
-        }
 
     def get_author(self, obj):
         return {
@@ -50,7 +38,6 @@ class CommunityPostSerializer(serializers.ModelSerializer):
 
 
 class CommunityPostWriteSerializer(serializers.Serializer):
-    station_id = serializers.IntegerField(required=False)
     title = serializers.CharField(max_length=120, required=False)
     content = serializers.CharField(required=False)
     tags = serializers.ListField(
@@ -89,15 +76,10 @@ class CommunityPostWriteSerializer(serializers.Serializer):
             raise serializers.ValidationError(f"tags must contain at most {MAX_TAGS} items.")
         return cleaned_tags
 
-    def validate_station_id(self, value):
-        if not GasStation.objects.filter(id=value).exists():
-            raise serializers.ValidationError("STATION_NOT_FOUND")
-        return value
-
     def validate(self, attrs):
         is_partial = self.context.get("partial", False)
         if not is_partial:
-            missing_fields = [field for field in ["station_id", "title", "content"] if field not in attrs]
+            missing_fields = [field for field in ["title", "content"] if field not in attrs]
             if missing_fields:
                 raise serializers.ValidationError({field: "This field is required." for field in missing_fields})
         if not attrs:
@@ -105,18 +87,13 @@ class CommunityPostWriteSerializer(serializers.Serializer):
         return attrs
 
     def create(self, validated_data):
-        station_id = validated_data.pop("station_id")
         return CommunityPost.objects.create(
-            station_id=station_id,
             author=self.context["request"].user,
             **validated_data,
         )
 
     def update(self, instance, validated_data):
-        station_id = validated_data.pop("station_id", None)
-        if station_id is not None:
-            instance.station_id = station_id
         for field, value in validated_data.items():
             setattr(instance, field, value)
-        instance.save(update_fields=["station", "title", "content", "tags", "updated_at"])
+        instance.save(update_fields=["title", "content", "tags", "updated_at"])
         return instance

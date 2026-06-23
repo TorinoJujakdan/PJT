@@ -39,12 +39,10 @@ const editingPostId = ref(null);
 
 const filters = reactive({
   query: "",
-  station_id: "",
   tag: "",
 });
 
 const form = reactive({
-  station_id: "",
   title: "",
   content: "",
   tags: "",
@@ -53,7 +51,6 @@ const form = reactive({
 const isEditing = computed(() => editingPostId.value !== null);
 const canSubmit = computed(() => (
   props.isAuthenticated
-  && String(form.station_id).trim()
   && form.title.trim()
   && form.content.trim()
   && !saving.value
@@ -61,7 +58,6 @@ const canSubmit = computed(() => (
 
 function resetForm() {
   editingPostId.value = null;
-  form.station_id = "";
   form.title = "";
   form.content = "";
   form.tags = "";
@@ -69,7 +65,6 @@ function resetForm() {
 
 function fillFormForEdit(post) {
   editingPostId.value = post.id;
-  form.station_id = post.station?.station_id ? String(post.station.station_id) : "";
   form.title = post.title || "";
   form.content = post.content || "";
   form.tags = tagsToInput(post.tags);
@@ -82,7 +77,6 @@ function requestLogin() {
 function buildFilters() {
   return {
     query: filters.query.trim(),
-    station_id: filters.station_id.trim(),
     tag: filters.tag.trim(),
     limit: 50,
   };
@@ -111,7 +105,6 @@ async function submitPost() {
   error.value = "";
   statusMessage.value = "";
   const payload = {
-    station_id: Number(form.station_id),
     title: form.title,
     content: form.content,
     tags: parseTagInput(form.tags),
@@ -159,64 +152,53 @@ onMounted(loadPosts);
 
 <template>
   <div class="communityWorkspace">
-    <aside class="communityPanel">
+    <aside class="communityPanel communityWritePanel" aria-labelledby="community-write-title">
       <div class="cardsSectionHeading communityHeading">
         <div>
-          <p class="eyebrow">READ PUBLICLY</p>
-          <h3>커뮤니티 검색</h3>
-          <p>모든 사용자가 주유소 경험 게시글을 볼 수 있습니다.</p>
+          <p class="eyebrow">WRITE</p>
+          <h3 id="community-write-title">{{ isEditing ? "게시글 수정" : "게시글 작성" }}</h3>
+          <p>제목, 내용, 태그만으로 커뮤니티에 글을 남길 수 있습니다.</p>
         </div>
       </div>
-
-      <form class="communitySearchForm" @submit.prevent="loadPosts">
-        <label>
-          검색어
-          <input v-model="filters.query" data-community-initial-focus type="search" placeholder="제목, 내용, 주유소명 검색" />
-        </label>
-        <label>
-          주유소 ID
-          <input v-model="filters.station_id" inputmode="numeric" placeholder="예: 1" />
-        </label>
-        <label>
-          태그
-          <input v-model="filters.tag" placeholder="예: clean" />
-        </label>
-        <button class="cardPrimaryButton" type="submit" :disabled="loading">
-          <Search :size="16" />
-          검색/필터 적용
-        </button>
-      </form>
 
       <div class="communityWriteGate">
         <template v-if="isAuthenticated">
           <p class="eyebrow">WRITE AS {{ user?.username }}</p>
-          <h3>{{ isEditing ? "게시글 수정" : "게시글 작성" }}</h3>
-          <p>실방문 인증 없이 경험을 공유합니다. 추천 순위에는 반영되지 않습니다.</p>
+          <h3>로그인된 사용자로 작성 중</h3>
+          <p>커뮤니티 게시글은 추천 순위나 주유비 계산에 반영되지 않습니다.</p>
         </template>
         <template v-else>
           <p class="eyebrow">LOGIN REQUIRED</p>
-          <h3>작성은 로그인 후 가능</h3>
-          <p>목록 조회는 공개이며, 게시글 작성/수정/삭제만 로그인이 필요합니다.</p>
+          <h3>작성은 로그인이 필요합니다</h3>
+          <p>목록 조회와 검색은 공개이며, 게시글 작성·수정·삭제만 로그인이 필요합니다.</p>
           <button class="cardPrimaryButton" type="button" @click="requestLogin">로그인하고 작성하기</button>
         </template>
       </div>
 
       <form v-if="isAuthenticated" class="communityPostForm" @submit.prevent="submitPost">
         <label>
-          주유소 ID
-          <input v-model="form.station_id" required inputmode="numeric" placeholder="게시글을 연결할 주유소 ID" />
-        </label>
-        <label>
           제목
-          <input v-model="form.title" required maxlength="120" placeholder="예: 셀프 주유가 편했어요" />
+          <input
+            v-model="form.title"
+            data-community-initial-focus
+            required
+            maxlength="120"
+            placeholder="예: 오늘 발견한 절약 팁"
+          />
         </label>
         <label>
           내용
-          <textarea v-model="form.content" required maxlength="2000" rows="6" placeholder="주유소 이용 경험을 적어 주세요." />
+          <textarea
+            v-model="form.content"
+            required
+            maxlength="2000"
+            rows="9"
+            placeholder="공유하고 싶은 경험이나 정보를 적어 주세요."
+          />
         </label>
         <label>
           태그
-          <input v-model="form.tags" placeholder="쉼표로 구분: clean, coffee" />
+          <input v-model="form.tags" placeholder="쉼표로 구분: 절약, 정보, 질문" />
         </label>
         <div class="communityFormActions">
           <button class="cardPrimaryButton" type="submit" :disabled="!canSubmit">
@@ -229,15 +211,30 @@ onMounted(loadPosts);
       </form>
     </aside>
 
-    <section class="communityPanel communityListPanel">
+    <section class="communityPanel communityListPanel" aria-labelledby="community-list-title">
       <header class="communityListHeader">
         <div>
           <p class="eyebrow">POSTS</p>
-          <h3>게시글 {{ meta.count }}개</h3>
-          <p>기본 50개까지 조회하며 서버에서 최대 100개로 제한합니다.</p>
+          <h3 id="community-list-title">게시글 {{ meta.count }}개</h3>
+          <p>최근 게시글을 최대 {{ meta.limit }}개까지 보여줍니다.</p>
         </div>
         <button class="cardSecondaryButton" type="button" :disabled="loading" @click="loadPosts">새로고침</button>
       </header>
+
+      <form class="communitySearchForm communityListSearch" role="search" @submit.prevent="loadPosts">
+        <label>
+          검색어
+          <input v-model="filters.query" type="search" placeholder="제목, 내용, 태그 검색" />
+        </label>
+        <label>
+          태그
+          <input v-model="filters.tag" placeholder="예: 절약" />
+        </label>
+        <button class="cardPrimaryButton" type="submit" :disabled="loading">
+          <Search :size="16" />
+          게시글 검색
+        </button>
+      </form>
 
       <p v-if="error" class="cardError">{{ error }}</p>
       <p v-if="statusMessage" class="cardStatus">{{ statusMessage }}</p>
@@ -250,15 +247,15 @@ onMounted(loadPosts);
       <div v-else-if="!posts.length" class="cardsEmptyState">
         <MessageSquare :size="28" />
         <strong>아직 게시글이 없습니다.</strong>
-        <span>첫 주유소 경험을 공유해 보세요.</span>
+        <span>첫 게시글을 작성해 커뮤니티를 시작해 보세요.</span>
       </div>
 
       <article v-for="post in posts" v-else :key="post.id" class="communityPostCard">
         <div class="communityPostTop">
           <div>
-            <p class="eyebrow">{{ post.station?.brand || "STATION" }}</p>
+            <p class="eyebrow">COMMUNITY</p>
             <h4>{{ post.title }}</h4>
-            <p>{{ post.station?.name }} · {{ post.station?.address }}</p>
+            <p>작성자 {{ post.author?.username || "unknown" }}</p>
           </div>
           <div v-if="canEditPost(post, user)" class="communityActions">
             <button class="cardIconButton" type="button" aria-label="게시글 수정" @click="fillFormForEdit(post)">
@@ -278,7 +275,6 @@ onMounted(loadPosts);
 
         <p class="communityPostContent">{{ post.content }}</p>
         <footer class="communityPostFooter">
-          <span>작성자 {{ post.author?.username || "unknown" }}</span>
           <span>{{ new Date(post.created_at).toLocaleString() }}</span>
           <span v-for="tag in post.tags" :key="tag" class="communityTag">#{{ tag }}</span>
         </footer>
