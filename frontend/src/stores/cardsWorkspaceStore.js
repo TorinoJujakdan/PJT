@@ -10,6 +10,7 @@ export const blankCardDraft = Object.freeze({
   max_discount_amount: null,
   monthly_discount_limit: null,
   monthly_remaining_discount: null,
+  previous_month_spending: null,
   user_memo: "",
 });
 

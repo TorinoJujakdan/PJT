@@ -76,10 +76,24 @@ test("local card draft copies are isolated from their source while typing", () =
 test("replacing a draft preserves defaults while applying submitted values", () => {
   const target = createCardDraftCopy({ card_name: "Before", issuer_name: "A" });
 
-  replaceCardDraft(target, { card_name: "After", issuer_name: "B", discount_value: 150 });
+  replaceCardDraft(target, {
+    card_name: "After",
+    issuer_name: "B",
+    discount_value: 150,
+    previous_month_spending: 300000,
+  });
 
   assert.equal(target.card_name, "After");
   assert.equal(target.issuer_name, "B");
   assert.equal(target.discount_value, 150);
+  assert.equal(target.previous_month_spending, 300000);
   assert.equal(target.brand_scope, blankCardDraft.brand_scope);
+});
+
+
+test("card draft defaults include previous month spending", () => {
+  const draft = createCardDraftCopy({ card_name: "실적 카드" });
+
+  assert.equal(blankCardDraft.previous_month_spending, null);
+  assert.equal(draft.previous_month_spending, null);
 });

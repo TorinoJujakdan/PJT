@@ -110,6 +110,10 @@ onBeforeUnmount(persistManualDraft);
             <span>이번 달 남은 한도 <small>(원)</small></span>
             <input v-model.number="manualDraft.monthly_remaining_discount" type="number" min="0" step="1000" />
           </label>
+          <label>
+            <span>전월 실적 <small>(원)</small></span>
+            <input v-model.number="manualDraft.previous_month_spending" type="number" min="0" step="10000" />
+          </label>
         </div>
       </details>
 

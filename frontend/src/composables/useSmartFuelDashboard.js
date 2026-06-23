@@ -25,6 +25,7 @@ export function useSmartFuelDashboard({ isAuthenticated } = {}) {
     min_payment_amount: null,
     max_discount_amount: 5000,
     monthly_remaining_discount: 12000,
+    previous_month_spending: null,
     source_type: "manual",
     verification_status: "user_confirmed",
     card_image_url: null,

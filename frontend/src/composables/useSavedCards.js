@@ -32,6 +32,7 @@ export function useSavedCards({ isAuthenticated, tempCard }) {
         min_payment_amount: optionalNumber(c.min_payment_amount),
         max_discount_amount: optionalNumber(c.max_discount_amount),
         monthly_remaining_discount: optionalNumber(c.monthly_remaining_discount),
+        previous_month_spending: optionalNumber(c.previous_month_spending),
       }));
     }
 
@@ -50,6 +51,7 @@ export function useSavedCards({ isAuthenticated, tempCard }) {
         min_payment_amount: optionalNumber(tempCard.min_payment_amount),
         max_discount_amount: optionalNumber(tempCard.max_discount_amount),
         monthly_remaining_discount: optionalNumber(tempCard.monthly_remaining_discount),
+        previous_month_spending: optionalNumber(tempCard.previous_month_spending),
       },
     ];
   }

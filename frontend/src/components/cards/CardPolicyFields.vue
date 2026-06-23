@@ -48,6 +48,10 @@ defineEmits(["dirty"]);
         <span>이번 달 남은 한도 <small>(선택, 원)</small></span>
         <input v-model.number="draft.monthly_remaining_discount" type="number" min="0" step="1000" />
       </label>
+      <label>
+        <span>전월 실적 <small>(선택, 원)</small></span>
+        <input v-model.number="draft.previous_month_spending" type="number" min="0" step="10000" />
+      </label>
     </template>
   </div>
 </template>
