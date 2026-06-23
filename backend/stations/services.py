@@ -18,6 +18,7 @@ MAX_RADIUS_KM = 30.0
 RECOMMENDATION_PRIORITY_OPTIMAL = "optimal"
 RECOMMENDATION_PRIORITY_PRICE = "price"
 RECOMMENDATION_PRIORITY_DISTANCE = "distance"
+CATALOG_ALL_FUEL_TYPE = "all"
 
 
 @dataclass(frozen=True)
@@ -239,22 +240,99 @@ def serialize_selected_card(card, calculated_discount_amount):
     }
 
 
-def calculate_card_discount(station, refuel_cost, target_liters, user_cards):
+def normalize_catalog_fuel_type(value):
+    return str(value or "").strip().lower()
+
+
+def catalog_tier_matches_fuel_type(tier, fuel_type):
+    tier_fuel_type = normalize_catalog_fuel_type(tier.fuel_type)
+    requested_fuel_type = normalize_catalog_fuel_type(fuel_type)
+    return tier_fuel_type in {CATALOG_ALL_FUEL_TYPE, requested_fuel_type}
+
+
+def catalog_tier_matches_performance(tier, previous_month_spending):
+    spending = int(previous_month_spending or 0)
+    if int(tier.min_performance_amount or 0) > spending:
+        return False
+    max_performance_amount = tier.max_performance_amount
+    return max_performance_amount is None or spending <= int(max_performance_amount)
+
+
+def resolve_catalog_benefit_tier(card, fuel_type):
+    catalog = get_card_value(card, "linked_catalog", None)
+    if catalog is None:
+        return None
+
+    benefit_tiers = getattr(catalog, "benefit_tiers", None)
+    if benefit_tiers is None:
+        return None
+
+    previous_month_spending = get_card_value(card, "previous_month_spending", 0)
+    requested_fuel_type = normalize_catalog_fuel_type(fuel_type)
+    matching_tiers = [
+        tier
+        for tier in benefit_tiers.all()
+        if catalog_tier_matches_fuel_type(tier, requested_fuel_type)
+        and catalog_tier_matches_performance(tier, previous_month_spending)
+    ]
+    if not matching_tiers:
+        return None
+
+    return sorted(
+        matching_tiers,
+        key=lambda tier: (
+            normalize_catalog_fuel_type(tier.fuel_type) == requested_fuel_type,
+            int(tier.min_performance_amount or 0),
+            tier.id,
+        ),
+        reverse=True,
+    )[0]
+
+
+def build_effective_card_for_fuel_type(card, fuel_type):
+    tier = resolve_catalog_benefit_tier(card, fuel_type)
+    if tier is None:
+        return card
+
+    return {
+        "id": get_card_value(card, "id", None),
+        "card_id": get_card_value(card, "card_id", None),
+        "card_name": get_card_value(card, "card_name", ""),
+        "issuer_name": get_card_value(card, "issuer_name", ""),
+        "discount_type": tier.discount_type,
+        "discount_value": tier.discount_value,
+        "brand_scope": tier.brand_scope,
+        "min_payment_amount": tier.min_payment_amount,
+        "max_discount_amount": get_card_value(card, "max_discount_amount", None),
+        "monthly_discount_limit": tier.monthly_discount_limit,
+        "monthly_remaining_discount": get_card_value(card, "monthly_remaining_discount", None),
+        "source_type": get_card_value(card, "source_type", CardPolicy.SourceType.MANUAL),
+        "verification_status": get_card_value(
+            card,
+            "verification_status",
+            CardPolicy.VerificationStatus.USER_CONFIRMED,
+        ),
+        "card_image_url": get_card_value(card, "card_image_url", None),
+    }
+
+
+def calculate_card_discount(candidate, refuel_cost, target_liters, user_cards):
     best_discount = 0
     selected_card = None
 
     for card in user_cards or []:
         if not card_can_affect_recommendation(card):
             continue
-        if not brand_matches(get_card_value(card, "brand_scope", "all"), station.brand):
+        effective_card = build_effective_card_for_fuel_type(card, candidate.fuel_type)
+        if not brand_matches(get_card_value(effective_card, "brand_scope", "all"), candidate.station.brand):
             continue
 
-        min_payment_amount = get_card_value(card, "min_payment_amount", None)
+        min_payment_amount = get_card_value(effective_card, "min_payment_amount", None)
         if min_payment_amount is not None and int(min_payment_amount) > refuel_cost:
             continue
 
-        discount_type = get_card_value(card, "discount_type")
-        discount_value = float(get_card_value(card, "discount_value", 0))
+        discount_type = get_card_value(effective_card, "discount_type")
+        discount_value = float(get_card_value(effective_card, "discount_value", 0))
         if discount_type == CardPolicy.DiscountType.PER_LITER:
             raw_discount = discount_value * float(target_liters)
         elif discount_type == CardPolicy.DiscountType.PERCENTAGE:
@@ -265,17 +343,20 @@ def calculate_card_discount(station, refuel_cost, target_liters, user_cards):
             raw_discount = 0
 
         discount = round(raw_discount)
-        max_discount_amount = get_card_value(card, "max_discount_amount", None)
-        monthly_remaining_discount = get_card_value(card, "monthly_remaining_discount", None)
+        max_discount_amount = get_card_value(effective_card, "max_discount_amount", None)
+        monthly_discount_limit = get_card_value(effective_card, "monthly_discount_limit", None)
+        monthly_remaining_discount = get_card_value(effective_card, "monthly_remaining_discount", None)
         if max_discount_amount is not None:
             discount = min(discount, int(max_discount_amount))
+        if monthly_discount_limit is not None:
+            discount = min(discount, int(monthly_discount_limit))
         if monthly_remaining_discount is not None:
             discount = min(discount, int(monthly_remaining_discount))
         discount = max(discount, 0)
 
         if discount > best_discount:
             best_discount = discount
-            selected_card = serialize_selected_card(card, discount)
+            selected_card = serialize_selected_card(effective_card, discount)
 
     return best_discount, selected_card
 
@@ -365,7 +446,7 @@ def quote_travel_cost_recommendations(
             travel_mode,
         )
         card_discount_amount, selected_card = calculate_card_discount(
-            candidate.station,
+            candidate,
             refuel_cost,
             target_liters,
             user_cards,

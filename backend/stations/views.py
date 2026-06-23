@@ -208,7 +208,11 @@ class RecommendationQuoteAPIView(APIView):
     def _get_saved_cards(self, request):
         if not request.user or not request.user.is_authenticated:
             return []
-        return CardPolicy.objects.filter(owner=request.user, is_active=True)
+        return (
+            CardPolicy.objects.filter(owner=request.user, is_active=True)
+            .select_related("linked_catalog")
+            .prefetch_related("linked_catalog__benefit_tiers")
+        )
 
     def _resolve_fuel_efficiency(self, request, data):
         vehicle = data.get("vehicle")

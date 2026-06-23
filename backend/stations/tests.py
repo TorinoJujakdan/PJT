@@ -6,7 +6,7 @@ from django.test import TestCase
 from django.utils import timezone
 from rest_framework.test import APIClient
 
-from cards.models import CardPolicy
+from cards.models import CardBenefitTier, CardCatalog, CardPolicy
 from stations.models import FuelPrice, GasStation
 from stations.services import calculate_travel_cost
 from vehicles.models import VehicleProfile
@@ -648,6 +648,80 @@ class RecommendationQuoteAPITests(TestCase):
         self.assertEqual(recommendation["selected_card"]["card_image_url"], "https://example.com/gs-saver.png")
         self.assertIn("GS Saver", recommendation["reason"])
         self.assertIn("6000 KRW", recommendation["reason"])
+
+    def test_catalog_card_tier_uses_requested_fuel_type_for_discount(self):
+        user = get_user_model().objects.create_user(username="catalog-tier-user", password="pass12345")
+        station = self._create_station_with_price(
+            external_station_id="CATALOG-TIER-GS",
+            name="Catalog Tier GS Station",
+            latitude=35.0,
+            longitude=129.0,
+            price_per_liter=1000,
+            brand=GasStation.Brand.GS,
+            fuel_type=FuelPrice.FuelType.DIESEL,
+        )
+        FuelPrice.objects.create(
+            station=station,
+            fuel_type=FuelPrice.FuelType.GASOLINE,
+            price_per_liter=500,
+            collected_at=timezone.now(),
+        )
+        catalog = CardCatalog.objects.create(
+            card_name="Catalog Tier Saver",
+            issuer_name="Catalog Bank",
+            source_url="https://card-search.naver.com/card/catalog-tier",
+        )
+        CardBenefitTier.objects.create(
+            card_catalog=catalog,
+            fuel_type="gasoline",
+            min_performance_amount=0,
+            discount_type=CardPolicy.DiscountType.PER_LITER,
+            discount_value=40,
+            brand_scope="GS",
+        )
+        CardBenefitTier.objects.create(
+            card_catalog=catalog,
+            fuel_type="diesel",
+            min_performance_amount=300000,
+            discount_type=CardPolicy.DiscountType.PER_LITER,
+            discount_value=200,
+            brand_scope="GS",
+            monthly_discount_limit=10000,
+        )
+        CardPolicy.objects.create(
+            owner=user,
+            linked_catalog=catalog,
+            card_name="Catalog Tier Saver",
+            issuer_name="Catalog Bank",
+            discount_type=CardPolicy.DiscountType.PER_LITER,
+            discount_value=1,
+            brand_scope="GS",
+            previous_month_spending=500000,
+            source_type=CardPolicy.SourceType.CATALOG,
+            verification_status=CardPolicy.VerificationStatus.USER_CONFIRMED,
+        )
+        self.client.force_authenticate(user)
+
+        response = self.client.post(
+            "/api/v1/recommendations/quote/",
+            {
+                "location": {"latitude": 35.0, "longitude": 129.0},
+                "fuel_type": "diesel",
+                "target_liters": 30,
+                "radius_km": 1,
+                "vehicle": {"fuel_efficiency_kmpl": 10},
+            },
+            format="json",
+        )
+
+        self.assertEqual(response.status_code, 200)
+        recommendation = response.json()["recommendation"]
+        self.assertEqual(recommendation["station"]["station_id"], station.id)
+        self.assertEqual(recommendation["station"]["fuel_type"], "diesel")
+        self.assertEqual(recommendation["station"]["fuel_price_per_liter"], 1000)
+        self.assertEqual(recommendation["cost_breakdown"]["refuel_cost"], 30000)
+        self.assertEqual(recommendation["cost_breakdown"]["card_discount_amount"], 6000)
+        self.assertEqual(recommendation["selected_card"]["discount_value"], 200.0)
 
     def test_distant_discounted_station_loses_when_travel_cost_exceeds_benefit(self):
         user = get_user_model().objects.create_user(username="distant-card-user", password="pass12345")
