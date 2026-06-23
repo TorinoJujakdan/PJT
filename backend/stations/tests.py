@@ -649,6 +649,62 @@ class RecommendationQuoteAPITests(TestCase):
         self.assertIn("GS Saver", recommendation["reason"])
         self.assertIn("6000 KRW", recommendation["reason"])
 
+    def test_catalog_card_without_spending_does_not_use_copied_policy_discount(self):
+        user = get_user_model().objects.create_user(username="catalog-no-spending-user", password="pass12345")
+        station = self._create_station_with_price(
+            external_station_id="CATALOG-NO-SPENDING-GS",
+            name="Catalog No Spending GS Station",
+            latitude=35.01,
+            longitude=129.0,
+            price_per_liter=1000,
+            brand=GasStation.Brand.GS,
+            fuel_type=FuelPrice.FuelType.GASOLINE,
+        )
+        catalog = CardCatalog.objects.create(
+            card_name="Catalog No Spending Saver",
+            issuer_name="Catalog Bank",
+            source_url="https://card-search.naver.com/card/no-spending",
+        )
+        CardBenefitTier.objects.create(
+            card_catalog=catalog,
+            fuel_type="gasoline",
+            min_performance_amount=300000,
+            discount_type=CardPolicy.DiscountType.PER_LITER,
+            discount_value=200,
+            brand_scope="GS",
+        )
+        CardPolicy.objects.create(
+            owner=user,
+            linked_catalog=catalog,
+            card_name="Catalog No Spending Saver",
+            issuer_name="Catalog Bank",
+            discount_type=CardPolicy.DiscountType.PER_LITER,
+            discount_value=999,
+            brand_scope="GS",
+            previous_month_spending=None,
+            source_type=CardPolicy.SourceType.CATALOG,
+            verification_status=CardPolicy.VerificationStatus.USER_CONFIRMED,
+        )
+        self.client.force_authenticate(user)
+
+        response = self.client.post(
+            "/api/v1/recommendations/quote/",
+            {
+                "location": {"latitude": 35.01, "longitude": 129.0},
+                "fuel_type": "gasoline",
+                "target_liters": 30,
+                "radius_km": 1,
+                "vehicle": {"fuel_efficiency_kmpl": 10},
+            },
+            format="json",
+        )
+
+        self.assertEqual(response.status_code, 200)
+        recommendation = response.json()["recommendation"]
+        self.assertEqual(recommendation["station"]["station_id"], station.id)
+        self.assertEqual(recommendation["cost_breakdown"]["card_discount_amount"], 0)
+        self.assertIsNone(recommendation["selected_card"])
+
     def test_catalog_card_tier_uses_requested_fuel_type_for_discount(self):
         user = get_user_model().objects.create_user(username="catalog-tier-user", password="pass12345")
         station = self._create_station_with_price(

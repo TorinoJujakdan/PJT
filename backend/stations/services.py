@@ -251,14 +251,17 @@ def catalog_tier_matches_fuel_type(tier, fuel_type):
 
 
 def catalog_tier_matches_performance(tier, previous_month_spending):
-    spending = int(previous_month_spending or 0)
+    if previous_month_spending is None:
+        return False
+
+    spending = int(previous_month_spending)
     if int(tier.min_performance_amount or 0) > spending:
         return False
     max_performance_amount = tier.max_performance_amount
     return max_performance_amount is None or spending <= int(max_performance_amount)
 
 
-def resolve_catalog_benefit_tier(card, fuel_type):
+def get_catalog_benefit_tiers(card):
     catalog = get_card_value(card, "linked_catalog", None)
     if catalog is None:
         return None
@@ -267,11 +270,15 @@ def resolve_catalog_benefit_tier(card, fuel_type):
     if benefit_tiers is None:
         return None
 
-    previous_month_spending = get_card_value(card, "previous_month_spending", 0)
+    return list(benefit_tiers.all())
+
+
+def resolve_catalog_benefit_tier(card, fuel_type, benefit_tiers):
+    previous_month_spending = get_card_value(card, "previous_month_spending", None)
     requested_fuel_type = normalize_catalog_fuel_type(fuel_type)
     matching_tiers = [
         tier
-        for tier in benefit_tiers.all()
+        for tier in benefit_tiers
         if catalog_tier_matches_fuel_type(tier, requested_fuel_type)
         and catalog_tier_matches_performance(tier, previous_month_spending)
     ]
@@ -290,9 +297,15 @@ def resolve_catalog_benefit_tier(card, fuel_type):
 
 
 def build_effective_card_for_fuel_type(card, fuel_type):
-    tier = resolve_catalog_benefit_tier(card, fuel_type)
-    if tier is None:
+    benefit_tiers = get_catalog_benefit_tiers(card)
+    if benefit_tiers is None:
         return card
+    if not benefit_tiers:
+        return card
+
+    tier = resolve_catalog_benefit_tier(card, fuel_type, benefit_tiers)
+    if tier is None:
+        return None
 
     return {
         "id": get_card_value(card, "id", None),
@@ -324,6 +337,8 @@ def calculate_card_discount(candidate, refuel_cost, target_liters, user_cards):
         if not card_can_affect_recommendation(card):
             continue
         effective_card = build_effective_card_for_fuel_type(card, candidate.fuel_type)
+        if effective_card is None:
+            continue
         if not brand_matches(get_card_value(effective_card, "brand_scope", "all"), candidate.station.brand):
             continue
 
