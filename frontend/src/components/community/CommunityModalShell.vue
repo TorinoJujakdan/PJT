@@ -63,7 +63,7 @@ onBeforeUnmount(() => {
         <div>
           <p class="eyebrow">COMMUNITY</p>
           <h2 id="community-modal-title">커뮤니티</h2>
-          <p>주유소 이용 경험을 검색하고 공유하세요. 실방문 인증과 추천 알고리즘 반영은 포함하지 않습니다.</p>
+          <p>특정 주유소 연결 없이 자유롭게 게시글을 작성하고 검색하세요. 추천 알고리즘 반영은 포함하지 않습니다.</p>
         </div>
         <button class="cardsCloseButton" type="button" aria-label="커뮤니티 닫기" @click="emit('close')">
           <X :size="20" />

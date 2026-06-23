@@ -1,4 +1,3 @@
-from django.db.models import Q
 from rest_framework import status
 from rest_framework.permissions import AllowAny
 from rest_framework.response import Response
@@ -16,7 +15,6 @@ ERROR_MESSAGES = {
     "COMMUNITY_POST_NOT_FOUND": "Community post was not found.",
     "COMMUNITY_POST_FORBIDDEN": "Only the author can modify this community post.",
     "INVALID_COMMUNITY_POST": "Community post input is invalid.",
-    "STATION_NOT_FOUND": "Gas station was not found.",
 }
 
 
@@ -41,53 +39,40 @@ def _parse_limit(raw_limit):
     return min(limit, MAX_LIST_LIMIT)
 
 
-def _has_station_not_found_error(serializer):
-    station_errors = serializer.errors.get("station_id") if isinstance(serializer.errors, dict) else None
-    if not station_errors:
-        return False
-    return any(str(error) == "STATION_NOT_FOUND" for error in station_errors)
-
-
 def _post_has_exact_tag(post, tag):
     normalized_tag = tag.casefold()
     return any(isinstance(item, str) and item.casefold() == normalized_tag for item in post.tags)
+
+
+def _post_matches_query(post, query):
+    normalized_query = query.casefold()
+    if normalized_query in post.title.casefold() or normalized_query in post.content.casefold():
+        return True
+    return any(isinstance(item, str) and normalized_query in item.casefold() for item in post.tags)
 
 
 class CommunityPostListCreateAPIView(APIView):
     permission_classes = [AllowAny]
 
     def get(self, request):
-        queryset = CommunityPost.objects.select_related("station", "author").all()
-        station_id = (request.query_params.get("station_id") or "").strip()
+        queryset = CommunityPost.objects.select_related("author").all()
         query = (request.query_params.get("query") or "").strip()
         tag = (request.query_params.get("tag") or "").strip()
         limit = _parse_limit(request.query_params.get("limit"))
 
-        if station_id:
-            try:
-                queryset = queryset.filter(station_id=int(station_id))
-            except ValueError:
-                return error_response(
-                    "INVALID_COMMUNITY_POST",
-                    status.HTTP_400_BAD_REQUEST,
-                    {"station_id": ["station_id must be an integer."]},
-                )
-        if query:
-            queryset = queryset.filter(
-                Q(title__icontains=query)
-                | Q(content__icontains=query)
-                | Q(station__name__icontains=query)
-                | Q(station__address__icontains=query)
-            )
-        if tag:
+        if query or tag:
             posts = []
             for post in queryset.iterator():
-                if _post_has_exact_tag(post, tag):
-                    posts.append(post)
+                if query and not _post_matches_query(post, query):
+                    continue
+                if tag and not _post_has_exact_tag(post, tag):
+                    continue
+                posts.append(post)
                 if len(posts) >= limit:
                     break
         else:
             posts = list(queryset[:limit])
+
         serializer = CommunityPostSerializer(posts, many=True, context={"request": request})
         return Response(
             {
@@ -96,7 +81,6 @@ class CommunityPostListCreateAPIView(APIView):
                     "count": len(serializer.data),
                     "limit": limit,
                     "filters": {
-                        "station_id": station_id or None,
                         "query": query or None,
                         "tag": tag or None,
                     },
@@ -110,8 +94,6 @@ class CommunityPostListCreateAPIView(APIView):
 
         serializer = CommunityPostWriteSerializer(data=request.data, context={"request": request})
         if not serializer.is_valid():
-            if _has_station_not_found_error(serializer):
-                return error_response("STATION_NOT_FOUND", status.HTTP_404_NOT_FOUND, serializer.errors)
             return error_response("INVALID_COMMUNITY_POST", status.HTTP_400_BAD_REQUEST, serializer.errors)
 
         post = serializer.save()
@@ -123,7 +105,7 @@ class CommunityPostDetailAPIView(APIView):
     permission_classes = [AllowAny]
 
     def _get_post(self, post_id):
-        return CommunityPost.objects.select_related("station", "author").filter(id=post_id).first()
+        return CommunityPost.objects.select_related("author").filter(id=post_id).first()
 
     def get(self, request, post_id):
         post = self._get_post(post_id)
@@ -148,8 +130,6 @@ class CommunityPostDetailAPIView(APIView):
             context={"request": request, "partial": True},
         )
         if not serializer.is_valid():
-            if _has_station_not_found_error(serializer):
-                return error_response("STATION_NOT_FOUND", status.HTTP_404_NOT_FOUND, serializer.errors)
             return error_response("INVALID_COMMUNITY_POST", status.HTTP_400_BAD_REQUEST, serializer.errors)
 
         post = serializer.save()

@@ -2,8 +2,6 @@ from django.contrib.auth import get_user_model
 from django.test import TestCase
 from rest_framework.test import APIClient
 
-from stations.models import GasStation
-
 from .models import CommunityPost
 
 
@@ -13,28 +11,11 @@ class CommunityPostAPITests(TestCase):
         User = get_user_model()
         self.author = User.objects.create_user(username="author", password="pass12345")
         self.other_user = User.objects.create_user(username="other", password="pass12345")
-        self.station = GasStation.objects.create(
-            external_station_id="COMMUNITY-STATION-001",
-            name="Community Test Station",
-            brand=GasStation.Brand.SK,
-            address="Community test address",
-            latitude="37.5010000",
-            longitude="127.0390000",
-        )
-        self.other_station = GasStation.objects.create(
-            external_station_id="COMMUNITY-STATION-002",
-            name="Filtered Station",
-            brand=GasStation.Brand.GS,
-            address="Filtered address",
-            latitude="37.5020000",
-            longitude="127.0400000",
-        )
 
     def _create_post(self, **overrides):
         defaults = {
-            "station": self.station,
             "author": self.author,
-            "title": "Useful station review",
+            "title": "Useful community post",
             "content": "The pumps were clean and the staff was kind.",
             "tags": ["clean", "kind"],
         }
@@ -50,15 +31,16 @@ class CommunityPostAPITests(TestCase):
         self.assertEqual(list_response.status_code, 200)
         self.assertEqual(list_response.json()["meta"]["count"], 1)
         self.assertEqual(list_response.json()["posts"][0]["id"], post.id)
+        self.assertNotIn("station", list_response.json()["posts"][0])
         self.assertFalse(list_response.json()["posts"][0]["can_edit"])
         self.assertEqual(detail_response.status_code, 200)
         self.assertEqual(detail_response.json()["id"], post.id)
+        self.assertNotIn("station", detail_response.json())
 
     def test_anonymous_user_cannot_create_post(self):
         response = self.client.post(
             "/api/v1/community/posts/",
             {
-                "station_id": self.station.id,
                 "title": "Anonymous post",
                 "content": "Anonymous users cannot write.",
             },
@@ -68,15 +50,14 @@ class CommunityPostAPITests(TestCase):
         self.assertEqual(response.status_code, 403)
         self.assertEqual(response.json()["code"], "AUTHENTICATION_REQUIRED")
 
-    def test_authenticated_user_can_create_post_without_visit_verification(self):
+    def test_authenticated_user_can_create_post_with_title_content_and_tags_only(self):
         self.client.force_authenticate(self.author)
 
         response = self.client.post(
             "/api/v1/community/posts/",
             {
-                "station_id": self.station.id,
-                "title": "Fresh review",
-                "content": "No visit proof is required for MVP.",
+                "title": "Fresh post",
+                "content": "Only title, content, and tags are required for the community post.",
                 "tags": ["mvp", "review", "mvp"],
             },
             format="json",
@@ -84,27 +65,24 @@ class CommunityPostAPITests(TestCase):
 
         self.assertEqual(response.status_code, 201)
         data = response.json()
-        self.assertEqual(data["station"]["station_id"], self.station.id)
+        self.assertNotIn("station", data)
         self.assertEqual(data["author"]["id"], self.author.id)
         self.assertEqual(data["tags"], ["mvp", "review"])
         self.assertTrue(data["can_edit"])
         self.assertEqual(CommunityPost.objects.count(), 1)
 
-    def test_create_with_missing_station_returns_contract_error(self):
+    def test_create_requires_only_title_and_content(self):
         self.client.force_authenticate(self.author)
 
         response = self.client.post(
             "/api/v1/community/posts/",
-            {
-                "station_id": 999999,
-                "title": "Missing station",
-                "content": "This should fail.",
-            },
+            {"title": "Missing content"},
             format="json",
         )
 
-        self.assertEqual(response.status_code, 404)
-        self.assertEqual(response.json()["code"], "STATION_NOT_FOUND")
+        self.assertEqual(response.status_code, 400)
+        self.assertEqual(response.json()["code"], "INVALID_COMMUNITY_POST")
+        self.assertIn("content", response.json()["details"])
 
     def test_author_can_update_post(self):
         post = self._create_post()
@@ -152,33 +130,32 @@ class CommunityPostAPITests(TestCase):
         self.assertEqual(response.json()["code"], "COMMUNITY_POST_FORBIDDEN")
         self.assertTrue(CommunityPost.objects.filter(id=post.id).exists())
 
-    def test_search_station_and_tag_filters(self):
+    def test_search_title_content_and_tag_filters(self):
         clean_post = self._create_post(
             title="Clean coffee stop",
-            content="Good coffee near the station.",
+            content="Good coffee near the route.",
             tags=["coffee", "clean"],
         )
         self._create_post(
-            station=self.other_station,
-            title="Quiet station",
-            content="Different location.",
+            title="Quiet post",
+            content="Different topic.",
             tags=["quiet"],
         )
         self._create_post(
-            title="Unclean keyword should not match",
+            title="Unclean keyword should not match exact tag",
             content="This post has a different tag.",
             tags=["unclean"],
         )
 
         search_response = self.client.get("/api/v1/community/posts/", {"query": "coffee"})
-        station_response = self.client.get("/api/v1/community/posts/", {"station_id": self.station.id})
         tag_response = self.client.get("/api/v1/community/posts/", {"tag": "coffee"})
         exact_tag_response = self.client.get("/api/v1/community/posts/", {"tag": "clean"})
 
         self.assertEqual(search_response.status_code, 200)
+        self.assertEqual(search_response.json()["meta"]["filters"], {"query": "coffee", "tag": None})
+        removed_filter_name = "_".join(["station", "id"])
+        self.assertNotIn(removed_filter_name, search_response.json()["meta"]["filters"])
         self.assertEqual([post["id"] for post in search_response.json()["posts"]], [clean_post.id])
-        self.assertEqual(station_response.status_code, 200)
-        self.assertEqual(station_response.json()["meta"]["count"], 2)
         self.assertEqual(tag_response.status_code, 200)
         self.assertEqual([post["id"] for post in tag_response.json()["posts"]], [clean_post.id])
         self.assertEqual(exact_tag_response.status_code, 200)
@@ -202,9 +179,10 @@ class CommunityPostAPITests(TestCase):
         self.assertEqual(max_response.json()["meta"]["count"], 100)
         self.assertEqual(max_response.json()["meta"]["limit"], 100)
 
-    def test_community_post_model_has_no_recommendation_or_visit_verification_fields(self):
+    def test_community_post_model_has_no_station_recommendation_or_visit_verification_fields(self):
         field_names = {field.name for field in CommunityPost._meta.get_fields()}
 
+        self.assertNotIn("station", field_names)
         self.assertNotIn("verified_visit", field_names)
         self.assertNotIn("visit_proof", field_names)
         self.assertNotIn("recommendation_score", field_names)

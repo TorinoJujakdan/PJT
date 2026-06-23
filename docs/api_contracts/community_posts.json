@@ -4,7 +4,7 @@
   "basePath": "/api/v1",
   "resource": {
     "name": "Community posts",
-    "description": "Public gas-station experience posts for the Community tab. These posts are not visit-verified and must not affect recommendation ranking or fuel-cost calculations."
+    "description": "Public community posts for the Community tab. Posts are standalone user-authored content and must not affect recommendation ranking or fuel-cost calculations."
   },
   "endpoints": [
     {
@@ -12,16 +12,12 @@
       "method": "GET",
       "path": "/community/posts/",
       "auth": "optional",
-      "description": "Return public community posts. Anonymous users can read the list.",
+      "description": "Return public community posts. Anonymous users can read and search the list.",
       "query": {
         "properties": {
           "query": {
             "type": "string",
-            "description": "Case-insensitive search over title, content, station name, and station address."
-          },
-          "station_id": {
-            "type": "integer",
-            "description": "Filter posts attached to a single GasStation."
+            "description": "Case-insensitive search over title, content, and tags."
           },
           "tag": {
             "type": "string",
@@ -56,10 +52,6 @@
               "filters": {
                 "type": "object",
                 "properties": {
-                  "station_id": {
-                    "type": "string",
-                    "nullable": true
-                  },
                   "query": {
                     "type": "string",
                     "nullable": true
@@ -80,7 +72,7 @@
       "method": "POST",
       "path": "/community/posts/",
       "auth": "required",
-      "description": "Create a community post for an existing gas station. No visit proof is accepted or required.",
+      "description": "Create a community post with title, content, and optional tags. No location linkage or visit proof is accepted or required.",
       "request": {
         "$ref": "#/schemas/CommunityPostWrite"
       },
@@ -126,9 +118,6 @@
         "id": {
           "type": "integer"
         },
-        "station": {
-          "$ref": "#/schemas/CommunityStationSummary"
-        },
         "author": {
           "$ref": "#/schemas/CommunityAuthorSummary"
         },
@@ -165,14 +154,10 @@
     "CommunityPostWrite": {
       "type": "object",
       "required": [
-        "station_id",
         "title",
         "content"
       ],
       "properties": {
-        "station_id": {
-          "type": "integer"
-        },
         "title": {
           "type": "string",
           "minLength": 1,
@@ -198,9 +183,6 @@
       "type": "object",
       "minProperties": 1,
       "properties": {
-        "station_id": {
-          "type": "integer"
-        },
         "title": {
           "type": "string",
           "minLength": 1,
@@ -221,24 +203,7 @@
           "maxItems": 10
         }
       },
-      "description": "Any subset of station_id, title, content, and tags; at least one field must be provided."
-    },
-    "CommunityStationSummary": {
-      "type": "object",
-      "properties": {
-        "station_id": {
-          "type": "integer"
-        },
-        "name": {
-          "type": "string"
-        },
-        "brand": {
-          "type": "string"
-        },
-        "address": {
-          "type": "string"
-        }
-      }
+      "description": "Any subset of title, content, and tags; at least one field must be provided."
     },
     "CommunityAuthorSummary": {
       "type": "object",
@@ -261,16 +226,15 @@
       "COMMUNITY_POST_FORBIDDEN"
     ],
     "404": [
-      "COMMUNITY_POST_NOT_FOUND",
-      "STATION_NOT_FOUND"
+      "COMMUNITY_POST_NOT_FOUND"
     ]
   },
   "implementationNotes": [
-    "CommunityPost belongs to stations.GasStation and the Django user model.",
+    "CommunityPost belongs to the Django user model only.",
     "GET list/detail are public; create/update/delete are auth-gated.",
     "Update/delete must return COMMUNITY_POST_FORBIDDEN with HTTP 403 for authenticated non-authors.",
     "The Community tab is public in the frontend navigation; write controls show login guidance for anonymous users.",
-    "No 실방문 인증 field, workflow, or proof upload is part of this contract.",
+    "No visit proof field, location-link workflow, or proof upload is part of this contract.",
     "Community posts must not be read by recommendation endpoints and must not influence recommendation ranking, distance, discount, or cost."
   ]
 }
