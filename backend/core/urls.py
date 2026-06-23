@@ -16,6 +16,7 @@ urlpatterns = [
     path("api/v1/health/", health_check, name="health-check"),
     path("api/v1/", include("accounts.urls")),
     path("api/v1/", include("cards.urls")),
+    path("api/v1/community/", include("community.urls")),
     path("api/v1/", include("vehicles.urls")),
     path("api/v1/stations/", include("stations.urls")),
     path("api/v1/recommendations/quote/", RecommendationQuoteAPIView.as_view(), name="recommendations-quote"),
