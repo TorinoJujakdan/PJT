@@ -19,3 +19,4 @@ The full blueprint remains the canonical index, but day-to-day coding should use
 - `cards_catalog.json`: card catalog search and save-from-catalog APIs
 - `cards_ingestion.json`: controlled Selenium card ingestion contract
 - `stations_opinet.json`: Opinet synchronization boundary
+- `community_posts.json`: public community post list/detail plus authenticated create, author-only update, and author-only delete APIs
