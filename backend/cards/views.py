@@ -40,7 +40,9 @@ class MyCardPolicyListCreateAPIView(APIView):
     permission_classes = [IsAuthenticated]
 
     def get(self, request):
-        policies = CardPolicy.objects.filter(owner=request.user, is_active=True)
+        policies = CardPolicy.objects.filter(owner=request.user, is_active=True).select_related(
+            "linked_catalog"
+        ).prefetch_related("linked_catalog__benefit_tiers")
         serializer = CardPolicySerializer(policies, many=True)
         return Response({"cards": serializer.data})
 
@@ -60,7 +62,9 @@ class MyCardPolicyFromCatalogAPIView(APIView):
         if not serializer.is_valid():
             return error_response("INVALID_CARD_POLICY", status.HTTP_400_BAD_REQUEST, serializer.errors)
 
-        catalog = CardCatalog.objects.filter(id=serializer.validated_data["catalog_card_id"]).first()
+        catalog = CardCatalog.objects.prefetch_related("benefit_tiers").filter(
+            id=serializer.validated_data["catalog_card_id"]
+        ).first()
         if catalog is None:
             return error_response("CARD_CATALOG_NOT_FOUND", status.HTTP_404_NOT_FOUND)
 
