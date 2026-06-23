@@ -75,6 +75,8 @@ cd backend
 - `NAVER_GEOCODING_CLIENT_ID` / `NAVER_GEOCODING_CLIENT_SECRET`: server-side Naver Cloud Maps credentials shared by Geocoding, Reverse Geocoding, and Directions. Legacy `NAVER_CLIENT_ID` / `NAVER_CLIENT_SECRET` remain accepted for these Maps APIs.
 - `NAVER_LOCAL_CLIENT_ID` / `NAVER_LOCAL_CLIENT_SECRET`: optional NAVER Developers Search credentials for registered businesses, buildings, and landmarks. `NAVER_SEARCH_*` and `NAVER_OPENAPI_*` aliases are also accepted. Cloud Maps `NAVER_CLIENT_*` credentials are intentionally not used for Local Search.
 - `CARD_INGESTION_ALLOWED_DOMAINS`: comma-separated allowlist for card ingestion sources.
+- `GMS_API_KEY`: server-side key for the planned GMS/LLM card fuel-benefit extraction path. Keep it only in `backend/.env`; never expose it through frontend `VITE_*` variables.
+- `GMS_MODEL`, `GMS_TIMEOUT_SECONDS`, `GMS_MAX_OUTPUT_TOKENS`: optional GMS/LLM extraction runtime settings.
 
 ## 초기 데이터 설정 (Initial Data Setup)
 

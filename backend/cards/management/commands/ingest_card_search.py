@@ -1,5 +1,8 @@
 from django.core.management.base import BaseCommand, CommandError
 
+from cards.ai_normalization import save_ai_normalized_candidates
+from cards.gms_client import GmsConfigurationError, GmsRequestError, normalize_card_fuel_benefit
+from cards.llm_fuel_extraction import build_line_numbered_document, validate_llm_fuel_payload
 from cards.models import CardPolicy
 from cards.selenium_ingestion import (
     DEFAULT_CARD_SEARCH_URL,
@@ -24,6 +27,12 @@ class Command(BaseCommand):
         )
         parser.add_argument("--limit", type=int, default=50, help="Maximum candidates to collect.")
         parser.add_argument("--scroll-count", type=int, default=8, help="Number of page-bottom scroll passes.")
+        parser.add_argument(
+            "--normalizer",
+            choices=["selenium", "gms"],
+            default="selenium",
+            help="Choose selenium parser fallback or GMS/LLM fuel benefit extraction.",
+        )
         parser.add_argument(
             "--detail",
             action="store_true",
@@ -52,6 +61,9 @@ class Command(BaseCommand):
 
         if options["dry_run"]:
             for candidate in candidates:
+                if options["normalizer"] == "gms":
+                    self.write_gms_dry_run(candidate)
+                    continue
                 self.safe_write(
                     f"{candidate.card_name} | {candidate.discount_type} {candidate.discount_value} | "
                     f"brand={candidate.brand_scope} | min={candidate.min_payment_amount} | "
@@ -61,7 +73,17 @@ class Command(BaseCommand):
             self.safe_write(self.style.SUCCESS(f"Collected {len(candidates)} candidates without saving."))
             return
 
-        saved = save_candidates(candidates, source_url=options["url"])
+        if options["normalizer"] == "gms":
+            try:
+                saved = save_ai_normalized_candidates(
+                    candidates,
+                    source_url=options["url"],
+                    normalizer=normalize_card_fuel_benefit,
+                )
+            except (GmsConfigurationError, GmsRequestError) as exc:
+                raise CommandError(str(exc)) from exc
+        else:
+            saved = save_candidates(candidates, source_url=options["url"])
         verified_count = sum(
             1
             for candidate in saved
@@ -73,4 +95,22 @@ class Command(BaseCommand):
                 f"Saved {len(saved)} card catalog candidates "
                 f"({verified_count} admin verified, {unverified_count} unverified)."
             )
+        )
+
+    def write_gms_dry_run(self, candidate):
+        try:
+            payload = normalize_card_fuel_benefit(candidate)
+        except (GmsConfigurationError, GmsRequestError) as exc:
+            raise CommandError(str(exc)) from exc
+        validation = validate_llm_fuel_payload(
+            build_line_numbered_document(candidate.raw_summary),
+            payload,
+        )
+        tier = validation.tier_data
+        if tier is None:
+            self.safe_write(f"{candidate.card_name} | GMS no valid tier | warnings={validation.warnings}")
+            return
+        self.safe_write(
+            f"{candidate.card_name} | {tier.discount_type} {tier.discount_value} | "
+            f"brand={tier.brand_scope} | monthly={tier.monthly_discount_limit} | warnings={validation.warnings}"
         )
