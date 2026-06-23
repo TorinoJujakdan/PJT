@@ -62,7 +62,8 @@ class RecommendationQuoteRequestSerializer(serializers.Serializer):
 
     location = LocationSerializer()
     fuel_type = serializers.ChoiceField(choices=FuelPrice.FuelType.choices)
-    target_liters = serializers.FloatField(min_value=1, max_value=150)
+    target_liters = serializers.FloatField(min_value=1, max_value=150, required=False, allow_null=True)
+    target_amount = serializers.IntegerField(min_value=1000, max_value=3_000_000, required=False, allow_null=True)
     radius_km = serializers.FloatField(min_value=1, max_value=30, required=False, default=15)
     recommendation_priority = serializers.ChoiceField(
         choices=RecommendationPriority.choices,
@@ -77,6 +78,13 @@ class RecommendationQuoteRequestSerializer(serializers.Serializer):
     vehicle = serializers.DictField(required=False)
     cards = RecommendationCardPolicySerializer(many=True, required=False, default=list)
     include_candidates = serializers.BooleanField(required=False, default=True)
+
+    def validate(self, attrs):
+        if not attrs.get("target_liters") and not attrs.get("target_amount"):
+            raise serializers.ValidationError(
+                "target_liters 또는 target_amount 중 하나는 필수입니다."
+            )
+        return attrs
 
     def validate_vehicle(self, value):
         if not isinstance(value, dict):
