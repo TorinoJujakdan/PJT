@@ -3,6 +3,41 @@ from rest_framework import serializers
 from .models import CardBenefitTier, CardCatalog, CardPolicy
 
 
+def _first_benefit_tier(catalog):
+    if catalog is None:
+        return None
+    prefetched = getattr(catalog, "_prefetched_objects_cache", {}).get("benefit_tiers")
+    if prefetched is not None:
+        return prefetched[0] if prefetched else None
+    return catalog.benefit_tiers.first()
+
+
+def _policy_benefit(policy):
+    return {
+        "id": None,
+        "fuel_type": "ALL",
+        "min_performance_amount": 0,
+        "max_performance_amount": None,
+        "discount_type": policy.discount_type,
+        "discount_value": str(policy.discount_value),
+        "brand_scope": policy.brand_scope,
+        "min_payment_amount": policy.min_payment_amount,
+        "monthly_discount_limit": policy.monthly_discount_limit,
+    }
+
+
+def _policy_uses_catalog_default(policy, tier):
+    if policy.discount_value == 0:
+        return True
+    return (
+        policy.discount_type == tier.discount_type
+        and policy.discount_value == tier.discount_value
+        and policy.brand_scope == tier.brand_scope
+        and policy.min_payment_amount == tier.min_payment_amount
+        and policy.monthly_discount_limit == tier.monthly_discount_limit
+    )
+
+
 class CardPolicySerializer(serializers.ModelSerializer):
     card_id = serializers.CharField(source="id", read_only=True)
     card_image_url = serializers.URLField(required=False, allow_blank=True)
@@ -11,6 +46,8 @@ class CardPolicySerializer(serializers.ModelSerializer):
     source_url = serializers.URLField(required=False, allow_blank=True)
     source_title = serializers.CharField(required=False, allow_blank=True)
     user_memo = serializers.CharField(required=False, allow_blank=True)
+    catalog_benefit_tiers = serializers.SerializerMethodField()
+    effective_benefit = serializers.SerializerMethodField()
 
     class Meta:
         model = CardPolicy
@@ -35,8 +72,21 @@ class CardPolicySerializer(serializers.ModelSerializer):
             "source_url",
             "source_title",
             "user_memo",
+            "catalog_benefit_tiers",
+            "effective_benefit",
         ]
         read_only_fields = ["card_id", "source_type", "verification_status"]
+
+    def get_catalog_benefit_tiers(self, obj):
+        if not obj.linked_catalog_id:
+            return []
+        return CardBenefitTierSerializer(obj.linked_catalog.benefit_tiers.all(), many=True).data
+
+    def get_effective_benefit(self, obj):
+        tier = _first_benefit_tier(obj.linked_catalog)
+        if tier and _policy_uses_catalog_default(obj, tier):
+            return CardBenefitTierSerializer(tier).data
+        return _policy_benefit(obj)
 
     def validate_discount_value(self, value):
         if value < 0:
@@ -78,6 +128,7 @@ class CardBenefitTierSerializer(serializers.ModelSerializer):
 class CardCatalogSerializer(serializers.ModelSerializer):
     catalog_card_id = serializers.IntegerField(source="id", read_only=True)
     benefit_tiers = CardBenefitTierSerializer(many=True, read_only=True)
+    effective_benefit = serializers.SerializerMethodField()
     card_image_file = serializers.FileField(read_only=True)
 
     class Meta:
@@ -98,7 +149,14 @@ class CardCatalogSerializer(serializers.ModelSerializer):
             "confidence",
             "collected_at",
             "benefit_tiers",
+            "effective_benefit",
         ]
+
+    def get_effective_benefit(self, obj):
+        tier = _first_benefit_tier(obj)
+        if tier:
+            return CardBenefitTierSerializer(tier).data
+        return None
 
 
 class CardFromCatalogSerializer(serializers.Serializer):

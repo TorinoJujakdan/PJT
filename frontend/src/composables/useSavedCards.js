@@ -1,5 +1,6 @@
 import { ref } from "vue";
 import { getMyCards } from "../api/cards";
+import { cardWithEffectiveBenefit } from "../components/cards/cardPresentation";
 
 function optionalNumber(value) {
   if (value === "" || value === null || value === undefined) {
@@ -22,18 +23,21 @@ export function useSavedCards({ isAuthenticated, tempCard }) {
 
   function selectedCards() {
     if (isAuthenticated?.value) {
-      return cards.value.map((c) => ({
-        card_id: c.card_id,
-        card_name: c.card_name,
-        issuer_name: c.issuer_name,
-        discount_type: c.discount_type,
-        discount_value: Number(c.discount_value || 0),
-        brand_scope: c.brand_scope || "all",
-        min_payment_amount: optionalNumber(c.min_payment_amount),
-        max_discount_amount: optionalNumber(c.max_discount_amount),
-        monthly_remaining_discount: optionalNumber(c.monthly_remaining_discount),
-        previous_month_spending: optionalNumber(c.previous_month_spending),
-      }));
+      return cards.value.map((c) => {
+        const card = cardWithEffectiveBenefit(c);
+        return {
+          card_id: card.card_id,
+          card_name: card.card_name,
+          issuer_name: card.issuer_name,
+          discount_type: card.discount_type,
+          discount_value: Number(card.discount_value || 0),
+          brand_scope: card.brand_scope || "all",
+          min_payment_amount: optionalNumber(card.min_payment_amount),
+          max_discount_amount: optionalNumber(card.max_discount_amount),
+          monthly_remaining_discount: optionalNumber(card.monthly_remaining_discount),
+          previous_month_spending: optionalNumber(card.previous_month_spending),
+        };
+      });
     }
 
     if (!tempCard.enabled) {

@@ -2,7 +2,9 @@ import assert from "node:assert/strict";
 import test from "node:test";
 
 import {
+  cardWithEffectiveBenefit,
   cardPayload,
+  catalogCardDraft,
   catalogCardPayload,
   discountLabel,
   trustDisclosure,
@@ -12,6 +14,53 @@ import {
 test("내부 할인 코드를 사용자 친화적인 한국어 혜택으로 변환한다", () => {
   assert.equal(discountLabel({ discount_type: "per_liter", discount_value: 80 }), "리터당 80원 할인");
   assert.equal(discountLabel({ discount_type: "percentage", discount_value: 7 }), "결제 금액의 7% 할인");
+});
+
+test("카탈로그 정규화 혜택을 표시와 등록 기본값의 표준값으로 사용한다", () => {
+  const catalogCard = {
+    catalog_card_id: 3,
+    card_name: "정규화 카드",
+    issuer_name: "테스트카드",
+    discount_type: "per_liter",
+    discount_value: 0,
+    benefit_tiers: [
+      {
+        discount_type: "per_liter",
+        discount_value: "90.00",
+        brand_scope: "GS",
+        min_payment_amount: 30000,
+        monthly_discount_limit: 15000,
+      },
+    ],
+  };
+
+  assert.equal(discountLabel(catalogCard), "리터당 90원 할인");
+  assert.equal(catalogCardDraft(catalogCard).discount_value, 90);
+  assert.equal(catalogCardPayload(catalogCard).discount_value, 90);
+  assert.equal(catalogCardPayload(catalogCard).monthly_discount_limit, 15000);
+});
+
+test("저장 카드도 연결된 카탈로그 tier를 빠른 선택 혜택으로 사용한다", () => {
+  const savedCard = {
+    card_id: 7,
+    card_name: "저장 카드",
+    issuer_name: "테스트카드",
+    discount_type: "per_liter",
+    discount_value: "0.00",
+    catalog_benefit_tiers: [
+      {
+        discount_type: "percentage",
+        discount_value: "10.00",
+        brand_scope: "all",
+      },
+    ],
+  };
+
+  const benefitCard = cardWithEffectiveBenefit(savedCard);
+
+  assert.equal(discountLabel(savedCard), "결제 금액의 10% 할인");
+  assert.equal(benefitCard.discount_type, "percentage");
+  assert.equal(benefitCard.discount_value, "10.00");
 });
 
 test("출처 없음과 미검증 출처를 서로 다른 안내로 구분한다", () => {

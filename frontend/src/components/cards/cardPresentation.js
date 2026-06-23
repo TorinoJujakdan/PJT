@@ -7,9 +7,10 @@ const brandLabels = {
 };
 
 export function discountLabel(card) {
-  const value = Number(card?.discount_value || 0).toLocaleString("ko-KR");
-  if (card?.discount_type === "percentage") return `결제 금액의 ${value}% 할인`;
-  if (card?.discount_type === "fixed_amount") return `건당 ${value}원 할인`;
+  const benefit = cardWithEffectiveBenefit(card);
+  const value = Number(benefit?.discount_value || 0).toLocaleString("ko-KR");
+  if (benefit?.discount_type === "percentage") return `결제 금액의 ${value}% 할인`;
+  if (benefit?.discount_type === "fixed_amount") return `건당 ${value}원 할인`;
   return `리터당 ${value}원 할인`;
 }
 
@@ -56,22 +57,60 @@ export function validateCardDraft(draft) {
   return "";
 }
 
+function firstBenefit(benefits) {
+  return Array.isArray(benefits) && benefits.length > 0 ? benefits[0] : null;
+}
+
+export function effectiveBenefit(card) {
+  return (
+    card?.effective_benefit
+    || firstBenefit(card?.catalog_benefit_tiers)
+    || firstBenefit(card?.benefit_tiers)
+    || null
+  );
+}
+
+export function cardWithEffectiveBenefit(card) {
+  const benefit = effectiveBenefit(card);
+  if (!benefit) return card || {};
+
+  return {
+    ...(card || {}),
+    discount_type: benefit.discount_type || card?.discount_type || "per_liter",
+    discount_value: benefit.discount_value ?? card?.discount_value ?? 0,
+    brand_scope: benefit.brand_scope || card?.brand_scope || "all",
+    min_payment_amount: benefit.min_payment_amount ?? card?.min_payment_amount ?? null,
+    monthly_discount_limit: benefit.monthly_discount_limit ?? card?.monthly_discount_limit ?? null,
+  };
+}
+
 export function cardPayload(draft) {
   const optionalNumber = (value) => (
     value === "" || value === null || value === undefined ? null : Number(value)
   );
+  const benefitDraft = cardWithEffectiveBenefit(draft);
   return {
-    card_name: draft.card_name,
-    issuer_name: draft.issuer_name,
-    discount_type: draft.discount_type,
-    discount_value: Number(draft.discount_value || 0),
-    brand_scope: draft.brand_scope,
-    min_payment_amount: optionalNumber(draft.min_payment_amount),
-    max_discount_amount: optionalNumber(draft.max_discount_amount),
-    monthly_discount_limit: optionalNumber(draft.monthly_discount_limit),
-    monthly_remaining_discount: optionalNumber(draft.monthly_remaining_discount),
-    previous_month_spending: optionalNumber(draft.previous_month_spending),
-    user_memo: draft.user_memo || "",
+    card_name: benefitDraft.card_name,
+    issuer_name: benefitDraft.issuer_name,
+    discount_type: benefitDraft.discount_type,
+    discount_value: Number(benefitDraft.discount_value || 0),
+    brand_scope: benefitDraft.brand_scope || "all",
+    min_payment_amount: optionalNumber(benefitDraft.min_payment_amount),
+    max_discount_amount: optionalNumber(benefitDraft.max_discount_amount),
+    monthly_discount_limit: optionalNumber(benefitDraft.monthly_discount_limit),
+    monthly_remaining_discount: optionalNumber(benefitDraft.monthly_remaining_discount),
+    previous_month_spending: optionalNumber(benefitDraft.previous_month_spending),
+    user_memo: benefitDraft.user_memo || "",
+  };
+}
+
+export function catalogCardDraft(card) {
+  return {
+    ...cardPayload({
+      ...cardWithEffectiveBenefit(card),
+      user_memo: "카탈로그 혜택 확인 후 등록",
+    }),
+    catalog_card_id: card.catalog_card_id,
   };
 }
 

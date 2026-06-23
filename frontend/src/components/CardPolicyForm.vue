@@ -1,6 +1,6 @@
 <script setup>
-import { ChevronDown, CreditCard, Sparkles } from "@lucide/vue";
-import { ref, watch } from "vue";
+import { CreditCard, Sparkles } from "@lucide/vue";
+import { cardWithEffectiveBenefit, discountLabel } from "./cards/cardPresentation";
 
 const props = defineProps({
   cards: {
@@ -76,17 +76,18 @@ function applyMyCard(cardId) {
   if (!cardId) return;
   const card = props.cards.find(c => String(c.card_id) === String(cardId));
   if (!card) return;
+  const benefitCard = cardWithEffectiveBenefit(card);
 
   model.value.enabled = true;
-  model.value.issuer_name = card.issuer_name;
-  model.value.card_name = card.card_name;
-  model.value.discount_type = card.discount_type;
-  model.value.discount_value = card.discount_value;
-  model.value.brand_scope = card.brand_scope;
-  model.value.min_payment_amount = card.min_payment_amount;
-  model.value.max_discount_amount = card.max_discount_amount;
-  model.value.monthly_remaining_discount = card.monthly_remaining_discount;
-  model.value.previous_month_spending = card.previous_month_spending;
+  model.value.issuer_name = benefitCard.issuer_name;
+  model.value.card_name = benefitCard.card_name;
+  model.value.discount_type = benefitCard.discount_type;
+  model.value.discount_value = benefitCard.discount_value;
+  model.value.brand_scope = benefitCard.brand_scope;
+  model.value.min_payment_amount = benefitCard.min_payment_amount;
+  model.value.max_discount_amount = benefitCard.max_discount_amount;
+  model.value.monthly_remaining_discount = benefitCard.monthly_remaining_discount;
+  model.value.previous_month_spending = benefitCard.previous_month_spending;
 }
 </script>
 
@@ -106,7 +107,7 @@ function applyMyCard(cardId) {
     <!-- 내 등록 카드 시뮬레이션 대입 드롭다운 -->
     <div v-if="cards && cards.length > 0" style="margin-bottom: 16px;">
       <span style="font-size: 11px; font-weight: 800; color: var(--slate-400); text-transform: uppercase; display: flex; align-items: center; gap: 4px; margin-bottom: 8px;">
-        💳 내 등록 카드 빠른 선택 (시뮬레이션 반영)
+        <CreditCard :size="10" /> 내 등록 카드 빠른 선택 (시뮬레이션 반영)
       </span>
       <select @change="applyMyCard($event.target.value)" style="width: 100%; border: 1px solid var(--slate-200); border-radius: var(--radius-sm); padding: 10px 12px; font-size: 13px; font-weight: 700; color: var(--slate-700); background-color: var(--slate-50); outline: none; transition: border-color 0.2s;">
         <option value="">-- 내 카드 중에서 선택하여 테스트 --</option>
@@ -115,7 +116,7 @@ function applyMyCard(cardId) {
           :key="card.card_id"
           :value="card.card_id"
         >
-          [{{ card.issuer_name }}] {{ card.card_name }} ({{ card.discount_type === 'per_liter' ? 'L당 ' + card.discount_value + '원' : card.discount_type === 'percentage' ? card.discount_value + '%' : card.discount_value + '원' }} 할인)
+          [{{ card.issuer_name }}] {{ card.card_name }} ({{ discountLabel(card) }})
         </option>
       </select>
     </div>
@@ -146,7 +147,7 @@ function applyMyCard(cardId) {
       <div>
         <strong>{{ model.issuer_name || "카드사 미정" }} {{ model.card_name || "카드 혜택 없음" }}</strong>
         <span :style="{ color: model.enabled ? 'var(--primary)' : 'var(--slate-400)', fontWeight: 700 }">
-          {{ model.enabled ? `${model.discount_type === 'per_liter' ? 'L당 ' + model.discount_value + '원' : model.discount_type === 'percentage' ? model.discount_value + '%' : model.discount_value + '원'} 할인 반영` : "미적용 상태" }}
+          {{ model.enabled ? `${discountLabel(model)} 반영` : "미적용 상태" }}
         </span>
       </div>
     </div>
@@ -213,4 +214,3 @@ function applyMyCard(cardId) {
     </div>
   </section>
 </template>
-

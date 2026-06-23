@@ -73,6 +73,41 @@ class CardPolicyAPITests(TestCase):
         self.assertEqual(len(cards), 1)
         self.assertEqual(cards[0]["card_name"], "My Card")
 
+    def test_list_linked_catalog_card_exposes_tier_as_effective_benefit(self):
+        catalog = CardCatalog.objects.create(
+            card_name="Tier Card",
+            issuer_name="Tier Bank",
+            source_url="https://card-search.naver.com/card/tier",
+        )
+        CardBenefitTier.objects.create(
+            card_catalog=catalog,
+            fuel_type="ALL",
+            discount_type=CardPolicy.DiscountType.PER_LITER,
+            discount_value=90,
+            brand_scope="GS",
+            min_payment_amount=30000,
+            monthly_discount_limit=15000,
+        )
+        CardPolicy.objects.create(
+            owner=self.user,
+            linked_catalog=catalog,
+            card_name="Tier Card",
+            issuer_name="Tier Bank",
+            discount_type=CardPolicy.DiscountType.PER_LITER,
+            discount_value=0,
+            source_type=CardPolicy.SourceType.CATALOG,
+        )
+
+        self.client.force_authenticate(self.user)
+        response = self.client.get("/api/v1/me/cards/")
+
+        self.assertEqual(response.status_code, 200)
+        card = response.json()["cards"][0]
+        self.assertEqual(card["effective_benefit"]["discount_type"], "per_liter")
+        self.assertEqual(card["effective_benefit"]["discount_value"], "90.00")
+        self.assertEqual(card["effective_benefit"]["brand_scope"], "GS")
+        self.assertEqual(card["catalog_benefit_tiers"][0]["monthly_discount_limit"], 15000)
+
     def test_delete_card_policy_soft_deletes_owned_policy(self):
         policy = CardPolicy.objects.create(
             owner=self.user,
@@ -234,6 +269,8 @@ class CardPolicyAPITests(TestCase):
         self.assertEqual(len(cards), 1)
         self.assertEqual(cards[0]["card_name"], "KB국민 굿데이카드")
         self.assertEqual(cards[0]["verification_status"], "unverified")
+        self.assertEqual(cards[0]["effective_benefit"]["discount_type"], "per_liter")
+        self.assertEqual(cards[0]["effective_benefit"]["discount_value"], "60.00")
 
     def test_create_card_policy_from_catalog_confirms_user_card(self):
         catalog = CardCatalog.objects.create(
@@ -268,6 +305,8 @@ class CardPolicyAPITests(TestCase):
         self.assertEqual(data["card_name"], "KB국민 굿데이카드")
         self.assertEqual(data["source_type"], "catalog")
         self.assertEqual(data["verification_status"], "user_confirmed")
+        self.assertEqual(data["discount_value"], "60.00")
+        self.assertEqual(data["effective_benefit"]["discount_value"], "60.00")
         self.assertEqual(CardPolicy.objects.filter(owner=self.user).count(), 1)
 
     def test_create_card_policy_from_catalog_allows_user_overrides(self):
@@ -305,6 +344,8 @@ class CardPolicyAPITests(TestCase):
         self.assertEqual(policy.discount_value, 5)
         self.assertEqual(policy.brand_scope, "GS")
         self.assertEqual(policy.max_discount_amount, 5000)
+        self.assertEqual(response.json()["effective_benefit"]["discount_type"], "percentage")
+        self.assertEqual(response.json()["effective_benefit"]["discount_value"], "5.00")
 
     def test_create_card_policy_from_catalog_rejects_invalid_percentage_override(self):
         catalog = CardCatalog.objects.create(

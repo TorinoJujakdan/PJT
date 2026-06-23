@@ -11,7 +11,7 @@ import CardArtwork from "./CardArtwork.vue";
 import CardPolicyFields from "./CardPolicyFields.vue";
 import {
   brandLabel,
-  cardPayload,
+  catalogCardDraft,
   catalogCardPayload,
   discountLabel,
   trustDisclosure,
@@ -50,8 +50,7 @@ function selectCard(card) {
   cardsWorkspaceStore.selectedCatalogCard = card;
   Object.assign(
     cardsWorkspaceStore.catalogDraft,
-    cardPayload({ ...card, user_memo: "카탈로그 혜택 확인 후 등록" }),
-    { catalog_card_id: card.catalog_card_id },
+    catalogCardDraft(card),
   );
   error.value = "";
 }
