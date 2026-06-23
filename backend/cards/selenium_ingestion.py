@@ -1,10 +1,15 @@
+import hashlib
+import mimetypes
 import os
 import re
 import time
+from pathlib import Path
+from urllib.request import Request, urlopen
 from dataclasses import dataclass, replace
 from decimal import Decimal
 from urllib.parse import urljoin, urlparse
 
+from django.core.files.base import ContentFile
 from django.utils import timezone
 
 from .models import CardBenefitTier, CardCatalog, CardPolicy
@@ -15,6 +20,8 @@ DEFAULT_CARD_SEARCH_URL = (
     "https://card-search.naver.com/list?"
     "companyCode=&brandNames=&benefitCategoryIds=1&sortMethod=ri&isRefetch=true&bizType=CPC"
 )
+MAX_CARD_IMAGE_BYTES = 3 * 1024 * 1024
+ALLOWED_IMAGE_CONTENT_TYPES = {"image/jpeg", "image/png", "image/webp", "image/gif"}
 
 
 class CardIngestionError(RuntimeError):
@@ -58,6 +65,109 @@ def validate_allowed_url(url):
     if domain not in get_allowed_domains():
         raise CardIngestionError(f"Domain is not allowlisted: {domain or url}")
     return url
+
+
+def decimal_to_json_value(value):
+    if value is None:
+        return None
+    return str(value)
+
+
+def build_card_image_filename(candidate, image_url, content_type=""):
+    parsed = urlparse(image_url or "")
+    suffix = Path(parsed.path).suffix.lower()
+    if suffix not in {".jpg", ".jpeg", ".png", ".webp", ".gif"}:
+        suffix = mimetypes.guess_extension(content_type or "") or ".img"
+    digest_source = f"{candidate.source_url}|{image_url}|{candidate.card_name}".encode("utf-8", errors="ignore")
+    digest = hashlib.sha256(digest_source).hexdigest()[:16]
+    return f"card-{digest}{suffix}"
+
+
+def fetch_remote_image(image_url, timeout=8, max_bytes=MAX_CARD_IMAGE_BYTES):
+    parsed = urlparse(image_url or "")
+    if parsed.scheme not in {"http", "https"} or not parsed.netloc:
+        return None, ""
+
+    request = Request(
+        image_url,
+        headers={"User-Agent": "SmartFuelCardIngestion/1.0 (+https://card-search.naver.com)"},
+    )
+    try:
+        with urlopen(request, timeout=timeout) as response:
+            content_type = (response.headers.get("Content-Type") or "").split(";")[0].strip().lower()
+            if content_type and content_type not in ALLOWED_IMAGE_CONTENT_TYPES:
+                return None, content_type
+            content = response.read(max_bytes + 1)
+    except Exception:
+        return None, ""
+
+    if not content or len(content) > max_bytes:
+        return None, content_type
+    return content, content_type
+
+
+def persist_catalog_card_image(catalog_card, candidate):
+    """Download the public card artwork and store the DB-backed FileField path.
+
+    The original image URL is retained as provenance only; recommendation/UI code can
+    use card_image_file instead of hot-linking the remote image.
+    """
+    image_url = (candidate.card_image_url or "").strip()
+    if not image_url:
+        return False
+
+    catalog_card.card_image_original_url = image_url[:200]
+    if catalog_card.card_image_file and catalog_card.card_image_url == image_url:
+        return False
+
+    content, content_type = fetch_remote_image(image_url)
+    if not content:
+        return False
+
+    filename = build_card_image_filename(candidate, image_url, content_type)
+    catalog_card.card_image_file.save(filename, ContentFile(content), save=False)
+    return True
+
+
+def build_normalized_catalog_payload(catalog_card, candidate, source_url, tier_data=None):
+    image_file = getattr(catalog_card, "card_image_file", None)
+    image_path = image_file.name if image_file else ""
+    return {
+        "schema_version": 1,
+        "provider": "naver_card_search",
+        "source": {
+            "type": catalog_card.source_type,
+            "url": catalog_card.source_url or source_url,
+            "title": catalog_card.source_title,
+            "collected_at": catalog_card.collected_at.isoformat() if catalog_card.collected_at else None,
+            "verification_status": catalog_card.verification_status,
+            "confidence": decimal_to_json_value(catalog_card.confidence),
+        },
+        "card": {
+            "name": catalog_card.card_name,
+            "issuer": catalog_card.issuer_name,
+            "image": {
+                "original_url": catalog_card.card_image_original_url or candidate.card_image_url,
+                "stored_file": image_path,
+                "legacy_url": catalog_card.card_image_url,
+            },
+        },
+        "benefits": [
+            {
+                "category": "fuel",
+                "fuel_type": (tier_data or {}).get("fuel_type", "ALL"),
+                "discount_type": (tier_data or {}).get("discount_type", candidate.discount_type),
+                "discount_value": decimal_to_json_value((tier_data or {}).get("discount_value", candidate.discount_value)),
+                "brand_scope": (tier_data or {}).get("brand_scope", candidate.brand_scope or "all"),
+                "min_payment_amount": (tier_data or {}).get("min_payment_amount", candidate.min_payment_amount),
+                "max_discount_amount": candidate.max_discount_amount,
+                "monthly_discount_limit": (tier_data or {}).get("monthly_discount_limit", candidate.monthly_discount_limit),
+                "monthly_remaining_discount": candidate.monthly_remaining_discount,
+                "min_performance_amount": (tier_data or {}).get("min_performance_amount", 0),
+            }
+        ],
+        "raw_summary": catalog_card.raw_summary,
+    }
 
 
 def normalize_candidate(candidate, source_url):
@@ -550,11 +660,19 @@ def save_candidates(candidates, source_url):
             ).first()
 
         if catalog_card is None:
-            catalog_card = CardCatalog.objects.create(**catalog_data)
+            catalog_card = CardCatalog(**catalog_data)
         else:
             for field_name, value in catalog_data.items():
                 setattr(catalog_card, field_name, value)
-            catalog_card.save()
+
+        persist_catalog_card_image(catalog_card, candidate)
+        catalog_card.normalized_data = build_normalized_catalog_payload(
+            catalog_card,
+            candidate,
+            source_url,
+            tier_data=tier_data,
+        )
+        catalog_card.save()
 
         # Save or update the benefit tier for this catalog card
         if tier_data and tier_data["discount_value"] > 0:

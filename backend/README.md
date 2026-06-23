@@ -64,6 +64,7 @@ cd backend
 - Migration `vehicles.0005_reset_profiles_expand_vehicle_types` intentionally deletes existing vehicle profiles and replaces the five-type choices metadata with the nine-type contract.
 - `CardCatalog` rows collected from Selenium remain `unverified` and are not used for ranking until a user confirms them into `CardPolicy` or an admin verifies them.
 - Card ingestion is run through management commands, not through the recommendation request path.
+- Selenium card ingestion downloads public card artwork into `MEDIA_ROOT/card_images/` and stores the file path plus a normalized JSON payload on `CardCatalog`; remote image URLs are retained only as source provenance.
 
 ## Environment
 

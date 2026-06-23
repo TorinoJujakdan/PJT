@@ -1,6 +1,8 @@
 from decimal import Decimal
+from tempfile import TemporaryDirectory
+from unittest.mock import patch
 
-from django.test import TestCase
+from django.test import TestCase, override_settings
 from django.utils import timezone
 
 from .models import CardBenefitTier, CardCatalog, CardPolicy
@@ -19,6 +21,13 @@ from .selenium_ingestion import (
 
 
 class CardSeleniumIngestionTests(TestCase):
+    def setUp(self):
+        self._image_fetch_patch = patch("cards.selenium_ingestion.fetch_remote_image", return_value=(None, ""))
+        self._image_fetch_patch.start()
+
+    def tearDown(self):
+        self._image_fetch_patch.stop()
+
     def test_validate_allowed_url_accepts_approved_naver_card_search_domain(self):
         url = "https://card-search.naver.com/list?benefitCategoryIds=1"
 
@@ -51,6 +60,33 @@ class CardSeleniumIngestionTests(TestCase):
         self.assertEqual(catalog.source_type, CardPolicy.SourceType.SELENIUM)
         self.assertEqual(catalog.verification_status, CardPolicy.VerificationStatus.UNVERIFIED)
         self.assertIsNotNone(catalog.collected_at)
+
+
+    def test_save_candidates_downloads_card_image_and_stores_normalized_json(self):
+        source_url = "https://card-search.naver.com/list?benefitCategoryIds=1"
+        candidate = ScrapedCardCandidate(
+            card_name="Smart Oil Card",
+            issuer_name="Smart Bank",
+            discount_type=CardPolicy.DiscountType.PER_LITER,
+            discount_value=Decimal("80"),
+            card_image_url="https://card-search.naver.com/card.png",
+            source_url="https://card-search.naver.com/card/1",
+            source_title="Smart Oil Card",
+            raw_summary="Smart Oil Card fuel discount 80 KRW per liter",
+            confidence=Decimal("0.80"),
+        )
+
+        with TemporaryDirectory() as media_root:
+            with override_settings(MEDIA_ROOT=media_root):
+                with patch("cards.selenium_ingestion.fetch_remote_image", return_value=(b"fake-png", "image/png")):
+                    save_candidates([candidate], source_url=source_url)
+
+                catalog = CardCatalog.objects.get()
+                self.assertEqual(catalog.card_image_original_url, "https://card-search.naver.com/card.png")
+                self.assertTrue(catalog.card_image_file.name.startswith("card_images/catalog/card-"))
+                self.assertEqual(catalog.normalized_data["schema_version"], 1)
+                self.assertEqual(catalog.normalized_data["card"]["image"]["stored_file"], catalog.card_image_file.name)
+                self.assertEqual(catalog.normalized_data["benefits"][0]["discount_value"], "80")
 
     def test_save_candidates_updates_existing_source_url(self):
         source_url = "https://card-search.naver.com/list?benefitCategoryIds=1"
