@@ -35,6 +35,7 @@ INSTALLED_APPS = [
     "django_apscheduler",
     "accounts",
     "cards",
+    "community",
     "stations",
     "vehicles",
 ]

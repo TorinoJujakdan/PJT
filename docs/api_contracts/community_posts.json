@@ -1,0 +1,276 @@
+{
+  "project": "SmartFuel",
+  "version": "v1",
+  "basePath": "/api/v1",
+  "resource": {
+    "name": "Community posts",
+    "description": "Public gas-station experience posts for the Community tab. These posts are not visit-verified and must not affect recommendation ranking or fuel-cost calculations."
+  },
+  "endpoints": [
+    {
+      "name": "List community posts",
+      "method": "GET",
+      "path": "/community/posts/",
+      "auth": "optional",
+      "description": "Return public community posts. Anonymous users can read the list.",
+      "query": {
+        "properties": {
+          "query": {
+            "type": "string",
+            "description": "Case-insensitive search over title, content, station name, and station address."
+          },
+          "station_id": {
+            "type": "integer",
+            "description": "Filter posts attached to a single GasStation."
+          },
+          "tag": {
+            "type": "string",
+            "description": "Filter posts whose tag list contains a tag exactly equal to the query tag, case-insensitively."
+          },
+          "limit": {
+            "type": "integer",
+            "default": 50,
+            "maximum": 100,
+            "description": "Server-bounded list size. Invalid or values below 1 fall back to 50; values above 100 are capped at 100."
+          }
+        }
+      },
+      "response200": {
+        "type": "object",
+        "properties": {
+          "posts": {
+            "type": "array",
+            "items": {
+              "$ref": "#/schemas/CommunityPost"
+            }
+          },
+          "meta": {
+            "type": "object",
+            "properties": {
+              "count": {
+                "type": "integer"
+              },
+              "limit": {
+                "type": "integer"
+              },
+              "filters": {
+                "type": "object",
+                "properties": {
+                  "station_id": {
+                    "type": "string",
+                    "nullable": true
+                  },
+                  "query": {
+                    "type": "string",
+                    "nullable": true
+                  },
+                  "tag": {
+                    "type": "string",
+                    "nullable": true
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    {
+      "name": "Create community post",
+      "method": "POST",
+      "path": "/community/posts/",
+      "auth": "required",
+      "description": "Create a community post for an existing gas station. No visit proof is accepted or required.",
+      "request": {
+        "$ref": "#/schemas/CommunityPostWrite"
+      },
+      "response201": {
+        "$ref": "#/schemas/CommunityPost"
+      }
+    },
+    {
+      "name": "Read community post",
+      "method": "GET",
+      "path": "/community/posts/{post_id}/",
+      "auth": "optional",
+      "description": "Return a single public community post."
+    },
+    {
+      "name": "Update community post",
+      "method": "PATCH",
+      "path": "/community/posts/{post_id}/",
+      "auth": "required",
+      "description": "Partially update a post. The backend fetches the post by id first; an authenticated non-author receives COMMUNITY_POST_FORBIDDEN with HTTP 403, not an owner-filtered 404.",
+      "request": {
+        "$ref": "#/schemas/CommunityPostWritePartial"
+      },
+      "response200": {
+        "$ref": "#/schemas/CommunityPost"
+      }
+    },
+    {
+      "name": "Delete community post",
+      "method": "DELETE",
+      "path": "/community/posts/{post_id}/",
+      "auth": "required",
+      "description": "Delete a post. The backend fetches the post by id first; an authenticated non-author receives COMMUNITY_POST_FORBIDDEN with HTTP 403, not an owner-filtered 404.",
+      "response204": {
+        "description": "No response body."
+      }
+    }
+  ],
+  "schemas": {
+    "CommunityPost": {
+      "type": "object",
+      "properties": {
+        "id": {
+          "type": "integer"
+        },
+        "station": {
+          "$ref": "#/schemas/CommunityStationSummary"
+        },
+        "author": {
+          "$ref": "#/schemas/CommunityAuthorSummary"
+        },
+        "title": {
+          "type": "string",
+          "maxLength": 120
+        },
+        "content": {
+          "type": "string",
+          "maxLength": 2000
+        },
+        "tags": {
+          "type": "array",
+          "items": {
+            "type": "string",
+            "maxLength": 20
+          },
+          "maxItems": 10
+        },
+        "created_at": {
+          "type": "string",
+          "format": "date-time"
+        },
+        "updated_at": {
+          "type": "string",
+          "format": "date-time"
+        },
+        "can_edit": {
+          "type": "boolean",
+          "description": "True only for the authenticated author."
+        }
+      }
+    },
+    "CommunityPostWrite": {
+      "type": "object",
+      "required": [
+        "station_id",
+        "title",
+        "content"
+      ],
+      "properties": {
+        "station_id": {
+          "type": "integer"
+        },
+        "title": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 120
+        },
+        "content": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 2000
+        },
+        "tags": {
+          "type": "array",
+          "default": [],
+          "items": {
+            "type": "string",
+            "maxLength": 20
+          },
+          "maxItems": 10
+        }
+      }
+    },
+    "CommunityPostWritePartial": {
+      "type": "object",
+      "minProperties": 1,
+      "properties": {
+        "station_id": {
+          "type": "integer"
+        },
+        "title": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 120
+        },
+        "content": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 2000
+        },
+        "tags": {
+          "type": "array",
+          "default": [],
+          "items": {
+            "type": "string",
+            "maxLength": 20
+          },
+          "maxItems": 10
+        }
+      },
+      "description": "Any subset of station_id, title, content, and tags; at least one field must be provided."
+    },
+    "CommunityStationSummary": {
+      "type": "object",
+      "properties": {
+        "station_id": {
+          "type": "integer"
+        },
+        "name": {
+          "type": "string"
+        },
+        "brand": {
+          "type": "string"
+        },
+        "address": {
+          "type": "string"
+        }
+      }
+    },
+    "CommunityAuthorSummary": {
+      "type": "object",
+      "properties": {
+        "id": {
+          "type": "integer"
+        },
+        "username": {
+          "type": "string"
+        }
+      }
+    }
+  },
+  "errors": {
+    "400": [
+      "INVALID_COMMUNITY_POST"
+    ],
+    "403": [
+      "AUTHENTICATION_REQUIRED",
+      "COMMUNITY_POST_FORBIDDEN"
+    ],
+    "404": [
+      "COMMUNITY_POST_NOT_FOUND",
+      "STATION_NOT_FOUND"
+    ]
+  },
+  "implementationNotes": [
+    "CommunityPost belongs to stations.GasStation and the Django user model.",
+    "GET list/detail are public; create/update/delete are auth-gated.",
+    "Update/delete must return COMMUNITY_POST_FORBIDDEN with HTTP 403 for authenticated non-authors.",
+    "The Community tab is public in the frontend navigation; write controls show login guidance for anonymous users.",
+    "No 실방문 인증 field, workflow, or proof upload is part of this contract.",
+    "Community posts must not be read by recommendation endpoints and must not influence recommendation ranking, distance, discount, or cost."
+  ]
+}
