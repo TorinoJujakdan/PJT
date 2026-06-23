@@ -1,7 +1,6 @@
 import { computed, reactive, ref, watch } from "vue";
 import { refreshNearbyStations } from "../api/stations";
 import { recommendationStore } from "../stores/recommendationStore";
-import { getVehicleFuelPriceUnit } from "../components/vehicles/vehiclePresentation";
 import { useSavedCards } from "./useSavedCards";
 import { useStartLocation } from "./useStartLocation";
 import { useVehicleProfiles } from "./useVehicleProfiles";
@@ -119,9 +118,6 @@ export function useSmartFuelDashboard({ isAuthenticated } = {}) {
       return;
     }
 
-    const priceUnit = getVehicleFuelPriceUnit(fuel.fuel_type);
-    const calculatedLiters = Number((fuel.target_amount / priceUnit).toFixed(2));
-
     const request = {
       location: {
         latitude: location.latitude,
@@ -130,7 +126,7 @@ export function useSmartFuelDashboard({ isAuthenticated } = {}) {
       fuel_type: fuel.fuel_type,
       radius_km: searchRadiusKm.value,
       recommendation_priority: priority.value,
-      target_liters: calculatedLiters,
+      target_amount: fuel.target_amount,
       travel_mode: fuel.travel_mode,
       cards: selectedCards(),
       include_candidates: true,

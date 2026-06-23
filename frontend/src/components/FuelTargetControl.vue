@@ -42,11 +42,8 @@ const calculatedLiters = computed(() => {
         <span>주유 금액 (원)</span>
         <input v-model.number="model.target_amount" type="number" min="5000" max="300000" step="5000" placeholder="예: 50000" />
       </label>
-      <label>
-        <span>차량 연비 (km/L)</span>
-        <input v-model.number="model.fuel_efficiency_kmpl" type="number" min="1" max="50" step="0.1" :disabled="isReadOnly" />
-      </label>
-      <label>
+
+      <label style="grid-column: 1 / -1;">
         <span>이동 경로 기준</span>
         <select v-model="model.travel_mode">
           <option value="round_trip">왕복 (주유소 경유)</option>
@@ -56,7 +53,7 @@ const calculatedLiters = computed(() => {
 
       <!-- Real-time estimated liters information helper -->
       <div style="grid-column: 1 / -1; background: var(--slate-50); border: 1px dashed var(--slate-200); border-radius: var(--radius-sm); padding: 8px 12px; font-size: 12px; font-weight: 700; color: var(--slate-600); display: flex; justify-content: space-between; align-items: center; margin-top: 4px;">
-        <span>💡 기준 단가 대비 예상 주유량</span>
+        <span>💡 기준 단가 대비 예상 주유량 <span style="font-weight: 500; color: var(--slate-400);">(주유소마다 다를 수 있음)</span></span>
         <span style="color: var(--primary); font-weight: 800; font-size: 13px;">약 {{ calculatedLiters }} L</span>
       </div>
     </div>
