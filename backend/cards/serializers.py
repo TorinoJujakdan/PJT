@@ -1,5 +1,6 @@
 from rest_framework import serializers
 
+from .benefit_safety import is_suspicious_fuel_discount
 from .models import CardBenefitTier, CardCatalog, CardPolicy
 
 
@@ -7,9 +8,11 @@ def _first_benefit_tier(catalog):
     if catalog is None:
         return None
     prefetched = getattr(catalog, "_prefetched_objects_cache", {}).get("benefit_tiers")
-    if prefetched is not None:
-        return prefetched[0] if prefetched else None
-    return catalog.benefit_tiers.first()
+    benefit_tiers = prefetched if prefetched is not None else catalog.benefit_tiers.all()
+    for tier in benefit_tiers:
+        if not is_suspicious_fuel_discount(tier.discount_type, tier.discount_value):
+            return tier
+    return None
 
 
 def _policy_benefit(policy):
