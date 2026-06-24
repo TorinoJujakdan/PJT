@@ -1,8 +1,9 @@
 from __future__ import annotations
 
 from decimal import Decimal, InvalidOperation
+from typing import TypeAlias
 
-DiscountValueInput = str | int | float | Decimal | None
+DiscountValueInput: TypeAlias = str | int | float | Decimal | None
 
 FUEL_CONTEXT_KEYWORDS: tuple[str, ...] = (
     "주유",

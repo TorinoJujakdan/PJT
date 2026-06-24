@@ -287,7 +287,7 @@ function renderRouteLine() {
     routeLine = new naverMaps.Polyline({
       map,
       path,
-      strokeColor: "#007eff",
+      strokeColor: "#0ea5e9",
       strokeOpacity: 0.8,
       strokeWeight: 6,
       strokeStyle: "solid",
@@ -566,7 +566,7 @@ onBeforeUnmount(() => {
 }
 
 :deep(.mapMarker.active) {
-  outline: 4.5px solid rgba(16, 185, 129, 0.35);
+  outline: 4.5px solid rgba(56, 189, 248, 0.35);
   border-color: var(--secondary);
 }
 

@@ -119,7 +119,7 @@ async function saveProfile() {
           <span>{{ error.message }}</span>
         </div>
 
-        <div v-if="saved" class="statusStrip" style="background: var(--primary-light); color: var(--primary); margin: 8px 0; border: 1px solid rgba(15, 107, 79, 0.2);">
+        <div v-if="saved" class="statusStrip" style="background: var(--primary-light); color: var(--primary); margin: 8px 0; border: 1px solid rgba(2, 132, 199, 0.2);">
           <ShieldCheck :size="16" />
           <span>성공적으로 회원 정보가 업데이트되었습니다.</span>
         </div>

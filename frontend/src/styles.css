@@ -11,12 +11,15 @@
   text-rendering: optimizeLegibility;
   -webkit-font-smoothing: antialiased;
 
-  /* Color Palette (Forest Premium) */
-  --primary: #0f6b4f;
-  --primary-hover: #0c563f;
-  --primary-light: #e6f4ee;
-  --secondary: #10b981;
+  /* Color Palette (Silver & Sky Blue) */
+  --primary: #0284c7;
+  --primary-hover: #0369a1;
+  --primary-light: #e0f2fe;
+  --secondary: #38bdf8;
+  --secondary-glow: rgba(56, 189, 248, 0.35);
   --accent: #f59e0b;
+  --naver-green: #03c75a;
+  --naver-green-hover: #02b34f;
   --slate-50: #f8fafc;
   --slate-100: #f1f5f9;
   --slate-200: #e2e8f0;
@@ -34,7 +37,7 @@
   --radius-sm: 8px;
   --shadow-sm: 0 1px 3px rgba(0, 0, 0, 0.05);
   --shadow-md: 0 4px 6px -1px rgba(0, 0, 0, 0.05), 0 2px 4px -1px rgba(0, 0, 0, 0.03);
-  --shadow-lg: 0 10px 25px -5px rgba(15, 107, 79, 0.05), 0 8px 10px -6px rgba(15, 107, 79, 0.05);
+  --shadow-lg: 0 10px 25px -5px rgba(2, 132, 199, 0.05), 0 8px 10px -6px rgba(2, 132, 199, 0.05);
   --shadow-premium: 0 20px 40px -15px rgba(15, 23, 42, 0.08);
 }
 
@@ -62,8 +65,8 @@ body {
   min-width: 320px;
   background-color: var(--slate-50);
   background-image: 
-    radial-gradient(at 0% 0%, rgba(16, 185, 129, 0.03) 0px, transparent 50%),
-    radial-gradient(at 50% 0%, rgba(15, 107, 79, 0.03) 0px, transparent 50%);
+    radial-gradient(at 0% 0%, rgba(56, 189, 248, 0.03) 0px, transparent 50%),
+    radial-gradient(at 50% 0%, rgba(2, 132, 199, 0.03) 0px, transparent 50%);
 }
 
 button,
@@ -151,7 +154,7 @@ select:disabled {
   background: var(--primary);
   border-color: var(--primary);
   color: var(--white);
-  box-shadow: 0 4px 12px rgba(15, 107, 79, 0.2);
+  box-shadow: 0 4px 12px rgba(2, 132, 199, 0.2);
 }
 
 .textButton {
@@ -178,7 +181,7 @@ select:disabled {
 /* Status Strip */
 .statusStrip {
   background: var(--primary-light);
-  border: 1px solid rgba(15, 107, 79, 0.15);
+  border: 1px solid rgba(2, 132, 199, 0.15);
   border-radius: var(--radius-md);
   color: var(--primary);
   font-size: 13px;
@@ -192,7 +195,7 @@ select:disabled {
 }
 
 .statusStrip::before {
-  content: "💡";
+  content: "?뮕";
   font-size: 14px;
 }
 
@@ -306,7 +309,7 @@ input:focus,
 select:focus {
   background: var(--white);
   border-color: var(--primary);
-  box-shadow: 0 0 0 3px rgba(15, 107, 79, 0.15);
+  box-shadow: 0 0 0 3px rgba(2, 132, 199, 0.15);
 }
 
 /* Styled Switch (Slider Look) */
@@ -369,7 +372,7 @@ select:focus {
 /* Premium Primary Buttons */
 .primaryButton {
   align-items: center;
-  background: linear-gradient(135deg, var(--primary) 0%, var(--primary-hover) 100%);
+  background: var(--primary);
   border: 0;
   border-radius: var(--radius-md);
   color: var(--white);
@@ -380,14 +383,16 @@ select:focus {
   justify-content: center;
   min-height: 48px;
   padding: 0 24px;
-  box-shadow: 0 4px 14px rgba(15, 107, 79, 0.3);
+  box-shadow: 0 4px 12px rgba(2, 132, 199, 0.15);
   text-shadow: 0 1px 1px rgba(0, 0, 0, 0.1);
   transform: translateY(0);
+  transition: all 0.2s ease;
 }
 
 .primaryButton:hover {
-  transform: translateY(-2px);
-  box-shadow: 0 6px 20px rgba(15, 107, 79, 0.4);
+  background: var(--primary-hover);
+  transform: translateY(-1px);
+  box-shadow: 0 6px 16px rgba(2, 132, 199, 0.25);
 }
 
 .primaryButton:active {
@@ -637,7 +642,7 @@ select:focus {
 
 .breakdown .total {
   background: var(--primary-light);
-  border-color: rgba(15, 107, 79, 0.2);
+  border-color: rgba(2, 132, 199, 0.2);
 }
 
 .breakdown .total span {
@@ -762,7 +767,7 @@ select:focus {
   background: var(--primary-light);
   border-color: var(--primary);
   color: var(--primary);
-  box-shadow: 0 4px 12px rgba(15, 107, 79, 0.1);
+  box-shadow: 0 4px 12px rgba(2, 132, 199, 0.1);
 }
 
 .candidateRow.selectable.active strong {
@@ -877,11 +882,12 @@ select:focus {
 }
 
 .mapMarker.recommended {
-  background: linear-gradient(135deg, var(--primary) 0%, var(--secondary) 100%);
+  background: var(--primary-light);
+  color: var(--primary);
 }
 
 .mapMarker.active {
-  outline: 4px solid rgba(16, 185, 129, 0.3);
+  outline: 4px solid rgba(56, 189, 248, 0.3);
 }
 
 /* Cards management list */
@@ -996,6 +1002,39 @@ select:focus {
   transform: rotate(180deg);
 }
 
+
+/* Clean flat Silver & Sky Blue theme active styling */
+.navButton.active,
+.primaryButton,
+.cardPrimaryButton,
+.cardsTabs button.active,
+.primaryAction {
+  color: var(--white);
+  text-shadow: none;
+}
+
+.navButton.active,
+.cardPrimaryButton,
+.cardsTabs button.active,
+.primaryAction {
+  background: var(--primary);
+  border-color: var(--primary);
+  box-shadow: 0 4px 12px rgba(2, 132, 199, 0.15);
+}
+
+.defaultBadge {
+  color: var(--primary);
+  background: var(--primary-light);
+  border: 1px solid rgba(2, 132, 199, 0.2);
+  box-shadow: none;
+  text-shadow: none;
+}
+
+.mapMarker.recommended {
+  color: var(--primary);
+  text-shadow: none;
+}
+
 /* Responsive Customizations */
 @media (max-width: 960px) {
   .workspace {
@@ -1073,10 +1112,10 @@ select:focus {
 .userLocationMarker .dot {
   width: 12px;
   height: 12px;
-  background: #00e5ff;
+  background: var(--secondary);
   border: 2px solid #ffffff;
   border-radius: 50%;
-  box-shadow: 0 0 8px rgba(0, 229, 255, 0.8);
+  box-shadow: 0 0 10px var(--secondary-glow);
   z-index: 2;
 }
 
@@ -1084,7 +1123,7 @@ select:focus {
   position: absolute;
   width: 24px;
   height: 24px;
-  background: rgba(0, 229, 255, 0.4);
+  background: var(--secondary-glow);
   border-radius: 50%;
   animation: markerPulse 1.8s infinite ease-in-out;
   z-index: 1;
@@ -1122,8 +1161,8 @@ select:focus {
   align-content: center;
   gap: 12px;
   background:
-    radial-gradient(circle at top left, rgba(16, 185, 129, 0.16), transparent 34%),
-    linear-gradient(135deg, #f8fafc 0%, #eef8f3 100%);
+    radial-gradient(circle at top left, rgba(56, 189, 248, 0.16), transparent 34%),
+    linear-gradient(135deg, #f8fafc 0%, #f0fdfa 100%);
   color: var(--slate-800);
   font-size: 15px;
 }
@@ -1251,7 +1290,7 @@ select:focus {
   min-height: 46px;
   padding: 0 18px;
   border-radius: 999px;
-  border: 1.5px solid rgba(15, 107, 79, 0.18);
+  border: 1.5px solid rgba(2, 132, 199, 0.18);
   background: rgba(255, 255, 255, 0.78);
   color: var(--slate-800);
   display: inline-flex;
@@ -1272,7 +1311,7 @@ select:focus {
 
 .onboardingGhostButton:hover {
   color: var(--primary);
-  border-color: rgba(15, 107, 79, 0.35);
+  border-color: rgba(2, 132, 199, 0.35);
   transform: translateY(-1px);
   box-shadow: var(--shadow-md);
 }
@@ -1907,6 +1946,80 @@ select:focus {
   font-weight: 900;
 }
 
+.fuelChoiceGrid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 10px;
+}
+
+.fuelChoice {
+  min-height: 46px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 16px;
+  border: 1.5px solid var(--slate-200);
+  background: var(--slate-50);
+  color: var(--slate-600);
+  font-size: 13px;
+  font-weight: 900;
+  cursor: pointer;
+}
+
+.fuelChoice input {
+  position: absolute;
+  opacity: 0;
+  pointer-events: none;
+}
+
+.fuelChoice.active {
+  border-color: var(--primary);
+  background: var(--primary-light);
+  color: var(--primary);
+  box-shadow: 0 0 0 3px rgba(2, 132, 199, 0.11);
+}
+
+.setupPanel .typePicker {
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 10px;
+}
+
+.setupSummary {
+  display: flex;
+  gap: 12px;
+  align-items: center;
+  padding: 14px 16px;
+  border-radius: 18px;
+  background: linear-gradient(135deg, rgba(2, 132, 199, 0.09), rgba(56, 189, 248, 0.12));
+  color: var(--primary);
+}
+
+.setupSummary div {
+  display: grid;
+  gap: 3px;
+}
+
+.setupSummary strong {
+  color: var(--slate-900);
+  font-size: 14px;
+  font-weight: 950;
+}
+
+.setupSummary span {
+  color: var(--slate-500);
+  font-size: 12px;
+  font-weight: 750;
+}
+
+.signupPageCard {
+  display: grid;
+  gap: 14px;
+}
+
+.signupPageCard label {
+  display: block;
+}
+
 .signupPageCard input {
   width: 100%;
 }
@@ -2050,14 +2163,14 @@ select:focus {
 .topBarUnified .linkBtn:hover {
   color: var(--primary);
   background: var(--primary-light);
-  border-color: rgba(15, 107, 79, 0.1);
+  border-color: rgba(2, 132, 199, 0.1);
 }
 
 .topBarUnified .linkBtn.active {
   color: var(--white);
   background: var(--primary);
   border-color: var(--primary);
-  box-shadow: 0 4px 10px rgba(15, 107, 79, 0.15);
+  box-shadow: 0 4px 10px rgba(2, 132, 199, 0.15);
 }
 
 .topBarUnified .userSection {
@@ -2102,13 +2215,14 @@ select:focus {
 /* Double Sidebar: Stage 1 Icon Sidebar */
 .iconSidebar {
   width: 68px;
-  background: var(--slate-900);
+  background: var(--slate-100);
+  border-right: 1px solid var(--slate-200);
   display: flex;
   flex-direction: column;
   align-items: center;
   justify-content: space-between;
   padding: 20px 0;
-  box-shadow: 4px 0 15px rgba(0, 0, 0, 0.2);
+  box-shadow: 1px 0 8px rgba(0, 0, 0, 0.03);
   pointer-events: auto;
   z-index: 12;
 }
@@ -2127,7 +2241,7 @@ select:focus {
   border-radius: 16px;
   border: none;
   background: transparent;
-  color: var(--slate-400);
+  color: var(--slate-500);
   display: flex;
   flex-direction: column;
   align-items: center;
@@ -2138,14 +2252,14 @@ select:focus {
 }
 
 .iconSidebar .tabItem:hover {
-  color: var(--white);
-  background: rgba(255, 255, 255, 0.08);
+  color: var(--slate-900);
+  background: var(--slate-200);
 }
 
 .iconSidebar .tabItem.active {
-  color: var(--white);
-  background: var(--primary);
-  box-shadow: 0 4px 12px rgba(15, 107, 79, 0.4);
+  color: var(--primary);
+  background: var(--primary-light);
+  box-shadow: 0 4px 12px rgba(2, 132, 199, 0.15);
 }
 
 .iconSidebar .tabItem span {
@@ -2175,8 +2289,8 @@ select:focus {
   height: 44px;
   border-radius: 50%;
   border: none;
-  background: rgba(255, 255, 255, 0.05);
-  color: var(--slate-400);
+  background: var(--slate-200);
+  color: var(--slate-500);
   display: flex;
   align-items: center;
   justify-content: center;
@@ -2185,8 +2299,8 @@ select:focus {
 }
 
 .iconSidebar .actionItem:hover {
-  color: var(--white);
-  background: rgba(255, 255, 255, 0.15);
+  color: var(--slate-900);
+  background: var(--slate-300);
 }
 
 .iconSidebar .actionItem.logout:hover {
@@ -2383,7 +2497,7 @@ select:focus {
 .priorityOption.active {
   background: var(--primary-light);
   border-color: var(--primary);
-  box-shadow: 0 2px 8px rgba(15, 107, 79, 0.05);
+  box-shadow: 0 2px 8px rgba(2, 132, 199, 0.05);
 }
 
 .priorityOption input {
@@ -2477,8 +2591,8 @@ select:focus {
 
 .priorityPocketTab.active {
   background: linear-gradient(180deg, #ffffff 0%, var(--primary-light) 100%);
-  border-color: rgba(15, 107, 79, 0.55);
-  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.9), 0 8px 16px rgba(15, 107, 79, 0.14);
+  border-color: rgba(2, 132, 199, 0.55);
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.9), 0 8px 16px rgba(2, 132, 199, 0.14);
   color: var(--primary);
   transform: translateY(-2px);
 }
@@ -2654,8 +2768,10 @@ select:focus {
 }
 
 .mapControlBtn:hover {
-  background: var(--slate-50);
-  color: var(--slate-900);
+  background: var(--primary-light);
+  border-color: var(--primary);
+  color: var(--primary);
+  box-shadow: 0 0 10px var(--secondary-glow);
   transform: translateY(-1px);
 }
 
@@ -2688,15 +2804,16 @@ select:focus {
 }
 
 .mapChip:hover {
-  background: var(--white);
-  color: var(--slate-900);
+  background: var(--primary-light);
+  border-color: var(--primary);
+  color: var(--primary);
 }
 
 .mapChip.active {
   background: var(--primary);
   border-color: var(--primary);
   color: var(--white);
-  box-shadow: 0 4px 10px rgba(15, 107, 79, 0.2);
+  box-shadow: 0 4px 12px rgba(2, 132, 199, 0.25);
 }
 
 /* Floating Detail Card (Bottom Right) */
@@ -2718,17 +2835,7 @@ select:focus {
   flex-direction: column;
 }
 
-.floatingDetailCard::before {
-  content: "";
-  position: absolute;
-  top: 0;
-  left: 0;
-  width: 6px;
-  height: 100%;
-  background: linear-gradient(to bottom, var(--primary), var(--secondary));
-  border-top-left-radius: 20px;
-  border-bottom-left-radius: 20px;
-}
+/* Removed left-side misaligned gradient line */
 
 .floatingDetailCard .cardHeader {
   display: flex;
@@ -2859,7 +2966,7 @@ select:focus {
 }
 
 .floatingDetailCard .primaryBtnSmall {
-  background: linear-gradient(135deg, var(--primary) 0%, var(--primary-hover) 100%);
+  background: var(--naver-green);
   border: none;
   color: var(--white);
   border-radius: var(--radius-md);
@@ -2871,12 +2978,13 @@ select:focus {
   justify-content: center;
   gap: 6px;
   min-height: 42px;
-  box-shadow: 0 4px 10px rgba(15, 107, 79, 0.2);
+  box-shadow: 0 4px 10px rgba(3, 199, 90, 0.2);
 }
 
 .floatingDetailCard .primaryBtnSmall:hover {
+  background: var(--naver-green-hover);
   transform: translateY(-1px);
-  box-shadow: 0 6px 14px rgba(15, 107, 79, 0.3);
+  box-shadow: 0 6px 14px rgba(3, 199, 90, 0.3);
 }
 
 /* Glassmorphism Modal System */
@@ -3058,7 +3166,7 @@ body.modalOpen {
 .cardsTabs button.active {
   color: #fff;
   background: var(--primary);
-  box-shadow: 0 8px 20px rgba(15, 107, 79, 0.22);
+  box-shadow: 0 8px 20px rgba(2, 132, 199, 0.22);
 }
 
 .cardsTabs small {
@@ -3122,7 +3230,7 @@ body.modalOpen {
 
 .cardSearchBar:focus-within {
   border-color: var(--primary);
-  box-shadow: 0 0 0 3px rgba(15, 107, 79, 0.12);
+  box-shadow: 0 0 0 3px rgba(2, 132, 199, 0.12);
 }
 
 .cardSearchBar input {
@@ -3187,8 +3295,8 @@ body.modalOpen {
 }
 
 .cardStatus {
-  color: #065f46;
-  background: #d1fae5;
+  color: #005f56;
+  background: #c6fff4;
 }
 
 .cardError {
@@ -3208,7 +3316,7 @@ body.modalOpen {
   min-height: 0;
   padding: 20px;
   overflow: hidden;
-  background: linear-gradient(135deg, rgba(230, 244, 238, 0.45), rgba(248, 250, 252, 0.9));
+  background: linear-gradient(135deg, rgba(198, 255, 244, 0.55), rgba(248, 250, 252, 0.9));
 }
 
 .communityPanel {
@@ -3222,8 +3330,8 @@ body.modalOpen {
 }
 
 .communityWritePanel {
-  border-color: rgba(15, 107, 79, 0.18);
-  box-shadow: 0 18px 36px rgba(15, 107, 79, 0.08);
+  border-color: rgba(2, 132, 199, 0.18);
+  box-shadow: 0 18px 36px rgba(2, 132, 199, 0.08);
 }
 
 .communityHeading {
@@ -3271,7 +3379,7 @@ body.modalOpen {
 .communityPostForm input:focus,
 .communityPostForm textarea:focus {
   border-color: var(--primary);
-  outline: 3px solid rgba(15, 107, 79, 0.12);
+  outline: 3px solid rgba(2, 132, 199, 0.12);
 }
 
 .communityPostForm textarea {
@@ -3283,7 +3391,7 @@ body.modalOpen {
   gap: 8px;
   margin: 20px 0;
   padding: 16px;
-  border: 1px solid rgba(15, 107, 79, 0.12);
+  border: 1px solid rgba(2, 132, 199, 0.12);
   border-radius: 16px;
   color: var(--slate-700);
   background: linear-gradient(145deg, var(--primary-light), var(--slate-50));
@@ -3375,7 +3483,7 @@ body.modalOpen {
 }
 
 .communityPostCard:hover {
-  border-color: rgba(15, 107, 79, 0.25);
+  border-color: rgba(2, 132, 199, 0.25);
   box-shadow: var(--shadow-lg);
   transform: translateY(-1px);
 }
@@ -3598,8 +3706,8 @@ body.modalOpen {
 }
 
 .trustNotice[data-tone="verified"] {
-  color: #065f46;
-  background: #ecfdf5;
+  color: #005f56;
+  background: #f0fdfa;
 }
 
 .trustNotice span {
@@ -3714,7 +3822,7 @@ body.modalOpen {
 .cardFormGrid select:focus,
 .memoField textarea:focus {
   border-color: var(--primary);
-  outline: 3px solid rgba(15, 107, 79, 0.12);
+  outline: 3px solid rgba(2, 132, 199, 0.12);
 }
 
 .formHint {
@@ -3908,7 +4016,7 @@ body.modalOpen {
   align-items: center;
   margin-top: 12px;
   padding: 12px 14px;
-  border: 1px solid rgba(15, 107, 79, 0.18);
+  border: 1px solid rgba(2, 132, 199, 0.18);
   border-radius: var(--radius-md);
   background: linear-gradient(145deg, var(--primary-light), var(--slate-50));
 }
@@ -4094,6 +4202,38 @@ body.modalOpen {
 
 .vehicleImageFlipped {
   transform: scaleX(-1);
+}
+
+/* Final overrides for flat Silver & Sky Blue theme modal/workspace controls. */
+.navButton.active,
+.primaryButton,
+.cardPrimaryButton,
+.cardsTabs button.active,
+.primaryAction {
+  color: var(--white);
+  text-shadow: none;
+}
+
+.navButton.active,
+.cardPrimaryButton,
+.cardsTabs button.active,
+.primaryAction {
+  background: var(--primary);
+  border-color: var(--primary);
+  box-shadow: 0 4px 12px rgba(2, 132, 199, 0.15);
+}
+
+.defaultBadge {
+  color: var(--primary);
+  background: var(--primary-light);
+  border: 1px solid rgba(2, 132, 199, 0.2);
+  box-shadow: none;
+  text-shadow: none;
+}
+
+.mapMarker.recommended {
+  color: var(--primary);
+  text-shadow: none;
 }
 
 /* Refined service intro layout override: clean centered heading + 3 balanced cards */

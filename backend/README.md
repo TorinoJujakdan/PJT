@@ -76,8 +76,19 @@ cd backend
 - `NAVER_GEOCODING_CLIENT_ID` / `NAVER_GEOCODING_CLIENT_SECRET`: server-side Naver Cloud Maps credentials shared by Geocoding, Reverse Geocoding, and Directions. Legacy `NAVER_CLIENT_ID` / `NAVER_CLIENT_SECRET` remain accepted for these Maps APIs.
 - `NAVER_LOCAL_CLIENT_ID` / `NAVER_LOCAL_CLIENT_SECRET`: optional NAVER Developers Search credentials for registered businesses, buildings, and landmarks. `NAVER_SEARCH_*` and `NAVER_OPENAPI_*` aliases are also accepted. Cloud Maps `NAVER_CLIENT_*` credentials are intentionally not used for Local Search.
 - `CARD_INGESTION_ALLOWED_DOMAINS`: comma-separated allowlist for card ingestion sources.
-- `GMS_API_KEY`: server-side key for the planned GMS/LLM card fuel-benefit extraction path. Keep it only in `backend/.env`; never expose it through frontend `VITE_*` variables.
-- `GMS_MODEL`, `GMS_TIMEOUT_SECONDS`, `GMS_MAX_OUTPUT_TOKENS`: optional GMS/LLM extraction runtime settings.
+- `GEMINI_API_KEY`: server-side key for Gemini card fuel-benefit extraction. Keep it only in `backend/.env`; never expose it through frontend `VITE_*` variables.
+- `GEMINI_MODEL`, `GEMINI_TIMEOUT_SECONDS`, `GEMINI_MAX_OUTPUT_TOKENS`: optional Gemini extraction runtime settings. The default model in code and `.env.example` is `gemini-3.5-flash`.
+
+## Gemini Fuel-Benefit Extraction Accounting
+
+`manage.py ingest_card_search_ai` stores Gemini response `usageMetadata`, model name, and a per-card `cost_estimate` in `CardCatalog.normalized_data`. For `gemini-3.5-flash` paid standard pricing, the backend estimates cost with input $1.50 / 1M tokens and output $9.00 / 1M tokens. Example: 1,200 input tokens and 400 output tokens is about `$0.0054` for one card; 152 cards at that shape is about `$0.8208`. Actual billing depends on the configured model, free-tier eligibility, cache/batch usage, and Gemini billing policy.
+
+Run a no-save extraction check with:
+
+```powershell
+cd backend
+..\\.venv\\Scripts\\python.exe manage.py ingest_card_search_ai --limit 3 --scroll-count 1 --dry-run
+```
 
 ## 초기 데이터 설정 (Initial Data Setup)
 
