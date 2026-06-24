@@ -1128,34 +1128,53 @@ select:focus {
   font-size: 15px;
 }
 
+
 .onboardingShell {
   min-height: 100vh;
   overflow-y: auto;
-  padding: 42px clamp(20px, 4vw, 64px);
-  display: grid;
-  grid-template-columns: minmax(0, 1.08fr) minmax(360px, 0.82fr);
-  gap: clamp(24px, 4vw, 52px);
   background:
-    radial-gradient(circle at 12% 8%, rgba(16, 185, 129, 0.18), transparent 30%),
-    radial-gradient(circle at 88% 18%, rgba(15, 107, 79, 0.13), transparent 28%),
-    linear-gradient(145deg, #f8fafc 0%, #eef8f3 46%, #ffffff 100%);
+    radial-gradient(circle at 10% 4%, rgba(16, 185, 129, 0.18), transparent 28%),
+    radial-gradient(circle at 88% 10%, rgba(245, 158, 11, 0.12), transparent 24%),
+    linear-gradient(180deg, #f8fafc 0%, #eef8f3 42%, #ffffff 100%);
 }
 
-.onboardingHero {
-  min-width: 0;
+.onboardingLanding {
+  display: block;
+  padding: 0;
+  color: var(--slate-800);
+}
+
+.landingHero,
+.landingSection,
+.signupLandingSection {
+  width: min(1180px, calc(100% - 40px));
+  margin: 0 auto;
+}
+
+.landingHero {
+  min-height: 100vh;
   display: flex;
   flex-direction: column;
   justify-content: center;
-  gap: 28px;
+  gap: clamp(28px, 4vw, 46px);
+  padding: 30px 0 70px;
+}
+
+.landingNav {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
 }
 
 .onboardingLogo {
   display: inline-flex;
   align-items: center;
   gap: 10px;
-  color: var(--slate-900);
+  color: var(--slate-950);
   font-size: 20px;
-  font-weight: 900;
+  font-weight: 950;
+  letter-spacing: -0.03em;
 }
 
 .onboardingLogo span {
@@ -1164,32 +1183,56 @@ select:focus {
   border-radius: 14px;
   display: grid;
   place-items: center;
-  color: var(--primary);
-  background: rgba(255, 255, 255, 0.92);
-  border: 1px solid rgba(15, 107, 79, 0.14);
-  box-shadow: var(--shadow-sm);
+  color: white;
+  background: linear-gradient(135deg, var(--primary), var(--secondary));
+  box-shadow: 0 16px 36px rgba(15, 107, 79, 0.22);
+}
+
+.heroLayout {
+  display: grid;
+  grid-template-columns: minmax(0, 1.02fr) minmax(360px, 0.8fr);
+  gap: clamp(28px, 6vw, 76px);
+  align-items: center;
 }
 
 .heroCopy {
-  max-width: 760px;
+  max-width: 740px;
 }
 
 .heroCopy h1 {
-  margin: 8px 0 14px;
+  margin: 10px 0 20px;
   color: var(--slate-950);
-  font-size: clamp(34px, 5vw, 60px);
-  line-height: 1.05;
-  letter-spacing: -0.055em;
+  font-size: clamp(40px, 6.2vw, 76px);
+  line-height: 0.98;
+  letter-spacing: -0.07em;
   font-weight: 950;
 }
 
-.heroCopy > p:last-child {
-  max-width: 640px;
+.heroTitle {
+  display: grid;
+  gap: 6px;
+}
+
+.heroTitleSmall {
+  display: block;
+  font-size: 0.82em;
+  color: var(--slate-950);
+}
+
+.heroTitleAccent {
+  display: block;
+  color: var(--primary);
+  text-shadow: 0 18px 46px rgba(15, 107, 79, 0.16);
+}
+
+.heroCopy > p:last-of-type {
+  max-width: 650px;
   margin: 0;
   color: var(--slate-600);
-  font-size: 16px;
-  line-height: 1.75;
+  font-size: clamp(15px, 1.7vw, 18px);
+  line-height: 1.85;
   font-weight: 700;
+  word-break: keep-all;
 }
 
 .onboardingActions {
@@ -1197,14 +1240,15 @@ select:focus {
   flex-wrap: wrap;
   gap: 12px;
   align-items: center;
+  margin-top: 28px;
 }
 
 .onboardingPrimary {
-  min-width: 160px;
+  min-width: 176px;
 }
 
 .onboardingGhostButton {
-  height: 48px;
+  min-height: 46px;
   padding: 0 18px;
   border-radius: 999px;
   border: 1.5px solid rgba(15, 107, 79, 0.18);
@@ -1217,196 +1261,650 @@ select:focus {
   font-weight: 900;
   cursor: pointer;
   box-shadow: var(--shadow-sm);
+  transition: transform 0.2s ease, border-color 0.2s ease, color 0.2s ease, box-shadow 0.2s ease;
+}
+
+.onboardingGhostButton.compact {
+  min-height: 42px;
+  padding: 0 15px;
+  background: rgba(255, 255, 255, 0.9);
 }
 
 .onboardingGhostButton:hover {
   color: var(--primary);
   border-color: rgba(15, 107, 79, 0.35);
   transform: translateY(-1px);
+  box-shadow: var(--shadow-md);
 }
 
-.featurePreviewGrid {
+.heroShowcase {
+  position: relative;
+  overflow: hidden;
+  border-radius: 34px;
+  padding: 22px;
+  background:
+    linear-gradient(145deg, rgba(15, 23, 42, 0.92), rgba(15, 107, 79, 0.84)),
+    radial-gradient(circle at top right, rgba(16, 185, 129, 0.38), transparent 34%);
+  box-shadow: 0 34px 90px rgba(15, 23, 42, 0.28);
+  color: white;
+}
+
+.heroShowcase::before {
+  content: "";
+  position: absolute;
+  inset: -30% 20% auto auto;
+  width: 220px;
+  height: 220px;
+  border-radius: 999px;
+  background: rgba(245, 158, 11, 0.22);
+  filter: blur(8px);
+}
+
+.showcaseTopline,
+.winnerCard,
+.costGrid {
+  position: relative;
+  z-index: 1;
+}
+
+.showcaseTopline {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 18px;
+  color: rgba(255, 255, 255, 0.74);
+  font-size: 12px;
+  font-weight: 850;
+}
+
+.showcaseTopline strong {
+  color: white;
+  font-size: 15px;
+}
+
+.mapPreview {
+  position: relative;
+  z-index: 1;
+  min-height: 250px;
+  border-radius: 26px;
+  overflow: hidden;
+  background:
+    linear-gradient(90deg, rgba(255, 255, 255, 0.05) 1px, transparent 1px),
+    linear-gradient(rgba(255, 255, 255, 0.05) 1px, transparent 1px),
+    radial-gradient(circle at 30% 40%, rgba(16, 185, 129, 0.36), transparent 26%),
+    linear-gradient(135deg, rgba(255, 255, 255, 0.12), rgba(255, 255, 255, 0.05));
+  background-size: 42px 42px, 42px 42px, auto, auto;
+  border: 1px solid rgba(255, 255, 255, 0.14);
+}
+
+.routeLine {
+  position: absolute;
+  left: 26%;
+  top: 55%;
+  width: 52%;
+  height: 3px;
+  border-radius: 999px;
+  background: linear-gradient(90deg, var(--secondary), var(--accent));
+  transform: rotate(-18deg);
+  box-shadow: 0 0 18px rgba(16, 185, 129, 0.75);
+}
+
+.mapPin {
+  position: absolute;
+  display: grid;
+  place-items: center;
+  border-radius: 999px;
+}
+
+.mapPin.main {
+  left: 58%;
+  top: 32%;
+  width: 46px;
+  height: 46px;
+  color: white;
+  background: var(--accent);
+  box-shadow: 0 16px 30px rgba(245, 158, 11, 0.38);
+}
+
+.mapPin.sub {
+  width: 18px;
+  height: 18px;
+  background: var(--secondary);
+  box-shadow: 0 0 0 8px rgba(16, 185, 129, 0.14);
+}
+
+.mapPin.sub.one { left: 24%; top: 58%; }
+.mapPin.sub.two { right: 20%; bottom: 20%; }
+
+.winnerCard {
+  margin: -34px 18px 14px;
+  padding: 17px;
+  border-radius: 22px;
+  display: flex;
+  justify-content: space-between;
+  gap: 12px;
+  align-items: center;
+  background: rgba(255, 255, 255, 0.94);
+  color: var(--slate-900);
+  box-shadow: 0 20px 48px rgba(15, 23, 42, 0.22);
+}
+
+.winnerCard p {
+  margin: 0 0 4px;
+  color: var(--primary);
+  font-size: 11px;
+  font-weight: 950;
+}
+
+.winnerCard strong {
+  font-size: 17px;
+  font-weight: 950;
+  letter-spacing: -0.03em;
+}
+
+.winnerCard > span {
+  white-space: nowrap;
+  color: var(--primary);
+  font-size: 12px;
+  font-weight: 950;
+  padding: 8px 10px;
+  border-radius: 999px;
+  background: var(--primary-light);
+}
+
+.costGrid {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 10px;
+}
+
+.costGrid div {
+  padding: 13px;
+  border-radius: 18px;
+  background: rgba(255, 255, 255, 0.1);
+  border: 1px solid rgba(255, 255, 255, 0.12);
+}
+
+.costGrid span,
+.costGrid strong {
+  display: block;
+}
+
+.costGrid span {
+  color: rgba(255, 255, 255, 0.64);
+  font-size: 11px;
+  font-weight: 800;
+  margin-bottom: 5px;
+}
+
+.costGrid strong {
+  color: white;
+  font-size: 13px;
+  font-weight: 950;
+}
+
+.actualPreview {
+  padding: 20px;
+}
+
+.actualPreviewFrame {
+  position: relative;
+  z-index: 1;
+  display: grid;
+  grid-template-columns: minmax(150px, 0.48fr) minmax(0, 1fr);
+  gap: 12px;
+  min-height: 300px;
+}
+
+.actualPreviewSidebar,
+.actualPreviewMap {
+  border-radius: 24px;
+  border: 1px solid rgba(255, 255, 255, 0.14);
+  background: rgba(255, 255, 255, 0.1);
+  backdrop-filter: blur(10px);
+}
+
+.actualPreviewSidebar {
+  padding: 16px;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.previewPanelTitle {
+  display: grid;
+  gap: 4px;
+  margin-bottom: 4px;
+}
+
+.previewPanelTitle span {
+  color: rgba(255, 255, 255, 0.62);
+  font-size: 11px;
+  font-weight: 850;
+}
+
+.previewPanelTitle strong {
+  color: white;
+  font-size: 15px;
+  font-weight: 950;
+}
+
+.previewField {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  min-height: 39px;
+  padding: 0 11px;
+  border-radius: 14px;
+  color: rgba(255, 255, 255, 0.78);
+  background: rgba(255, 255, 255, 0.08);
+  font-size: 12px;
+  font-weight: 850;
+}
+
+.previewField.active {
+  color: white;
+  background: rgba(16, 185, 129, 0.28);
+  box-shadow: inset 0 0 0 1px rgba(16, 185, 129, 0.24);
+}
+
+.actualPreviewMap {
+  position: relative;
+  overflow: hidden;
+  min-height: 300px;
+  background:
+    linear-gradient(90deg, rgba(255, 255, 255, 0.055) 1px, transparent 1px),
+    linear-gradient(rgba(255, 255, 255, 0.055) 1px, transparent 1px),
+    radial-gradient(circle at 34% 38%, rgba(16, 185, 129, 0.34), transparent 27%),
+    linear-gradient(135deg, rgba(15, 23, 42, 0.28), rgba(15, 107, 79, 0.36));
+  background-size: 44px 44px, 44px 44px, auto, auto;
+}
+
+.mapToolbar {
+  position: absolute;
+  top: 14px;
+  left: 14px;
+  display: flex;
+  gap: 5px;
+}
+
+.mapToolbar span {
+  width: 8px;
+  height: 8px;
+  border-radius: 999px;
+  background: rgba(255, 255, 255, 0.36);
+}
+
+.stationMarker {
+  position: absolute;
+  display: grid;
+  place-items: center;
+  border-radius: 999px;
+}
+
+.stationMarker.best {
+  right: 24%;
+  top: 34%;
+  width: 44px;
+  height: 44px;
+  color: white;
+  background: var(--accent);
+  box-shadow: 0 0 0 12px rgba(245, 158, 11, 0.14), 0 18px 36px rgba(245, 158, 11, 0.3);
+}
+
+.stationMarker.candidate {
+  width: 18px;
+  height: 18px;
+  background: var(--secondary);
+  box-shadow: 0 0 0 9px rgba(16, 185, 129, 0.13);
+}
+
+.stationMarker.candidate.one { left: 25%; top: 50%; }
+.stationMarker.candidate.two { right: 16%; bottom: 20%; }
+
+.routeLine.actual {
+  left: 25%;
+  top: 54%;
+  width: 58%;
+  height: 4px;
+  transform: rotate(-17deg);
+}
+
+.mapResultCard {
+  position: absolute;
+  left: 18px;
+  right: 18px;
+  bottom: 18px;
+  padding: 15px 16px;
+  border-radius: 20px;
+  color: var(--slate-900);
+  background: rgba(255, 255, 255, 0.95);
+  box-shadow: 0 20px 48px rgba(15, 23, 42, 0.22);
+}
+
+.mapResultCard p {
+  margin: 0 0 5px;
+  color: var(--primary);
+  font-size: 11px;
+  font-weight: 950;
+}
+
+.mapResultCard strong,
+.mapResultCard span {
+  display: block;
+}
+
+.mapResultCard strong {
+  font-size: 17px;
+  font-weight: 950;
+  letter-spacing: -0.03em;
+}
+
+.mapResultCard span {
+  margin-top: 5px;
+  color: var(--slate-500);
+  font-size: 12px;
+  font-weight: 850;
+}
+
+.actualCostGrid {
+  margin-top: 12px;
+}
+
+.heroMetricGrid {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 12px;
+}
+
+.heroMetric {
+  padding: 20px;
+  border-radius: 24px;
+  min-width: 0;
+  background: rgba(255, 255, 255, 0.78);
+  border: 1px solid rgba(226, 232, 240, 0.9);
+  box-shadow: 0 18px 50px rgba(15, 23, 42, 0.06);
+  backdrop-filter: blur(14px);
+}
+
+.heroMetric strong,
+.heroMetric span {
+  display: block;
+}
+
+.heroMetric strong {
+  color: var(--primary);
+  font-size: 26px;
+  font-weight: 950;
+  letter-spacing: -0.04em;
+  margin-bottom: 6px;
+}
+
+.heroMetric span {
+  color: var(--slate-600);
+  font-size: 13px;
+  font-weight: 850;
+  line-height: 1.55;
+  word-break: keep-all;
+}
+
+.landingSection {
+  padding: 74px 0;
+}
+
+.sectionHeading {
+  max-width: 650px;
+  margin-bottom: 26px;
+}
+
+.sectionHeading.centered {
+  margin-inline: auto;
+  text-align: center;
+}
+
+.sectionHeading h2,
+.signupCopyPanel h2,
+.signupPageCard h2 {
+  margin: 6px 0 10px;
+  color: var(--slate-950);
+  font-size: clamp(28px, 3.8vw, 44px);
+  font-weight: 950;
+  letter-spacing: -0.055em;
+  line-height: 1.08;
+  word-break: keep-all;
+}
+
+.sectionHeading span,
+.signupCopyPanel p {
+  color: var(--slate-560, var(--slate-600));
+  font-size: 15px;
+  line-height: 1.75;
+  font-weight: 700;
+  word-break: keep-all;
+}
+
+.effectGrid {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 16px;
+}
+
+.effectCard,
+.serviceCard,
+.guideCard,
+.signupCopyPanel,
+.signupPageCard {
+  border: 1px solid rgba(226, 232, 240, 0.96);
+  background: rgba(255, 255, 255, 0.9);
+  box-shadow: 0 24px 70px rgba(15, 23, 42, 0.08);
+  backdrop-filter: blur(16px);
+}
+
+.effectCard {
+  min-height: 250px;
+  padding: 26px;
+  border-radius: 30px;
+}
+
+.featureIcon {
+  width: 44px;
+  height: 44px;
+  display: grid;
+  place-items: center;
+  color: var(--primary);
+  border-radius: 16px;
+  background: var(--primary-light);
+  margin-bottom: 18px;
+}
+
+.effectCard h3,
+.serviceCard h3,
+.guideCard h3 {
+  margin: 0 0 10px;
+  color: var(--slate-900);
+  font-size: 19px;
+  line-height: 1.35;
+  font-weight: 950;
+  letter-spacing: -0.035em;
+  word-break: keep-all;
+}
+
+.effectCard p,
+.serviceCard span,
+.guideCard p {
+  margin: 0;
+  color: var(--slate-500);
+  font-size: 14px;
+  font-weight: 700;
+  line-height: 1.7;
+  word-break: keep-all;
+}
+
+.serviceIntro {
+  display: grid;
+  grid-template-columns: 0.8fr 1.2fr;
+  gap: clamp(24px, 5vw, 56px);
+  align-items: start;
+}
+
+.serviceGrid {
   display: grid;
   grid-template-columns: repeat(2, minmax(0, 1fr));
   gap: 14px;
 }
 
-.featurePreviewCard {
-  min-height: 178px;
-  padding: 20px;
-  border-radius: 24px;
-  background: rgba(255, 255, 255, 0.82);
-  border: 1px solid rgba(226, 232, 240, 0.9);
-  box-shadow: 0 18px 50px rgba(15, 23, 42, 0.07);
-  backdrop-filter: blur(14px);
+.serviceCard {
+  min-height: 190px;
+  padding: 24px;
+  border-radius: 26px;
 }
 
-.featureIcon {
-  width: 40px;
-  height: 40px;
-  display: grid;
-  place-items: center;
-  color: var(--primary);
-  border-radius: 14px;
-  background: var(--primary-light);
-  margin-bottom: 14px;
-}
-
-.featurePreviewCard p {
-  margin: 0 0 8px;
+.serviceCard p {
+  margin: 0 0 11px;
   color: var(--primary);
   font-size: 10px;
   font-weight: 950;
-  letter-spacing: 0.12em;
+  letter-spacing: 0.14em;
 }
 
-.featurePreviewCard h2 {
-  margin: 0 0 8px;
-  color: var(--slate-900);
-  font-size: 16px;
-  line-height: 1.35;
-  font-weight: 900;
-  letter-spacing: -0.025em;
-}
-
-.featurePreviewCard span {
-  color: var(--slate-500);
-  font-size: 13px;
-  font-weight: 700;
-  line-height: 1.6;
-}
-
-.onboardingSetupCard {
-  align-self: center;
-  display: flex;
-  flex-direction: column;
+.guideGrid {
+  display: grid;
   gap: 16px;
 }
 
-.setupIntro,
-.setupPanel,
-.signupPageCard {
-  border-radius: 28px;
-  border: 1px solid rgba(226, 232, 240, 0.96);
-  background: rgba(255, 255, 255, 0.92);
-  box-shadow: 0 24px 70px rgba(15, 23, 42, 0.1);
-  backdrop-filter: blur(16px);
+.guideCard {
+  display: grid;
+  grid-template-columns: minmax(0, 0.78fr) minmax(280px, 0.62fr);
+  gap: 20px;
+  align-items: center;
+  padding: 22px;
+  border-radius: 30px;
 }
 
-.setupIntro {
-  padding: 24px 24px 20px;
-}
-
-.setupIntro h2,
-.signupPageCard h2 {
-  margin: 4px 0 8px;
-  color: var(--slate-900);
-  font-size: 24px;
-  font-weight: 950;
-  letter-spacing: -0.04em;
-}
-
-.setupIntro p:last-child {
-  margin: 0;
-  color: var(--slate-500);
+.guideCopy > strong {
+  display: inline-grid;
+  place-items: center;
+  width: 48px;
+  height: 48px;
+  margin-bottom: 15px;
+  border-radius: 16px;
+  color: white;
+  background: linear-gradient(135deg, var(--primary), var(--secondary));
   font-size: 13px;
-  font-weight: 700;
-  line-height: 1.55;
+  font-weight: 950;
 }
 
-.setupPanel,
-.signupPageCard {
-  padding: 24px;
+.screenMock {
+  padding: 18px;
+  border-radius: 24px;
+  background: linear-gradient(180deg, var(--slate-50), white);
+  border: 1px solid var(--slate-200);
 }
 
-.onboardingFieldset {
-  min-inline-size: 0;
-  margin: 0 0 20px;
+.screenMockHeader {
+  display: flex;
+  gap: 5px;
+  margin-bottom: 16px;
+}
+
+.screenMockHeader span {
+  width: 8px;
+  height: 8px;
+  border-radius: 999px;
+  background: var(--slate-300);
+}
+
+.screenMock > strong {
+  display: block;
+  color: var(--slate-900);
+  font-size: 15px;
+  font-weight: 950;
+  margin-bottom: 12px;
+}
+
+.screenMock ul {
+  display: grid;
+  gap: 8px;
+  margin: 0;
   padding: 0;
-  border: 0;
+  list-style: none;
 }
 
-.onboardingFieldset legend,
+.screenMock li {
+  padding: 10px 12px;
+  border-radius: 14px;
+  background: white;
+  border: 1px solid var(--slate-200);
+  color: var(--slate-600);
+  font-size: 12px;
+  font-weight: 850;
+}
+
+.signupLandingSection {
+  display: grid;
+  grid-template-columns: minmax(0, 0.96fr) minmax(360px, 0.7fr);
+  gap: clamp(20px, 5vw, 56px);
+  align-items: stretch;
+  padding: 76px 0 92px;
+}
+
+.signupCopyPanel,
+.signupPageCard {
+  border-radius: 32px;
+  padding: clamp(24px, 4vw, 36px);
+}
+
+.signupCopyPanel {
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  background:
+    radial-gradient(circle at top right, rgba(16, 185, 129, 0.16), transparent 34%),
+    rgba(255, 255, 255, 0.9);
+}
+
+.signupChecklist {
+  display: grid;
+  gap: 10px;
+  margin-top: 24px;
+}
+
+.signupChecklist span {
+  display: flex;
+  align-items: center;
+  gap: 9px;
+  color: var(--slate-700);
+  font-size: 14px;
+  font-weight: 900;
+}
+
+.signupChecklist svg {
+  color: var(--primary);
+}
+
+.signupPageCard {
+  display: grid;
+  gap: 14px;
+}
+
+.signupPageCard.refined {
+  box-shadow: 0 34px 90px rgba(15, 107, 79, 0.14);
+}
+
+.signupPageCard h2 {
+  font-size: 30px;
+}
+
+.signupPageCard label {
+  display: block;
+}
+
 .signupPageCard label span {
   display: block;
   margin-bottom: 8px;
   color: var(--slate-700);
   font-size: 13px;
   font-weight: 900;
-}
-
-.fuelChoiceGrid {
-  display: grid;
-  grid-template-columns: repeat(2, minmax(0, 1fr));
-  gap: 10px;
-}
-
-.fuelChoice {
-  min-height: 46px;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  border-radius: 16px;
-  border: 1.5px solid var(--slate-200);
-  background: var(--slate-50);
-  color: var(--slate-600);
-  font-size: 13px;
-  font-weight: 900;
-  cursor: pointer;
-}
-
-.fuelChoice input {
-  position: absolute;
-  opacity: 0;
-  pointer-events: none;
-}
-
-.fuelChoice.active {
-  border-color: var(--primary);
-  background: var(--primary-light);
-  color: var(--primary);
-  box-shadow: 0 0 0 3px rgba(15, 107, 79, 0.11);
-}
-
-.setupPanel .typePicker {
-  grid-template-columns: repeat(3, minmax(0, 1fr));
-  gap: 10px;
-}
-
-.setupSummary {
-  display: flex;
-  gap: 12px;
-  align-items: center;
-  padding: 14px 16px;
-  border-radius: 18px;
-  background: linear-gradient(135deg, rgba(15, 107, 79, 0.09), rgba(16, 185, 129, 0.12));
-  color: var(--primary);
-}
-
-.setupSummary div {
-  display: grid;
-  gap: 3px;
-}
-
-.setupSummary strong {
-  color: var(--slate-900);
-  font-size: 14px;
-  font-weight: 950;
-}
-
-.setupSummary span {
-  color: var(--slate-500);
-  font-size: 12px;
-  font-weight: 750;
-}
-
-.signupPageCard {
-  display: grid;
-  gap: 14px;
-}
-
-.signupPageCard label {
-  display: block;
 }
 
 .signupPageCard input {
@@ -1420,27 +1918,73 @@ select:focus {
 }
 
 @media (max-width: 1080px) {
-  .onboardingShell {
+  .heroLayout,
+  .serviceIntro,
+  .signupLandingSection {
     grid-template-columns: 1fr;
   }
 
-  .onboardingSetupCard {
-    align-self: stretch;
+  .landingHero {
+    min-height: auto;
   }
 }
 
-@media (max-width: 640px) {
-  .onboardingShell {
-    padding: 24px 16px;
+@media (max-width: 760px) {
+  .landingHero,
+  .landingSection,
+  .signupLandingSection {
+    width: min(100% - 28px, 1180px);
   }
 
-  .featurePreviewGrid,
-  .fuelChoiceGrid {
+  .effectGrid,
+  .serviceGrid,
+  .heroMetricGrid,
+  .costGrid {
     grid-template-columns: 1fr;
   }
 
-  .setupPanel .typePicker {
-    grid-template-columns: repeat(2, minmax(0, 1fr));
+  .guideCard {
+    grid-template-columns: 1fr;
+  }
+
+  .heroShowcase {
+    border-radius: 26px;
+    padding: 16px;
+  }
+
+  .actualPreviewFrame {
+    grid-template-columns: 1fr;
+  }
+
+  .mapPreview {
+    min-height: 210px;
+  }
+
+  .winnerCard {
+    margin-inline: 8px;
+    flex-direction: column;
+    align-items: flex-start;
+  }
+}
+
+@media (max-width: 520px) {
+  .landingNav,
+  .onboardingActions {
+    align-items: stretch;
+  }
+
+  .onboardingActions,
+  .landingNav {
+    flex-direction: column;
+  }
+
+  .onboardingGhostButton,
+  .onboardingPrimary {
+    width: 100%;
+  }
+
+  .heroCopy h1 {
+    font-size: clamp(34px, 13vw, 48px);
   }
 }
 
@@ -3550,4 +4094,438 @@ body.modalOpen {
 
 .vehicleImageFlipped {
   transform: scaleX(-1);
+}
+
+/* Refined service intro layout override: clean centered heading + 3 balanced cards */
+.serviceIntro {
+  display: block;
+  padding-top: 92px;
+  padding-bottom: 92px;
+}
+
+.serviceIntro .sectionHeading {
+  position: static;
+  max-width: 780px;
+  margin: 0 auto 34px;
+  text-align: center;
+}
+
+.serviceIntro .sectionHeading h2 {
+  max-width: none;
+  margin-inline: auto;
+  font-size: clamp(34px, 4.8vw, 58px);
+  line-height: 1.04;
+  letter-spacing: -0.065em;
+}
+
+.serviceGrid {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 18px;
+  align-items: stretch;
+}
+
+.serviceCard {
+  position: relative;
+  overflow: hidden;
+  min-height: 280px;
+  padding: 30px 28px 28px;
+  border-radius: 30px;
+  background:
+    linear-gradient(180deg, rgba(255, 255, 255, 0.98), rgba(255, 255, 255, 0.9)),
+    radial-gradient(circle at 88% 8%, rgba(16, 185, 129, 0.12), transparent 30%);
+  border: 1px solid rgba(213, 226, 222, 0.95);
+  box-shadow: 0 22px 62px rgba(15, 23, 42, 0.075);
+  backdrop-filter: blur(16px);
+  transition: transform 0.22s ease, box-shadow 0.22s ease, border-color 0.22s ease;
+}
+
+.serviceCard::before {
+  content: "";
+  position: absolute;
+  inset: 0 0 auto;
+  height: 4px;
+  background: linear-gradient(90deg, var(--primary), var(--secondary));
+  opacity: 0.92;
+}
+
+.serviceCard::after {
+  content: "";
+  position: absolute;
+  right: 28px;
+  top: 30px;
+  width: 42px;
+  height: 42px;
+  border-radius: 16px;
+  background:
+    radial-gradient(circle at center, var(--primary) 0 4px, transparent 5px),
+    linear-gradient(135deg, rgba(230, 244, 238, 0.98), rgba(209, 250, 229, 0.8));
+  box-shadow: inset 0 0 0 1px rgba(15, 107, 79, 0.08);
+}
+
+.serviceCard:hover {
+  transform: translateY(-5px);
+  border-color: rgba(15, 107, 79, 0.18);
+  box-shadow: 0 30px 80px rgba(15, 107, 79, 0.13);
+}
+
+.serviceCard p {
+  max-width: calc(100% - 56px);
+  margin: 0 0 18px;
+  color: var(--primary);
+  font-size: 10px;
+  font-weight: 950;
+  letter-spacing: 0.16em;
+}
+
+.serviceCard h3 {
+  max-width: calc(100% - 34px);
+  margin: 0 0 14px;
+  color: var(--slate-950);
+  font-size: 22px;
+  line-height: 1.28;
+  font-weight: 950;
+  letter-spacing: -0.04em;
+  word-break: keep-all;
+}
+
+.serviceCard span {
+  display: block;
+  color: var(--slate-600);
+  font-size: 15px;
+  line-height: 1.72;
+  font-weight: 750;
+  word-break: keep-all;
+}
+
+@media (max-width: 1080px) {
+  .serviceGrid {
+    grid-template-columns: 1fr;
+  }
+
+  .serviceCard {
+    min-height: 0;
+  }
+}
+
+/* Minimal signup handoff: editorial text, no card-like left description, full-size form */
+.signupLandingSection {
+  position: relative;
+  grid-template-columns: minmax(0, 0.78fr) minmax(440px, 0.72fr);
+  align-items: center;
+  gap: clamp(42px, 7vw, 104px);
+  padding: clamp(62px, 8vw, 112px) 0 clamp(76px, 9vw, 124px);
+  border: 0;
+  border-radius: 0;
+  background: transparent;
+  box-shadow: none;
+}
+
+.signupLandingSection::before {
+  content: "";
+  position: absolute;
+  left: 0;
+  right: 0;
+  top: 0;
+  height: 1px;
+  background: linear-gradient(90deg, transparent, rgba(15, 107, 79, 0.18), transparent);
+}
+
+.signupCopyPanel {
+  position: relative;
+  min-height: auto;
+  padding: 0 0 0 26px;
+  border: 0;
+  border-radius: 0;
+  background: transparent;
+  box-shadow: none;
+  backdrop-filter: none;
+}
+
+.signupCopyPanel::before {
+  content: "";
+  display: block;
+  position: absolute;
+  left: 0;
+  top: 9px;
+  width: 3px;
+  height: 92px;
+  border-radius: 999px;
+  background: linear-gradient(180deg, var(--primary), rgba(16, 185, 129, 0.24));
+}
+
+.signupCopyPanel::after {
+  display: none;
+}
+
+.signupCopyPanel .eyebrow {
+  display: inline-flex;
+  margin: 0 0 18px;
+  padding: 0;
+  color: var(--primary);
+  font-size: 10px;
+  font-weight: 900;
+  letter-spacing: 0.18em;
+}
+
+.signupCopyPanel h2 {
+  display: grid;
+  gap: 6px;
+  max-width: 560px;
+  margin: 0;
+  color: var(--slate-950);
+  font-size: clamp(30px, 3.45vw, 46px);
+  line-height: 1.12;
+  letter-spacing: -0.05em;
+  font-weight: 930;
+  word-break: keep-all;
+}
+
+.signupCopyPanel h2 span {
+  display: block;
+}
+
+.signupCopyPanel p:not(.eyebrow),
+.signupChecklist {
+  display: none !important;
+}
+
+.signupPageCard.refined {
+  width: 100%;
+  max-width: 560px;
+  margin-left: auto;
+  padding: clamp(36px, 4.8vw, 52px);
+  border-radius: 32px;
+  border-color: rgba(213, 226, 222, 0.92);
+  background: rgba(255, 255, 255, 0.96);
+  box-shadow: 0 30px 80px rgba(15, 23, 42, 0.1);
+}
+
+.signupPageCard.refined .eyebrow {
+  margin-bottom: 10px;
+  font-size: 10px;
+  letter-spacing: 0.17em;
+}
+
+.signupPageCard.refined h2 {
+  margin-bottom: 26px;
+  font-size: clamp(32px, 3vw, 42px);
+  line-height: 1.12;
+  letter-spacing: -0.05em;
+  font-weight: 930;
+}
+
+.signupPageCard.refined label {
+  gap: 9px;
+}
+
+.signupPageCard.refined label span {
+  color: var(--slate-700);
+  font-size: 14px;
+  font-weight: 800;
+}
+
+.signupPageCard.refined input {
+  height: 58px;
+  border-radius: 15px;
+  background: rgba(248, 250, 252, 0.78);
+}
+
+.signupPageCard.refined .primaryButton.fullWidth {
+  height: 62px;
+  border-radius: 16px;
+  font-size: 16px;
+  box-shadow: 0 18px 42px rgba(15, 107, 79, 0.2);
+}
+
+.signupPageCard.refined .textButton {
+  min-height: 54px;
+  border-radius: 16px;
+  background: rgba(255, 255, 255, 0.78);
+}
+
+@media (max-width: 1080px) {
+  .signupLandingSection {
+    grid-template-columns: 1fr;
+    gap: 30px;
+    padding: 58px 0 76px;
+  }
+
+  .signupCopyPanel {
+    max-width: 620px;
+    margin-inline: auto;
+    text-align: left;
+  }
+
+  .signupPageCard.refined {
+    margin-inline: auto;
+  }
+}
+
+@media (max-width: 640px) {
+  .signupCopyPanel {
+    padding-left: 18px;
+  }
+
+  .signupCopyPanel::before {
+    height: 76px;
+  }
+
+  .signupCopyPanel h2 {
+    font-size: 27px;
+  }
+
+  .signupPageCard.refined {
+    max-width: none;
+    padding: 30px 22px;
+    border-radius: 26px;
+  }
+}
+
+/* Usage flow visual refresh: replace form mock cards with clean symbolic illustrations */
+.guideSection .guideGrid {
+  gap: 18px;
+}
+
+.guideSection .guideCard {
+  grid-template-columns: minmax(0, 1fr) 260px;
+  min-height: 220px;
+  padding: clamp(24px, 3.2vw, 34px);
+  border-radius: 28px;
+  background:
+    linear-gradient(135deg, rgba(255, 255, 255, 0.96), rgba(250, 253, 252, 0.9));
+  border-color: rgba(213, 226, 222, 0.88);
+  box-shadow: 0 22px 62px rgba(15, 23, 42, 0.065);
+}
+
+.guideSection .guideCopy {
+  max-width: 650px;
+}
+
+.guideSection .guideCopy > strong {
+  width: 44px;
+  height: 44px;
+  margin-bottom: 18px;
+  border-radius: 15px;
+  background: var(--primary);
+  box-shadow: 0 12px 26px rgba(15, 107, 79, 0.16);
+}
+
+.guideSection .guideCard h3 {
+  margin-bottom: 12px;
+  font-size: clamp(20px, 2vw, 24px);
+  letter-spacing: -0.04em;
+}
+
+.guideSection .guideCard p {
+  max-width: 720px;
+  color: var(--slate-600);
+  font-size: 15px;
+  line-height: 1.78;
+  font-weight: 720;
+}
+
+.guideIllustration {
+  position: relative;
+  justify-self: end;
+  width: 230px;
+  height: 150px;
+  display: grid;
+  place-items: center;
+  border-radius: 999px;
+  background:
+    radial-gradient(circle at 48% 42%, rgba(16, 185, 129, 0.13), transparent 34%),
+    radial-gradient(circle at 72% 60%, rgba(245, 158, 11, 0.11), transparent 28%);
+}
+
+.guideOrb {
+  position: absolute;
+  display: grid;
+  place-items: center;
+  border-radius: 24px;
+  color: var(--primary);
+}
+
+.guideOrb.primary {
+  left: 28px;
+  top: 36px;
+  width: 76px;
+  height: 76px;
+  color: white;
+  background: linear-gradient(135deg, var(--primary), var(--secondary));
+  box-shadow: 0 20px 42px rgba(15, 107, 79, 0.2);
+}
+
+.guideOrb.soft {
+  right: 28px;
+  top: 52px;
+  width: 58px;
+  height: 58px;
+  background: rgba(230, 244, 238, 0.95);
+  border: 1px solid rgba(15, 107, 79, 0.08);
+}
+
+.guideLine {
+  position: absolute;
+  left: 94px;
+  right: 74px;
+  top: 76px;
+  height: 2px;
+  border-radius: 999px;
+  background: linear-gradient(90deg, rgba(15, 107, 79, 0.26), rgba(16, 185, 129, 0.72));
+}
+
+.guideLine::after {
+  content: "";
+  position: absolute;
+  right: -2px;
+  top: 50%;
+  width: 8px;
+  height: 8px;
+  border-top: 2px solid rgba(16, 185, 129, 0.8);
+  border-right: 2px solid rgba(16, 185, 129, 0.8);
+  transform: translateY(-50%) rotate(45deg);
+}
+
+.guideMiniLabel {
+  position: absolute;
+  left: 50%;
+  bottom: 6px;
+  transform: translateX(-50%);
+  padding: 7px 12px;
+  border-radius: 999px;
+  color: var(--primary);
+  background: rgba(255, 255, 255, 0.82);
+  border: 1px solid rgba(213, 226, 222, 0.92);
+  font-size: 11px;
+  font-weight: 900;
+  white-space: nowrap;
+  box-shadow: 0 10px 24px rgba(15, 23, 42, 0.045);
+}
+
+.guideIllustrationStep02 .guideOrb.primary {
+  background: linear-gradient(135deg, #0f766e, var(--secondary));
+}
+
+.guideIllustrationStep03 .guideOrb.primary {
+  background: linear-gradient(135deg, var(--primary), #f59e0b);
+}
+
+@media (max-width: 1080px) {
+  .guideSection .guideCard {
+    grid-template-columns: 1fr;
+  }
+
+  .guideIllustration {
+    justify-self: start;
+    width: 210px;
+    height: 130px;
+  }
+}
+
+@media (max-width: 640px) {
+  .guideIllustration {
+    width: 100%;
+    max-width: 230px;
+  }
 }

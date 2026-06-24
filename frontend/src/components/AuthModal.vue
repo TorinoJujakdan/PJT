@@ -1,7 +1,7 @@
 <script setup>
 import { reactive, ref } from "vue";
 import { LogIn, UserPlus, X } from "@lucide/vue";
-import { loginAccount, signupAccount } from "../api/accounts";
+import { loginAccount, signupAndAuthenticate } from "../api/accounts";
 
 const props = defineProps({
   initialMode: {
@@ -45,7 +45,7 @@ async function handleSignup() {
   loading.value = true;
   error.value = null;
   try {
-    const payload = await signupAccount(signupForm);
+    const payload = await signupAndAuthenticate(signupForm);
     emit("authenticated", payload.user);
     emit("close");
   } catch (err) {
