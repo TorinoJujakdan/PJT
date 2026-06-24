@@ -1,7 +1,7 @@
 <script setup>
 import { reactive, ref } from "vue";
 import { UserPlus } from "@lucide/vue";
-import { signupAccount } from "../api/accounts";
+import { signupAndAuthenticate } from "../api/accounts";
 
 const emit = defineEmits(["authenticated", "go-login"]);
 
@@ -17,7 +17,7 @@ async function submit() {
   loading.value = true;
   error.value = null;
   try {
-    const payload = await signupAccount(form);
+    const payload = await signupAndAuthenticate(form);
     emit("authenticated", payload.user);
   } catch (err) {
     error.value = err.payload || { message: err.message };

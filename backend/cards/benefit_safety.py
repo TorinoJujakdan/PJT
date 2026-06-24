@@ -2,7 +2,7 @@ from __future__ import annotations
 
 from decimal import Decimal, InvalidOperation
 
-type DiscountValueInput = str | int | float | Decimal | None
+DiscountValueInput = str | int | float | Decimal | None
 
 FUEL_CONTEXT_KEYWORDS: tuple[str, ...] = (
     "주유",
