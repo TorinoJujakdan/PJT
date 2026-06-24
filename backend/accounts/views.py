@@ -38,13 +38,15 @@ class SignupAPIView(APIView):
         if not serializer.is_valid():
             return error_response("INVALID_SIGNUP", status.HTTP_400_BAD_REQUEST, serializer.errors)
         user = serializer.save()
-        login(request, user)
-        return Response({"user": UserSerializer(user).data}, status=status.HTTP_201_CREATED)
+        login(request, user, backend="django.contrib.auth.backends.ModelBackend")
+        return Response(
+            {"authenticated": True, "user": UserSerializer(user).data},
+            status=status.HTTP_201_CREATED,
+        )
 
 
 class LoginAPIView(APIView):
     permission_classes = [AllowAny]
-    throttle_classes = [AnonRateThrottle]
     throttle_classes = [AnonRateThrottle]
 
     def post(self, request):
@@ -61,7 +63,7 @@ class LoginAPIView(APIView):
             return error_response("INVALID_LOGIN", status.HTTP_400_BAD_REQUEST)
 
         login(request, user)
-        return Response({"user": UserSerializer(user).data})
+        return Response({"authenticated": True, "user": UserSerializer(user).data})
 
 
 class LogoutAPIView(APIView):
