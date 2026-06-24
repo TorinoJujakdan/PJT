@@ -25,6 +25,7 @@ const presets = ref({
   home: readStoredLocation(PRESET_STORAGE_KEYS.home),
   work: readStoredLocation(PRESET_STORAGE_KEYS.work)
 });
+const activePresetEditor = ref(null);
 
 let debounceTimer = null;
 let reverseTimer = null;
@@ -391,32 +392,53 @@ function useBrowserLocation() {
   );
 }
 
+function getPresetLabel(type) {
+  return type === "home" ? "집" : "회사";
+}
+
 function savePreset(type) {
-  const label = type === "home" ? "집" : "회사";
+  const label = getPresetLabel(type);
   const saved = writeStoredLocation(PRESET_STORAGE_KEYS[type], {
     ...model.value,
     source: `${type}_preset`
   });
   if (!saved) {
     setMessage("먼저 출발지를 확정해 주세요.", "error");
-    return;
+    return false;
   }
   presets.value = {
     ...presets.value,
     [type]: saved
   };
   setMessage(`${label} 위치로 저장했습니다.`, "success");
+  return true;
+}
+
+function openPresetEditor(type = "home") {
+  activePresetEditor.value = type;
+}
+
+function closePresetEditor() {
+  activePresetEditor.value = null;
+}
+
+function confirmPresetSave(type) {
+  if (savePreset(type)) {
+    closePresetEditor();
+  }
 }
 
 function usePreset(type) {
-  const label = type === "home" ? "집" : "회사";
+  const label = getPresetLabel(type);
   const preset = presets.value[type];
   if (!preset) {
-    savePreset(type);
+    openPresetEditor(type);
+    setMessage(`${label} 주소를 먼저 등록해 주세요.`, "info");
     return;
   }
   applyStoredLocation(preset, label);
 }
+
 
 watch(
   () => [
@@ -465,23 +487,72 @@ onBeforeUnmount(() => {
       </button>
     </div>
 
-    <div class="presetActions">
-      <button class="presetButton" type="button" @click="usePreset('home')" @dblclick.prevent="savePreset('home')">
-        <Home :size="15" />
-        <span>{{ presets.home ? "집" : "집 저장" }}</span>
-      </button>
-      <button class="presetButton" type="button" @click="usePreset('work')" @dblclick.prevent="savePreset('work')">
-        <BriefcaseBusiness :size="15" />
-        <span>{{ presets.work ? "회사" : "회사 저장" }}</span>
-      </button>
-    </div>
+    <div class="presetActions" aria-label="집 회사 빠른 출발지 선택">
+      <div class="presetQuickTabs twoTabs">
+        <button
+          class="presetQuickTab"
+          type="button"
+          :class="{ saved: presets.home }"
+          :title="presets.home ? '집 주소를 출발 위치로 설정' : '집 주소 등록 탭 열기'"
+          @click="usePreset('home')"
+        >
+          <Home :size="15" />
+          <span>집</span>
+        </button>
+        <button
+          class="presetQuickTab"
+          type="button"
+          :class="{ saved: presets.work }"
+          :title="presets.work ? '회사 주소를 출발 위치로 설정' : '회사 주소 등록 탭 열기'"
+          @click="usePreset('work')"
+        >
+          <BriefcaseBusiness :size="15" />
+          <span>회사</span>
+        </button>
+      </div>
 
-    <div class="activeLocationBadge">
-      <MapPin :size="18" />
-      <div class="activeLocationText">
-        <strong>{{ activeName }}</strong>
-        <span>{{ activeAddress }}</span>
-        <small v-if="activeCoords">{{ activeCoords }}<template v-if="activeAccuracy"> · 정확도 {{ activeAccuracy }}</template></small>
+      <div class="presetEditLinks" aria-label="집 회사 등록 수정">
+        <button type="button" @click="openPresetEditor('home')">
+          집 {{ presets.home ? "수정" : "등록" }}
+        </button>
+        <button type="button" @click="openPresetEditor('work')">
+          회사 {{ presets.work ? "수정" : "등록" }}
+        </button>
+      </div>
+
+      <div v-if="activePresetEditor" class="presetEditorPanel" role="tabpanel" aria-label="장소 등록 수정 탭">
+        <div class="presetEditorHeader">
+          <strong>장소 등록/수정</strong>
+          <button type="button" class="presetEditorClose" aria-label="장소 등록 탭 닫기" @click="closePresetEditor">
+            <X :size="13" />
+          </button>
+        </div>
+        <div class="presetEditorTabs" role="tablist" aria-label="등록할 장소 선택">
+          <button
+            type="button"
+            role="tab"
+            :aria-selected="activePresetEditor === 'home'"
+            :class="{ active: activePresetEditor === 'home' }"
+            @click="openPresetEditor('home')"
+          >
+            집
+          </button>
+          <button
+            type="button"
+            role="tab"
+            :aria-selected="activePresetEditor === 'work'"
+            :class="{ active: activePresetEditor === 'work' }"
+            @click="openPresetEditor('work')"
+          >
+            회사
+          </button>
+        </div>
+        <p class="presetEditorCopy">
+          현재 선택된 출발 위치를 {{ getPresetLabel(activePresetEditor) }} 주소로 저장합니다.
+        </p>
+        <button class="presetEditorSave" type="button" @click="confirmPresetSave(activePresetEditor)">
+          현재 위치를 {{ getPresetLabel(activePresetEditor) }}으로 저장
+        </button>
       </div>
     </div>
 
@@ -533,7 +604,18 @@ onBeforeUnmount(() => {
       </transition>
     </div>
 
+    <div class="activeLocationBadge" aria-live="polite">
+      <MapPin :size="18" />
+      <div class="activeLocationText">
+        <small class="locationSectionLabel">선택된 출발 위치</small>
+        <strong>{{ activeName }}</strong>
+        <span>{{ activeAddress }}</span>
+        <small v-if="activeCoords">{{ activeCoords }}<template v-if="activeAccuracy"> · 정확도 {{ activeAccuracy }}</template></small>
+      </div>
+    </div>
+
     <div v-if="recentLocations.length" class="recentList" aria-label="최근 위치 바로가기">
+      <div class="locationSectionLabel recentListTitle">최근 검색 위치</div>
       <div
         v-for="item in recentLocations"
         :key="`${item.latitude}-${item.longitude}-${item.saved_at}`"
@@ -560,6 +642,7 @@ onBeforeUnmount(() => {
       </div>
     </div>
 
+
     <input v-model.number="model.latitude" type="hidden" />
     <input v-model.number="model.longitude" type="hidden" />
 
@@ -581,38 +664,155 @@ onBeforeUnmount(() => {
   display: grid;
   gap: 12px;
   grid-template-columns: 22px minmax(0, 1fr);
-  margin-bottom: 18px;
+  margin: 12px 0;
   padding: 14px;
 }
 
 .presetActions {
   display: grid;
-  gap: 8px;
-  grid-template-columns: repeat(2, minmax(0, 1fr));
-  margin-bottom: 12px;
+  gap: 10px;
+  margin: 0 0 12px;
 }
 
-.presetButton {
-  align-items: center;
-  background: var(--white);
+.presetQuickTabs {
+  align-items: stretch;
+  background: var(--slate-100);
   border: 1px solid var(--slate-200);
-  border-radius: var(--radius-sm);
-  color: var(--slate-700);
+  border-radius: 999px;
+  display: grid;
+  gap: 4px;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  padding: 4px;
+}
+
+.presetQuickTab {
+  align-items: center;
+  background: transparent;
+  border: 0;
+  border-radius: 999px;
+  color: var(--slate-600);
   cursor: pointer;
   display: inline-flex;
   font-size: 12px;
-  font-weight: 800;
-  gap: 7px;
+  font-weight: 900;
+  gap: 6px;
   justify-content: center;
   min-height: 34px;
   min-width: 0;
   padding: 0 10px;
+  transition: background 0.18s ease, box-shadow 0.18s ease, color 0.18s ease, transform 0.18s ease;
 }
 
-.presetButton:hover {
-  background: var(--primary-light);
-  border-color: rgba(15, 107, 79, 0.22);
+.presetQuickTab:hover,
+.presetQuickTab.saved {
+  background: var(--white);
+  box-shadow: 0 6px 14px rgba(15, 23, 42, 0.08);
   color: var(--primary);
+}
+
+.presetEditLinks {
+  display: flex;
+  gap: 8px;
+  justify-content: flex-end;
+}
+
+.presetEditLinks button,
+.presetEditorClose,
+.presetEditorTabs button,
+.presetEditorSave {
+  border: 0;
+  cursor: pointer;
+  font-family: inherit;
+}
+
+.presetEditLinks button {
+  background: transparent;
+  color: var(--slate-500);
+  font-size: 11px;
+  font-weight: 800;
+  padding: 0;
+}
+
+.presetEditLinks button:hover {
+  color: var(--primary);
+}
+
+.presetEditorPanel {
+  background: var(--white);
+  border: 1.5px solid rgba(15, 107, 79, 0.18);
+  border-radius: var(--radius-md);
+  box-shadow: 0 10px 24px rgba(15, 107, 79, 0.08);
+  display: grid;
+  gap: 10px;
+  padding: 12px;
+}
+
+.presetEditorHeader {
+  align-items: center;
+  display: flex;
+  justify-content: space-between;
+}
+
+.presetEditorHeader strong {
+  color: var(--slate-900);
+  font-size: 13px;
+  font-weight: 900;
+}
+
+.presetEditorClose {
+  align-items: center;
+  background: var(--slate-100);
+  border-radius: 999px;
+  color: var(--slate-500);
+  display: inline-flex;
+  height: 24px;
+  justify-content: center;
+  width: 24px;
+}
+
+.presetEditorTabs {
+  background: var(--slate-100);
+  border-radius: 999px;
+  display: grid;
+  gap: 4px;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  padding: 4px;
+}
+
+.presetEditorTabs button {
+  background: transparent;
+  border-radius: 999px;
+  color: var(--slate-500);
+  font-size: 12px;
+  font-weight: 900;
+  min-height: 30px;
+}
+
+.presetEditorTabs button.active {
+  background: var(--white);
+  box-shadow: 0 4px 10px rgba(15, 23, 42, 0.08);
+  color: var(--primary);
+}
+
+.presetEditorCopy {
+  color: var(--slate-500);
+  font-size: 12px;
+  font-weight: 700;
+  line-height: 1.45;
+  margin: 0;
+}
+
+.presetEditorSave {
+  background: var(--primary);
+  border-radius: var(--radius-sm);
+  color: var(--white);
+  font-size: 12px;
+  font-weight: 900;
+  min-height: 36px;
+}
+
+.presetEditorSave:hover {
+  background: var(--primary-hover);
 }
 
 .activeLocationText {
@@ -657,6 +857,20 @@ onBeforeUnmount(() => {
   flex-wrap: wrap;
   gap: 6px;
   margin-top: 12px;
+}
+
+.locationSectionLabel {
+  color: var(--slate-400);
+  display: block;
+  font-size: 10px;
+  font-weight: 900;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+}
+
+.recentListTitle {
+  flex-basis: 100%;
+  margin-bottom: 2px;
 }
 
 .recentItem {
