@@ -38,3 +38,17 @@ export function deleteCommunityPost(postId) {
     method: "DELETE",
   });
 }
+
+
+export function starCommunityPost(postId) {
+  return apiRequest(`/community/posts/${postId}/star/`, {
+    method: "POST",
+  });
+}
+
+
+export function unstarCommunityPost(postId) {
+  return apiRequest(`/community/posts/${postId}/star/`, {
+    method: "DELETE",
+  });
+}

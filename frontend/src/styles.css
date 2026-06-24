@@ -2349,6 +2349,37 @@ body.modalOpen {
   gap: 14px;
 }
 
+.communityViewTabs {
+  display: inline-flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  padding: 6px;
+  border: 1px solid var(--slate-200);
+  border-radius: 999px;
+  background: var(--slate-50);
+  width: fit-content;
+}
+
+.communityViewTabs button {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 9px 14px;
+  border: 0;
+  border-radius: 999px;
+  color: var(--slate-600);
+  background: transparent;
+  font-weight: 800;
+  cursor: pointer;
+}
+
+.communityViewTabs button:hover,
+.communityViewTabs button.active {
+  color: var(--primary);
+  background: #fff;
+  box-shadow: var(--shadow-sm);
+}
+
 .communityListHeader,
 .communityPostTop {
   display: flex;
@@ -2809,6 +2840,11 @@ body.modalOpen {
 .cardIconButton.danger {
   color: #b91c1c;
   background: #fef2f2;
+}
+
+.cardIconButton.star.active {
+  color: #b45309;
+  background: #fffbeb;
 }
 
 .editCardPanel {

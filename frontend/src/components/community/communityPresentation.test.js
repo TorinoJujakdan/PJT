@@ -4,7 +4,10 @@ import { describe, it } from "node:test";
 import {
   canEditPost,
   formatCommunityError,
+  getStarredButtonLabel,
   parseTagInput,
+  removePostById,
+  replacePostById,
   tagsToInput,
 } from "./communityPresentation.js";
 
@@ -35,5 +38,23 @@ describe("communityPresentation", () => {
       formatCommunityError({ payload: { code: "INVALID_COMMUNITY_POST" } }),
       "게시글 입력값을 확인해 주세요.",
     );
+  });
+
+  it("replaces or removes posts by id without mutating unrelated cards", () => {
+    const posts = [
+      { id: 1, title: "one", is_starred: false },
+      { id: 2, title: "two", is_starred: false },
+    ];
+
+    assert.deepEqual(replacePostById(posts, { id: 2, is_starred: true }), [
+      { id: 1, title: "one", is_starred: false },
+      { id: 2, title: "two", is_starred: true },
+    ]);
+    assert.deepEqual(removePostById(posts, 1), [{ id: 2, title: "two", is_starred: false }]);
+  });
+
+  it("labels the private star action from the current post state", () => {
+    assert.equal(getStarredButtonLabel({ is_starred: true }), "별표 해제");
+    assert.equal(getStarredButtonLabel({ is_starred: false }), "별표 저장");
   });
 });
