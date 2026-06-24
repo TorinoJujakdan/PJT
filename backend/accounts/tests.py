@@ -19,8 +19,27 @@ class AccountAPITests(TestCase):
         )
 
         self.assertEqual(response.status_code, 201)
+        self.assertTrue(response.json()["authenticated"])
         self.assertEqual(response.json()["user"]["username"], "new-user")
 
+        me = self.client.get("/api/v1/accounts/me/")
+        self.assertTrue(me.json()["authenticated"])
+
+
+    def test_signup_accepts_lightweight_password_and_logs_in(self):
+        response = self.client.post(
+            "/api/v1/accounts/signup/",
+            {
+                "username": "light-user",
+                "email": "light@example.com",
+                "password": "1234",
+            },
+            format="json",
+        )
+
+        self.assertEqual(response.status_code, 201)
+        self.assertTrue(response.json()["authenticated"])
+        self.assertEqual(response.json()["user"]["username"], "light-user")
         me = self.client.get("/api/v1/accounts/me/")
         self.assertTrue(me.json()["authenticated"])
 
@@ -36,6 +55,7 @@ class AccountAPITests(TestCase):
             format="json",
         )
         self.assertEqual(login_response.status_code, 200)
+        self.assertTrue(login_response.json()["authenticated"])
         self.assertEqual(login_response.json()["user"]["username"], "login-user")
 
         logout_response = self.client.post("/api/v1/accounts/logout/")
