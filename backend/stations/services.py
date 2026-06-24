@@ -7,6 +7,7 @@ from typing import Any, Optional
 
 from django.db.models import OuterRef, Subquery
 
+from cards.benefit_safety import decimal_or_zero, is_suspicious_fuel_discount
 from cards.models import CardPolicy
 
 from .models import FuelPrice, GasStation
@@ -203,9 +204,8 @@ def get_card_value(card, field_name, default=None):
 
 
 def card_can_affect_recommendation(card):
-    source_type = get_card_value(card, "source_type", CardPolicy.SourceType.MANUAL)
     verification_status = get_card_value(card, "verification_status", CardPolicy.VerificationStatus.USER_CONFIRMED)
-    return source_type == CardPolicy.SourceType.MANUAL or verification_status in {
+    return verification_status in {
         CardPolicy.VerificationStatus.USER_CONFIRMED,
         CardPolicy.VerificationStatus.ADMIN_VERIFIED,
     }
@@ -347,7 +347,10 @@ def calculate_card_discount(candidate, refuel_cost, target_liters, user_cards):
             continue
 
         discount_type = get_card_value(effective_card, "discount_type")
-        discount_value = float(get_card_value(effective_card, "discount_value", 0))
+        discount_decimal = decimal_or_zero(get_card_value(effective_card, "discount_value", 0))
+        if is_suspicious_fuel_discount(discount_type, discount_decimal):
+            continue
+        discount_value = float(discount_decimal)
         if discount_type == CardPolicy.DiscountType.PER_LITER:
             raw_discount = discount_value * float(target_liters)
         elif discount_type == CardPolicy.DiscountType.PERCENTAGE:

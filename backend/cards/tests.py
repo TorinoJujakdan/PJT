@@ -272,6 +272,29 @@ class CardPolicyAPITests(TestCase):
         self.assertEqual(cards[0]["effective_benefit"]["discount_type"], "per_liter")
         self.assertEqual(cards[0]["effective_benefit"]["discount_value"], "60.00")
 
+    def test_catalog_search_suppresses_unrealistic_percentage_effective_benefit(self):
+        catalog = CardCatalog.objects.create(
+            card_name="삼성 iD SELECT ALL 카드",
+            issuer_name="삼성카드",
+            source_url="https://card-search.naver.com/card/select-all",
+            source_type=CardPolicy.SourceType.SELENIUM,
+            verification_status=CardPolicy.VerificationStatus.UNVERIFIED,
+        )
+        CardBenefitTier.objects.create(
+            card_catalog=catalog,
+            fuel_type="ALL",
+            discount_type=CardPolicy.DiscountType.PERCENTAGE,
+            discount_value=100,
+        )
+
+        self.client.force_authenticate(self.user)
+        response = self.client.get("/api/v1/cards/catalog/", {"query": "SELECT ALL"})
+
+        self.assertEqual(response.status_code, 200)
+        cards = response.json()["cards"]
+        self.assertEqual(len(cards), 1)
+        self.assertIsNone(cards[0]["effective_benefit"])
+
     def test_create_card_policy_from_catalog_confirms_user_card(self):
         catalog = CardCatalog.objects.create(
             card_name="KB국민 굿데이카드",

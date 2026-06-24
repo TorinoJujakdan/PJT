@@ -32,6 +32,7 @@ class CardIngestionError(RuntimeError):
 class ScrapedCardCandidate:
     card_name: str
     issuer_name: str = ""
+    fuel_type: str = "ALL"
     discount_type: str = CardPolicy.DiscountType.PER_LITER
     discount_value: Decimal = Decimal("0")
     brand_scope: str = "all"
@@ -83,9 +84,30 @@ def build_card_image_filename(candidate, image_url, content_type=""):
     return f"card-{digest}{suffix}"
 
 
+def is_safe_url(url):
+    import socket
+    import ipaddress
+    parsed = urlparse(url)
+    hostname = parsed.hostname
+    if not hostname:
+        return False
+    try:
+        addr_info = socket.getaddrinfo(hostname, None)
+        for _, _, _, _, sockaddr in addr_info:
+            ip = sockaddr[0]
+            ip_obj = ipaddress.ip_address(ip)
+            if ip_obj.is_loopback or ip_obj.is_private or ip_obj.is_multicast or ip_obj.is_unspecified:
+                return False
+        return True
+    except (socket.gaierror, ValueError):
+        return False
+
 def fetch_remote_image(image_url, timeout=8, max_bytes=MAX_CARD_IMAGE_BYTES):
     parsed = urlparse(image_url or "")
     if parsed.scheme not in {"http", "https"} or not parsed.netloc:
+        return None, ""
+
+    if not is_safe_url(image_url):
         return None, ""
 
     request = Request(
@@ -93,11 +115,26 @@ def fetch_remote_image(image_url, timeout=8, max_bytes=MAX_CARD_IMAGE_BYTES):
         headers={"User-Agent": "SmartFuelCardIngestion/1.0 (+https://card-search.naver.com)"},
     )
     try:
+        import time
+        import socket
+        socket.setdefaulttimeout(timeout)
         with urlopen(request, timeout=timeout) as response:
             content_type = (response.headers.get("Content-Type") or "").split(";")[0].strip().lower()
             if content_type and content_type not in ALLOWED_IMAGE_CONTENT_TYPES:
                 return None, content_type
-            content = response.read(max_bytes + 1)
+            
+            start_time = time.time()
+            content = bytearray()
+            while True:
+                if time.time() - start_time > timeout:
+                    return None, ""
+                chunk = response.read(8192)
+                if not chunk:
+                    break
+                content.extend(chunk)
+                if len(content) > max_bytes:
+                    break
+            content = bytes(content)
     except Exception:
         return None, ""
 
@@ -202,21 +239,22 @@ def normalize_candidate(candidate, source_url):
     return catalog_data, tier_data
 
 
+
 def infer_issuer_name(card_name):
     issuer_patterns = {
-        "KB국민": "KB국민카드",
-        "국민": "KB국민카드",
-        "신한": "신한카드",
-        "삼성": "삼성카드",
-        "현대": "현대카드",
-        "롯데": "롯데카드",
-        "LOCA": "롯데카드",
-        "디지로카": "롯데카드",
-        "하나": "하나카드",
-        "우리": "우리카드",
-        "NH": "NH농협카드",
-        "농협": "NH농협카드",
-        "IBK": "IBK기업은행",
+        "KB�??": "KB�??카드",
+        "�??": "KB�??카드",
+        "?�한": "?�한카드",
+        "?�성": "?�성카드",
+        "?��?": "?��?카드",
+        "�?��": "�?��카드",
+        "LOCA": "�?��카드",
+        "?��?로카": "�?��카드",
+        "?�나": "?�나카드",
+        "?�리": "?�리카드",
+        "NH": "NH?�협카드",
+        "?�협": "NH?�협카드",
+        "IBK": "IBK기업?�??,
         "BC": "BC카드",
     }
     for token, issuer in issuer_patterns.items():
@@ -231,18 +269,18 @@ def parse_korean_money_amount(value):
         return None
 
     total = Decimal("0")
-    man_match = re.search(r"([0-9]+(?:\.[0-9]+)?)\s*만", text)
+    man_match = re.search(r"([0-9]+(?:\.[0-9]+)?)\s*�?, text)
     if man_match:
         total += Decimal(man_match.group(1)) * Decimal("10000")
 
-    thousand_match = re.search(r"([0-9]+)\s*천", text)
+    thousand_match = re.search(r"([0-9]+)\s*�?, text)
     if thousand_match:
         total += Decimal(thousand_match.group(1)) * Decimal("1000")
 
     if total:
         return int(total)
 
-    won_match = re.search(r"([0-9][0-9,]*)\s*원", text)
+    won_match = re.search(r"([0-9][0-9,]*)\s*??, text)
     if won_match:
         return int(won_match.group(1).replace(",", ""))
 
@@ -251,7 +289,7 @@ def parse_korean_money_amount(value):
 
 MONEY_PATTERN = (
     r"(?P<amount>"
-    r"(?:[0-9]+(?:\.[0-9]+)?\s*만\s*)?(?:[0-9]+\s*천\s*)?(?:[0-9][0-9,]*\s*)?원"
+    r"(?:[0-9]+(?:\.[0-9]+)?\s*�?s*)?(?:[0-9]+\s*�?s*)?(?:[0-9][0-9,]*\s*)???
     r"|[0-9]+(?:\.[0-9]+)?\s*만원"
     r"|[0-9]+\s*천원"
     r")"
@@ -277,17 +315,17 @@ def extract_first_amount(pattern, text, skip_if_contains=None, skip_before_conta
 def infer_brand_scope(text):
     source_text = str(text or "")
     normalized = source_text.upper()
-    all_patterns = ["전 주유소", "전국 주유소", "모든 주유소", "모든 충전소", "주유소/충전소", "전 가맹점"]
+    all_patterns = ["??주유??, "?�국 주유??, "모든 주유??, "모든 충전??, "주유??충전??, "??가맹점"]
     if any(pattern in source_text for pattern in all_patterns):
         return "all"
 
     brand_patterns = [
-        ("GS", ["GS칼텍스", "GS CALTEX", "GS주유소"]),
-        ("SK", ["SK에너지", "SK주유소", "SK ENERGY"]),
-        ("S-OIL", ["S-OIL", "에쓰오일", "에스오일"]),
-        ("HD현대오일뱅크", ["현대오일뱅크", "HD현대오일뱅크", "OILBANK"]),
+        ("GS", ["GS칼텍??, "GS CALTEX", "GS주유??]),
+        ("SK", ["SK?�너지", "SK주유??, "SK ENERGY"]),
+        ("S-OIL", ["S-OIL", "?�쓰?�일", "?�스?�일"]),
+        ("HD?��??�일뱅크", ["?��??�일뱅크", "HD?��??�일뱅크", "OILBANK"]),
         ("E1", ["E1"]),
-        ("SK LPG", ["SK가스", "SK GAS"]),
+        ("SK LPG", ["SK가??, "SK GAS"]),
     ]
     matches = []
     for brand, tokens in brand_patterns:
@@ -303,44 +341,44 @@ def infer_brand_scope(text):
 def parse_benefit_constraints(text):
     normalized = " ".join(str(text or "").split())
     min_payment_amount = extract_first_amount(
-        rf"(?:건당|1회|회당|결제금액|이용금액|주유금액)[^.\n]{{0,30}}?{MONEY_PATTERN}\s*이상",
+        rf"(?:건당|1???�당|결제금액|?�용금액|주유금액)[^.\n]{{0,30}}?{MONEY_PATTERN}\s*?�상",
         normalized,
-        skip_if_contains=["전월", "직전", "실적", "합계"],
-        skip_before_contains=["전월", "직전", "실적", "합계"],
+        skip_if_contains=["?�월", "직전", "?�적", "?�계"],
+        skip_before_contains=["?�월", "직전", "?�적", "?�계"],
     )
     if min_payment_amount is None:
         min_payment_amount = extract_first_amount(
-            rf"{MONEY_PATTERN}\s*이상[^.\n]{{0,30}}?(?:결제|이용|주유)",
+            rf"{MONEY_PATTERN}\s*?�상[^.\n]{{0,30}}?(?:결제|?�용|주유)",
             normalized,
-            skip_if_contains=["전월", "직전", "실적", "합계"],
-            skip_before_contains=["전월", "직전", "실적", "합계"],
+            skip_if_contains=["?�월", "직전", "?�적", "?�계"],
+            skip_before_contains=["?�월", "직전", "?�적", "?�계"],
         )
 
     max_discount_amount = extract_first_amount(
-        rf"(?:건당|1회|회당)[^.\n]{{0,30}}?(?:최대|한도)\s*{MONEY_PATTERN}",
+        rf"(?:건당|1???�당)[^.\n]{{0,30}}?(?:최�?|?�도)\s*{MONEY_PATTERN}",
         normalized,
     )
     if max_discount_amount is None:
         max_discount_amount = extract_first_amount(
-            rf"(?:건당|1회|회당)[^.\n]{{0,30}}?{MONEY_PATTERN}\s*(?:까지|한도)",
+            rf"(?:건당|1???�당)[^.\n]{{0,30}}?{MONEY_PATTERN}\s*(?:까�?|?�도)",
             normalized,
-            skip_if_contains=["이상", "월"],
+            skip_if_contains=["?�상", "??],
         )
 
     monthly_discount_limit = extract_first_amount(
-        rf"(?:월|월간)[^.\n]{{0,35}}?(?:최대|통합|할인한도|한도)[^.\n]{{0,15}}?{MONEY_PATTERN}",
+        rf"(?:???�간)[^.\n]{{0,35}}?(?:최�?|?�합|?�인?�도|?�도)[^.\n]{{0,15}}?{MONEY_PATTERN}",
         normalized,
-        skip_if_contains=["전월", "실적", "이상시"],
+        skip_if_contains=["?�월", "?�적", "?�상??],
     )
     if monthly_discount_limit is None:
         monthly_discount_limit = extract_first_amount(
-            rf"{MONEY_PATTERN}\s*(?:월|월간)[^.\n]{{0,20}}?(?:통합)?\s*(?:할인)?한도",
+            rf"{MONEY_PATTERN}\s*(?:???�간)[^.\n]{{0,20}}?(?:?�합)?\s*(?:?�인)??�도",
             normalized,
-            skip_if_contains=["전월", "실적", "이상시"],
+            skip_if_contains=["?�월", "?�적", "?�상??],
         )
 
     monthly_remaining_discount = extract_first_amount(
-        rf"(?:월|당월)[^.\n]{{0,20}}?(?:잔여|남은)[^.\n]{{0,15}}?{MONEY_PATTERN}",
+        rf"(?:???�월)[^.\n]{{0,20}}?(?:?�여|?��?)[^.\n]{{0,15}}?{MONEY_PATTERN}",
         normalized,
     )
 
@@ -362,15 +400,15 @@ def summarize_detail_text(text, max_length=2000):
             for token in [
                 "주유",
                 "충전",
-                "리터당",
+                "리터??,
                 "LPG",
-                "전기차",
-                "할인",
-                "캐시백",
-                "한도",
+                "?�기�?,
+                "?�인",
+                "캐시�?,
+                "?�도",
                 "건당",
-                "월",
-                "이상",
+                "??,
+                "?�상",
             ]
         )
     ]
@@ -380,8 +418,8 @@ def summarize_detail_text(text, max_length=2000):
 
 def summarize_fuel_benefit_text(text, max_length=1000):
     lines = [line.strip() for line in str(text or "").splitlines() if line.strip()]
-    fuel_tokens = ["주유", "충전", "리터당", "LPG", "전기차", "휘발유", "경유"]
-    context_tokens = ["할인", "캐시백", "한도", "건당", "1회", "회당", "이상", "월"]
+    fuel_tokens = ["주유", "충전", "리터??, "LPG", "?�기�?, "?�발??, "경유"]
+    context_tokens = ["?�인", "캐시�?, "?�도", "건당", "1??, "?�당", "?�상", "??]
     selected = []
 
     for index, line in enumerate(lines):
@@ -416,30 +454,30 @@ def enrich_candidate_from_detail_text(candidate, detail_text, source_url=None, s
 
     base_confidence = candidate.confidence or Decimal("0.60")
     
-    # [고도화] 데이터 정합성 정밀 크로스 검증
+    # [고도?? ?�이???�합???��? ?�로??검�?
     penalty = Decimal("0.00")
 
-    # 1) 리터당 할인인데 할인액이 비현실적인 경우 → 값 자체를 원복 (hard block)
+    # 1) 리터???�인?�데 ?�인?�이 비현?�적??경우 ??�??�체�??�복 (hard block)
     if discount_type == CardPolicy.DiscountType.PER_LITER:
         if discount_value > Decimal("500") or discount_value < Decimal("20"):
-            # 신규 회원 이벤트 등 비현실적 값 차단 — 이전 candidate 값으로 되돌림
+            # ?�규 ?�원 ?�벤????비현?�적 �?차단 ???�전 candidate 값으�??�돌�?
             discount_type = candidate.discount_type
             discount_value = candidate.discount_value
             penalty += Decimal("0.35")
 
-    # 2) 할인율(PERCENTAGE)인데 50%를 초과하는 비현실적 할인인 경우 → hard block
-    #    예) "신규 회원 최대 100% 캐시백"이 주유 할인으로 잘못 파싱되는 케이스 방지
+    # 2) ?�인??PERCENTAGE)?�데 50%�?초과?�는 비현?�적 ?�인??경우 ??hard block
+    #    ?? "?�규 ?�원 최�? 100% 캐시�???주유 ?�인?�로 ?�못 ?�싱?�는 케?�스 방�?
     elif discount_type == CardPolicy.DiscountType.PERCENTAGE:
         if discount_value > Decimal("50") or discount_value < Decimal("1"):
             discount_type = candidate.discount_type
             discount_value = candidate.discount_value
             penalty += Decimal("0.30")
 
-    # 3) 상세 요약 텍스트 상에서 영화/커피 등 노이즈 혜택이 주유와 혼용된 경우
-    if any(token in fuel_summary for token in ["영화", "커피", "극장", "스타벅스"]):
+    # 3) ?�세 ?�약 ?�스???�에???�화/커피 ???�이�??�택??주유?� ?�용??경우
+    if any(token in fuel_summary for token in ["?�화", "커피", "극장", "?��?벅스"]):
         penalty += Decimal("0.05")
 
-    # 최종 신뢰도 계산 (가산 후 감점 차감)
+    # 최종 ?�뢰??계산 (가????감점 차감)
     confidence = base_confidence + (Decimal("0.04") * Decimal(found_fields)) - penalty
     if found_fields == 0:
         confidence = min(base_confidence, Decimal("0.60")) - penalty
@@ -463,7 +501,7 @@ def enrich_candidate_from_detail_text(candidate, detail_text, source_url=None, s
 
 
 def parse_discount(summary):
-    per_liter_match = re.search(r"리터당(?:\s*최대)?\s*([0-9,]+)\s*원", summary)
+    per_liter_match = re.search(r"리터???:\s*최�?)?\s*([0-9,]+)\s*??, summary)
     if per_liter_match:
         return CardPolicy.DiscountType.PER_LITER, Decimal(per_liter_match.group(1).replace(",", ""))
 
@@ -471,11 +509,11 @@ def parse_discount(summary):
     if percentage_match:
         return CardPolicy.DiscountType.PERCENTAGE, Decimal(percentage_match.group(1))
 
-    fixed_match = re.search(r"([0-9,]+)\s*원\s*(?:청구)?할인", summary)
+    fixed_match = re.search(r"([0-9,]+)\s*??s*(?:�?��)??�인", summary)
     if fixed_match:
         return CardPolicy.DiscountType.FIXED_AMOUNT, Decimal(fixed_match.group(1).replace(",", ""))
 
-    korean_thousand_match = re.search(r"([0-9]+)\s*천원\s*(?:청구)?할인", summary)
+    korean_thousand_match = re.search(r"([0-9]+)\s*천원\s*(?:�?��)??�인", summary)
     if korean_thousand_match:
         return CardPolicy.DiscountType.FIXED_AMOUNT, Decimal(korean_thousand_match.group(1)) * Decimal("1000")
 
@@ -483,9 +521,9 @@ def parse_discount(summary):
 
 
 def parse_fuel_discount(summary):
-    fuel_prefix = r"(?:주유소/충전소|주유비|주유소|충전소|주유|LPG|전기차|휘발유|경유)"
+    fuel_prefix = r"(?:주유??충전??주유�?주유??충전??주유|LPG|?�기�??�발??경유)"
 
-    per_liter_match = re.search(rf"{fuel_prefix}[^.\n]{{0,50}}?리터당(?:\s*최대)?\s*([0-9,]+)\s*원", summary)
+    per_liter_match = re.search(rf"{fuel_prefix}[^.\n]{{0,50}}?리터???:\s*최�?)?\s*([0-9,]+)\s*??, summary)
     if per_liter_match:
         return CardPolicy.DiscountType.PER_LITER, Decimal(per_liter_match.group(1).replace(",", ""))
 
@@ -493,11 +531,11 @@ def parse_fuel_discount(summary):
     if percentage_match:
         return CardPolicy.DiscountType.PERCENTAGE, Decimal(percentage_match.group(1))
 
-    fixed_match = re.search(rf"{fuel_prefix}[^.\n]{{0,50}}?([0-9,]+)\s*원\s*(?:청구)?할인", summary)
+    fixed_match = re.search(rf"{fuel_prefix}[^.\n]{{0,50}}?([0-9,]+)\s*??s*(?:�?��)??�인", summary)
     if fixed_match:
         return CardPolicy.DiscountType.FIXED_AMOUNT, Decimal(fixed_match.group(1).replace(",", ""))
 
-    korean_thousand_match = re.search(rf"{fuel_prefix}[^.\n]{{0,50}}?([0-9]+)\s*천원\s*(?:청구)?할인", summary)
+    korean_thousand_match = re.search(rf"{fuel_prefix}[^.\n]{{0,50}}?([0-9]+)\s*천원\s*(?:�?��)??�인", summary)
     if korean_thousand_match:
         return CardPolicy.DiscountType.FIXED_AMOUNT, Decimal(korean_thousand_match.group(1)) * Decimal("1000")
 
@@ -508,20 +546,20 @@ def looks_like_card_name(line):
     if not line or len(line) > 80:
         return False
     blocked_words = {
-        "신용카드",
-        "카드사",
-        "혜택",
+        "?�용카드",
+        "카드??,
+        "?�택",
         "가맹점",
-        "연회비",
-        "월 사용액",
-        "관련광고순",
-        "검색순",
-        "더보기",
-        "카드신청",
+        "?�회�?,
+        "???�용??,
+        "관?�광고순",
+        "검?�순",
+        "?�보�?,
+        "카드?�청",
     }
-    if line in blocked_words or re.fullmatch(r"신용카드\s*\d+", line):
+    if line in blocked_words or re.fullmatch(r"?�용카드\s*\d+", line):
         return False
-    return "카드" in line or any(token in line for token in ["LOCA", "taptap", "디지로카"])
+    return "카드" in line or any(token in line for token in ["LOCA", "taptap", "?��?로카"])
 
 
 def extract_candidates_from_text(page_text, source_url, limit=None):
@@ -535,7 +573,7 @@ def extract_candidates_from_text(page_text, source_url, limit=None):
 
         benefit_line = ""
         for next_line in lines[index + 1 : index + 4]:
-            if any(token in next_line for token in ["주유", "리터당", "충전", "LPG", "전기차"]):
+            if any(token in next_line for token in ["주유", "리터??, "충전", "LPG", "?�기�?]):
                 benefit_line = next_line
                 break
 
@@ -576,7 +614,7 @@ def extract_candidates_from_rows(rows, source_url, limit=None):
         benefit_text = str(row.get("benefitText", "")).strip()
 
         if card_name and benefit_text:
-            if not any(token in benefit_text for token in ["주유", "리터당", "충전", "LPG", "전기차"]):
+            if not any(token in benefit_text for token in ["주유", "리터??, "충전", "LPG", "?�기�?]):
                 continue
 
             discount_type, discount_value = parse_discount(benefit_text)
@@ -635,6 +673,8 @@ def extract_candidates_from_rows(rows, source_url, limit=None):
             break
 
     return candidates
+
+
 
 
 def save_candidates(candidates, source_url):
@@ -709,7 +749,12 @@ def should_visit_detail_url(url):
 
 
 def enrich_candidates_from_detail_pages(driver, candidates, wait_seconds=1):
+    from selenium.webdriver.common.by import By
+    from .gms_client import GMSClient
+    
+    gms = GMSClient.from_env()
     enriched = []
+    
     for candidate in candidates:
         detail_url = candidate.source_url
         if not should_visit_detail_url(detail_url):
@@ -717,24 +762,126 @@ def enrich_candidates_from_detail_pages(driver, candidates, wait_seconds=1):
             continue
 
         validate_allowed_url(detail_url)
+        
+        from .models import CardCatalog, CardPolicy
+        existing_card = CardCatalog.objects.filter(source_url=detail_url).first()
+        if not existing_card and candidate.card_name:
+            existing_card = CardCatalog.objects.filter(
+                card_name=candidate.card_name,
+                source_type=CardPolicy.SourceType.SELENIUM
+            ).first()
+
+        skip_vlm = False
+        if existing_card:
+            is_verified = (existing_card.verification_status == CardPolicy.VerificationStatus.ADMIN_VERIFIED)
+            image_match = False
+            if candidate.card_image_url:
+                if existing_card.card_image_original_url == candidate.card_image_url or existing_card.card_image_url == candidate.card_image_url:
+                    image_match = True
+            
+            if is_verified or image_match:
+                skip_vlm = True
+                if existing_card.raw_summary and len(existing_card.raw_summary) > 60:
+                    skip_vlm = False
+                else:
+                    norm = existing_card.normalized_data or {}
+                    benefits = norm.get("benefits", [])
+                    if benefits:
+                        b = benefits[0]
+                        if b.get("min_payment_amount") is None and b.get("monthly_discount_limit") is None:
+                            skip_vlm = False
+
+        if skip_vlm:
+            enriched.append(candidate)
+            continue
+
         try:
             driver.get(detail_url)
             if wait_seconds:
+                import time
                 time.sleep(wait_seconds)
-            detail_text = driver.execute_script("return document.body ? document.body.innerText : '';") or ""
+            
             detail_title = driver.execute_script("return document.title || '';") or ""
+            png_bytes = driver.get_screenshot_as_png()
+            import base64
+            try:
+                from PIL import Image
+                from io import BytesIO
+                with Image.open(BytesIO(png_bytes)) as img:
+                    width, height = img.size
+                    max_height = 2000
+                    if height > max_height:
+                        img = img.crop((0, 0, width, max_height))
+                    buffered = BytesIO()
+                    img.save(buffered, format="PNG")
+                    base64_img = base64.b64encode(buffered.getvalue()).decode("utf-8")
+            except ImportError:
+                base64_img = base64.b64encode(png_bytes).decode("utf-8")
         except Exception:
             enriched.append(candidate)
             continue
 
-        enriched.append(
-            enrich_candidate_from_detail_text(
+        context = {
+            "source_url": detail_url,
+            "source_title": detail_title or candidate.source_title,
+            "card_name": candidate.card_name,
+            "issuer_name": candidate.issuer_name
+        }
+
+        try:
+            payload = gms.normalize_multimodal(base64_img, context)
+            card_info = payload.get("card") or {}
+            benefits = payload.get("benefits") or []
+            quality = payload.get("quality") or {}
+            
+            if not benefits:
+                enriched.append(candidate)
+                continue
+                
+            benefit = benefits[0]
+            discount_val_str = str(benefit.get("discount_value") or 0)
+            try:
+                from decimal import Decimal
+                discount_val = Decimal(discount_val_str)
+            except Exception:
+                from decimal import Decimal
+                discount_val = Decimal("0")
+            
+            from .benefit_safety import is_usable_fuel_benefit
+            discount_type = benefit.get("discount_type", candidate.discount_type)
+            evidence_text = benefit.get("evidence_text", candidate.raw_summary)
+
+            if not is_usable_fuel_benefit(discount_type, discount_val, evidence_text):
+                import logging
+                logger = logging.getLogger(__name__)
+                logger.warning(f"Discarding hallucinated VLM benefit on detail page: {discount_type} {discount_val} for {candidate.card_name}")
+                enriched.append(candidate)
+                continue
+            
+            from dataclasses import replace
+            from decimal import Decimal
+            enriched_candidate = replace(
                 candidate,
-                detail_text,
-                source_url=detail_url,
+                card_name=card_info.get("name") or candidate.card_name,
+                issuer_name=card_info.get("issuer") or candidate.issuer_name,
+                fuel_type=benefit.get("fuel_type", "ALL"),
+                discount_type=discount_type,
+                discount_value=discount_val if discount_val > 0 else candidate.discount_value,
+                brand_scope=benefit.get("brand_scope", "all"),
+                min_payment_amount=benefit.get("min_payment_amount", candidate.min_payment_amount),
+                max_discount_amount=benefit.get("max_discount_amount", candidate.max_discount_amount),
+                monthly_discount_limit=benefit.get("monthly_discount_limit", candidate.monthly_discount_limit),
                 source_title=detail_title or candidate.source_title,
+                raw_summary=evidence_text,
+                confidence=Decimal(str(quality.get("extraction_confidence", "0.85")))
             )
-        )
+            enriched.append(enriched_candidate)
+        except Exception as e:
+            import logging
+            logger = logging.getLogger(__name__)
+            logger.warning(f"Error processing detail page for VLM: {e}")
+            enriched.append(candidate)
+
     return enriched
 
 
@@ -745,7 +892,7 @@ def find_more_button(driver, timeout=5):
     from selenium.webdriver.support.ui import WebDriverWait
 
     locators = [
-        (By.XPATH, "//*[contains(normalize-space(text()), '더보기')]"),
+        (By.XPATH, "//*[contains(normalize-space(text()), '?�보�?)]"),
         (By.CSS_SELECTOR, ".btn_more"),
         (By.CSS_SELECTOR, "button.more"),
         (By.CSS_SELECTOR, "a.more"),
@@ -762,68 +909,166 @@ def find_more_button(driver, timeout=5):
 
 
 def extract_candidates_from_dom(driver, source_url, limit=None):
-    script = """
-const primaryRows = Array.from(document.querySelectorAll('li.item'))
-  .map((node) => {
-    const name = node.querySelector('.name');
-    const desc = node.querySelector('.desc');
-    const img = node.querySelector('img.img');
-    const link = node.querySelector('a.anchor[href]');
-    return {
-      cardName: name ? (name.innerText || name.textContent || '').trim() : '',
-      benefitText: desc ? (desc.innerText || desc.textContent || '').trim() : '',
-      text: (node.innerText || node.textContent || '').replace(/\\s+/g, ' ').trim(),
-      imageUrl: img ? (img.currentSrc || img.src || '') : '',
-      href: link ? link.href : ''
-    };
-  })
-    .filter((item) => item.cardName && item.benefitText);
-if (primaryRows.length) return primaryRows.slice(0, Math.max((arguments[0] || 50) * 3, 50));
+    from selenium.webdriver.common.by import By
+    from .gms_client import GMSClient
 
-const cards = Array.from(document.querySelectorAll('a, article, li, div'))
-  .map((node) => {
-    const text = (node.innerText || node.textContent || '').replace(/\\s+/g, ' ').trim();
-    const img = node.querySelector && node.querySelector('img');
-    const href = node.href || (node.querySelector && node.querySelector('a[href]')?.href) || '';
-    return {
-      text,
-      imageUrl: img ? (img.currentSrc || img.src || '') : '',
-      href
-    };
-  })
-  .filter((item) => item.text.length >= 4 && item.text.length <= 500)
-  .filter((item) => /카드|할인|주유|oil|fuel/i.test(item.text));
-return cards.slice(0, Math.max((arguments[0] || 50) * 3, 50));
-"""
-    rows = driver.execute_script(script, limit or 50)
-    structured_candidates = extract_candidates_from_rows(rows, source_url, limit=limit)
-    if structured_candidates:
-        return structured_candidates
+    gms = GMSClient.from_env()
 
-    page_text = driver.execute_script("return document.body ? document.body.innerText : '';")
-    text_candidates = extract_candidates_from_text(page_text or "", source_url, limit=limit)
-    if text_candidates:
-        return text_candidates
+    elements = driver.find_elements(By.CSS_SELECTOR, "li.item")
+    if not elements:
+        elements = driver.find_elements(By.CSS_SELECTOR, "article, div.card_box")
+
+    if limit:
+        elements = elements[:limit]
 
     candidates = []
-    seen = set()
-    for index, row in enumerate(rows, start=1):
-        text = " ".join(str(row.get("text", "")).split())
-        if not text or text in seen:
-            continue
-        seen.add(text)
+    
+    for idx, element in enumerate(elements, start=1):
+        try:
+            card_name = ""
+            try:
+                name_el = element.find_element(By.CSS_SELECTOR, ".name")
+                card_name = name_el.text.strip()
+            except Exception:
+                pass
+                
+            href = ""
+            try:
+                link_el = element.find_element(By.CSS_SELECTOR, "a.anchor[href]")
+                href = link_el.get_attribute("href")
+            except Exception:
+                pass
+                
+            image_url = ""
+            try:
+                img_el = element.find_element(By.CSS_SELECTOR, "img.img")
+                image_url = img_el.get_attribute("src")
+            except Exception:
+                pass
+                
+            from urllib.parse import urljoin
+            context = {
+                "source_url": urljoin(source_url, href or f"#candidate-{idx}"),
+                "source_title": card_name,
+                "card_name": card_name,
+                "issuer_name": ""
+            }
 
-        parts = re.split(r"\\s{2,}| · | \\| ", text)
-        card_name = parts[0][:120]
-        candidates.append(
-            ScrapedCardCandidate(
-                card_name=card_name,
-                card_image_url=row.get("imageUrl") or "",
-                source_url=urljoin(source_url, row.get("href") or f"#candidate-{index}"),
-                source_title=card_name,
-                raw_summary=text,
-            )
-        )
+            from .models import CardCatalog, CardPolicy
+            from decimal import Decimal
+            
+            existing_card = CardCatalog.objects.filter(source_url=context["source_url"]).first()
+            if not existing_card and card_name:
+                existing_card = CardCatalog.objects.filter(
+                    card_name=card_name,
+                    source_type=CardPolicy.SourceType.SELENIUM
+                ).first()
+
+            skip_vlm = False
+            if existing_card:
+                is_verified = (existing_card.verification_status == CardPolicy.VerificationStatus.ADMIN_VERIFIED)
+                image_match = False
+                if image_url:
+                    if existing_card.card_image_original_url == image_url or existing_card.card_image_url == image_url:
+                        image_match = True
+                
+                if is_verified or image_match:
+                    skip_vlm = True
+                    if existing_card.raw_summary and len(existing_card.raw_summary) > 60:
+                        skip_vlm = False
+                    else:
+                        norm = existing_card.normalized_data or {}
+                        benefits = norm.get("benefits", [])
+                        if benefits:
+                            b = benefits[0]
+                            if b.get("min_payment_amount") is None and b.get("monthly_discount_limit") is None:
+                                skip_vlm = False
+
+            if skip_vlm:
+                norm_data = existing_card.normalized_data or {}
+                card_info = norm_data.get("card", {})
+                benefits = norm_data.get("benefits", [])
+                benefit = benefits[0] if benefits else {}
+                
+                discount_val_str = str(benefit.get("discount_value") or 0)
+                try:
+                    discount_val = Decimal(discount_val_str)
+                except Exception:
+                    discount_val = Decimal("0")
+                
+                candidates.append(
+                    ScrapedCardCandidate(
+                        card_name=existing_card.card_name or card_name,
+                        issuer_name=existing_card.issuer_name or "",
+                        fuel_type=benefit.get("fuel_type", "ALL"),
+                        discount_type=benefit.get("discount_type", CardPolicy.DiscountType.PER_LITER),
+                        discount_value=discount_val,
+                        brand_scope=benefit.get("brand_scope", "all"),
+                        min_payment_amount=benefit.get("min_payment_amount"),
+                        max_discount_amount=benefit.get("max_discount_amount"),
+                        monthly_discount_limit=benefit.get("monthly_discount_limit"),
+                        card_image_url=image_url or existing_card.card_image_original_url or existing_card.card_image_url,
+                        source_url=context["source_url"],
+                        source_title=context["source_title"],
+                        raw_summary=existing_card.raw_summary or benefit.get("evidence_text", ""),
+                        confidence=existing_card.confidence or Decimal("0.85")
+                    )
+                )
+                continue
+
+            base64_img = element.screenshot_as_base64
+            
+            payload = gms.normalize_multimodal(base64_img, context)
+            card_info = payload.get("card") or {}
+            benefits = payload.get("benefits") or []
+            quality = payload.get("quality") or {}
+            
+            for benefit in benefits:
+                discount_val_str = str(benefit.get("discount_value") or 0)
+                try:
+                    from decimal import Decimal
+                    discount_val = Decimal(discount_val_str)
+                except Exception:
+                    from decimal import Decimal
+                    discount_val = Decimal("0")
+                
+                discount_type = benefit.get("discount_type", CardPolicy.DiscountType.PER_LITER)
+                evidence_text = benefit.get("evidence_text", "")
+
+                from .benefit_safety import is_usable_fuel_benefit
+                if not is_usable_fuel_benefit(discount_type, discount_val, evidence_text):
+                    import logging
+                    logger = logging.getLogger(__name__)
+                    logger.warning(f"Discarding hallucinated VLM benefit from DOM: {discount_type} {discount_val} for {card_info.get('name') or card_name}")
+                    continue
+                
+                from decimal import Decimal
+                from .models import CardPolicy
+                candidates.append(
+                    ScrapedCardCandidate(
+                        card_name=card_info.get("name") or card_name,
+                        issuer_name=card_info.get("issuer") or "",
+                        fuel_type=benefit.get("fuel_type", "ALL"),
+                        discount_type=discount_type,
+                        discount_value=discount_val,
+                        brand_scope=benefit.get("brand_scope", "all"),
+                        min_payment_amount=benefit.get("min_payment_amount"),
+                        max_discount_amount=benefit.get("max_discount_amount"),
+                        monthly_discount_limit=benefit.get("monthly_discount_limit"),
+                        card_image_url=image_url,
+                        source_url=context["source_url"],
+                        source_title=context["source_title"],
+                        raw_summary=evidence_text,
+                        confidence=Decimal(str(quality.get("extraction_confidence", "0.85")))
+                    )
+                )
+
+        except Exception as e:
+            import logging
+            logger = logging.getLogger(__name__)
+            logger.warning(f"Error processing DOM element for VLM: {e}")
+            continue
+
     return candidates
 
 
@@ -871,7 +1116,7 @@ def scrape_card_search_candidates(
             driver.execute_script("window.scrollTo(0, document.body.scrollHeight);")
             time.sleep(1)
 
-        # Click the "더보기" (More) button up to 5 times to load more cards dynamically.
+        # Click the "?�보�? (More) button up to 5 times to load more cards dynamically.
         for _click_idx in range(5):
             driver.execute_script("window.scrollTo(0, document.body.scrollHeight);")
             more_button = find_more_button(driver)
@@ -935,43 +1180,43 @@ def discover_card_benefits(query, issuer_name=None, domain=None):
 
 
 def run_api_fallback_scraper(limit=None):
-    """셀레니움 기동이 안 되는 인프라를 위한 requests 또는 로컬 목업 기반의 경량 폴백 수집기입니다.
-    기본적인 주유 특화 카드의 프리셋 데이터를 돌려주어, 인프라 장벽 없이 테스트가 가능하도록 격리합니다.
+    """?�?�니?� 기동?????�는 ?�프?��? ?�한 requests ?�는 로컬 목업 기반??경량 ?�백 ?�집기입?�다.
+    기본?�인 주유 ?�화 카드???�리???�이?��? ?�려주어, ?�프???�벽 ?�이 ?�스?��? 가?�하?�록 격리?�니??
     """
     from decimal import Decimal
-    # 대한민국 대표 주유 카드들의 파싱 목업 생성
+    # ?�?��?�??�??주유 카드?�의 ?�싱 목업 ?�성
     mock_candidates = [
         ScrapedCardCandidate(
-            card_name="신한 Deep Oil 카드",
-            issuer_name="신한카드",
+            card_name="?�한 Deep Oil 카드",
+            issuer_name="?�한카드",
             discount_type=CardPolicy.DiscountType.PERCENTAGE,
             discount_value=Decimal("10"),
             card_image_url="https://img.shinhan.com/card/images/deep_oil.png",
             source_url="https://card-search.naver.com/list#candidate-1",
-            source_title="신한 Deep Oil 카드",
-            raw_summary="신한 Deep Oil 주유 10% 결제일 할인",
+            source_title="?�한 Deep Oil 카드",
+            raw_summary="?�한 Deep Oil 주유 10% 결제???�인",
             confidence=Decimal("0.90")
         ),
         ScrapedCardCandidate(
-            card_name="KB국민 Easy All 카드",
-            issuer_name="KB국민카드",
+            card_name="KB�?? Easy All 카드",
+            issuer_name="KB�??카드",
             discount_type=CardPolicy.DiscountType.PER_LITER,
             discount_value=Decimal("150"),
             card_image_url="https://img.kbcard.com/card/images/easy_all.png",
             source_url="https://card-search.naver.com/list#candidate-2",
-            source_title="KB국민 Easy All 카드",
-            raw_summary="KB국민 Easy All 전 주유소 리터당 150원 할인",
+            source_title="KB�?? Easy All 카드",
+            raw_summary="KB�?? Easy All ??주유??리터??150???�인",
             confidence=Decimal("0.88")
         ),
         ScrapedCardCandidate(
-            card_name="삼성 iD ENERGY 카드",
-            issuer_name="삼성카드",
+            card_name="?�성 iD ENERGY 카드",
+            issuer_name="?�성카드",
             discount_type=CardPolicy.DiscountType.FIXED_AMOUNT,
             discount_value=Decimal("10000"),
             card_image_url="https://img.samsungcard.com/card/images/id_energy.png",
             source_url="https://card-search.naver.com/list#candidate-3",
-            source_title="삼성 iD ENERGY 카드",
-            raw_summary="삼성 iD ENERGY 주유 건당 10,000원 결제일 할인",
+            source_title="?�성 iD ENERGY 카드",
+            raw_summary="?�성 iD ENERGY 주유 건당 10,000??결제???�인",
             confidence=Decimal("0.85")
         )
     ]

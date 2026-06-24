@@ -70,7 +70,7 @@ class CardPolicy(models.Model):
 
     @property
     def can_affect_recommendation(self):
-        return self.source_type in {self.SourceType.MANUAL, self.SourceType.CATALOG} or self.verification_status in {
+        return self.verification_status in {
             self.VerificationStatus.USER_CONFIRMED,
             self.VerificationStatus.ADMIN_VERIFIED,
         }
@@ -99,6 +99,7 @@ class CardCatalog(models.Model):
         default=CardPolicy.VerificationStatus.UNVERIFIED,
     )
     raw_summary = models.TextField(blank=True)
+    raw_hash = models.CharField(max_length=80, blank=True, db_index=True)
     normalized_data = models.JSONField(default=dict, blank=True)
     confidence = models.DecimalField(max_digits=4, decimal_places=2, null=True, blank=True)
     collected_at = models.DateTimeField(null=True, blank=True)
