@@ -2,12 +2,12 @@
 
 ## Product feel
 
-SmartFuel uses a premium forest control-center style: trustworthy, calm, and data-driven. UI copy should make backend truth and user-visible outcomes match, especially for fuel prices, route costs, and card benefits.
+SmartFuel uses a premium mint control-center style: trustworthy, calm, and data-driven. UI copy should make backend truth and user-visible outcomes match, especially for fuel prices, route costs, and card benefits.
 
 ## Tokens
 
-- Primary: `#0f6b4f`; hover: `#0c563f`; light surface: `#e6f4ee`
-- Secondary: `#10b981`; warning/accent: `#f59e0b`
+- Primary: `#0f766e`; hover: `#115e59`; light surface: `#ccfbf1`
+- Secondary: `#14b8a6`; warning/accent: `#f59e0b`
 - Neutral scale: `--slate-50` through `--slate-900`; base surface: white
 - Radius: 8px small, 12px medium, 16px large
 - Shadows: use existing `--shadow-sm`, `--shadow-md`, `--shadow-lg`, and `--shadow-premium`
@@ -24,7 +24,7 @@ SmartFuel uses a premium forest control-center style: trustworthy, calm, and dat
 ## Layout and interaction
 
 - Max app width: 1240px; shell padding: 32px desktop, responsive reduction on small screens
-- Keep panels on white surfaces with subtle borders and forest-tinted depth
+- Keep panels on white surfaces with subtle borders and mint-tinted depth
 - Use 4px-based spacing increments and preserve clear grouping between data, controls, and results
 - Motion should be subtle: 0.2s ease for color, border, shadow, and transform; honor reduced motion
 
