@@ -1,4 +1,7 @@
 from decimal import Decimal
+from io import StringIO
+
+from django.core.management import call_command
 from tempfile import TemporaryDirectory
 from unittest.mock import patch
 
@@ -13,8 +16,10 @@ from .selenium_ingestion import (
     extract_candidates_from_text,
     extract_candidates_from_rows,
     infer_brand_scope,
+    infer_fuel_type,
     parse_benefit_constraints,
     parse_discount,
+    parse_fuel_discount,
     save_candidates,
     validate_allowed_url,
 )
@@ -138,6 +143,70 @@ class CardSeleniumIngestionTests(TestCase):
         self.assertEqual(parse_discount("주유 7% 할인"), ("percentage", Decimal("7")))
         self.assertEqual(parse_discount("주유비 최대 1.7% 캐시백"), ("percentage", Decimal("1.7")))
         self.assertEqual(parse_discount("주유소·LPG충전소 2천원 할인"), ("fixed_amount", Decimal("2000")))
+
+    def test_parse_fuel_discount_ignores_non_fuel_cashback_percentage(self):
+        discount_type, discount_value = parse_fuel_discount("온라인 신규회원 연회비 100% 캐시백")
+
+        self.assertEqual(discount_type, CardPolicy.DiscountType.PER_LITER)
+        self.assertEqual(discount_value, Decimal("0"))
+
+
+    def test_parse_fuel_discount_catches_discount_before_fuel_keyword(self):
+        self.assertEqual(
+            parse_fuel_discount("리터당 80원 주유 할인"),
+            (CardPolicy.DiscountType.PER_LITER, Decimal("80")),
+        )
+        self.assertEqual(
+            parse_fuel_discount("7% 주유비 할인"),
+            (CardPolicy.DiscountType.PERCENTAGE, Decimal("7")),
+        )
+        self.assertEqual(
+            parse_fuel_discount("전월 실적 충족 시 80원/L 주유 할인"),
+            (CardPolicy.DiscountType.PER_LITER, Decimal("80")),
+        )
+
+    def test_parse_fuel_discount_catches_bare_per_liter_amount_in_card_title(self):
+        self.assertEqual(
+            parse_fuel_discount("SK 주유 400 우리카드"),
+            (CardPolicy.DiscountType.PER_LITER, Decimal("400")),
+        )
+
+    def test_extract_candidates_from_rows_prefers_fuel_percentage_over_cashback_percentage(self):
+        rows = [
+            {
+                "cardName": "삼성 iD SELECT ALL 카드",
+                "benefitText": "온라인신규회원 연회비 100% 캐시백 주유 7% 할인",
+                "href": "/detail/select-all",
+            }
+        ]
+
+        candidates = extract_candidates_from_rows(rows, "https://card-search.naver.com/list")
+
+        self.assertEqual(len(candidates), 1)
+        self.assertEqual(candidates[0].discount_type, CardPolicy.DiscountType.PERCENTAGE)
+        self.assertEqual(candidates[0].discount_value, Decimal("7"))
+
+    def test_electric_vehicle_only_benefit_is_stored_as_ev_tier(self):
+        rows = [
+            {
+                "cardName": "신한카드 EVerywhere",
+                "benefitText": "전기차 충전요금 최대 50% 캐시백",
+                "href": "/detail/everywhere",
+            }
+        ]
+
+        candidates = extract_candidates_from_rows(rows, "https://card-search.naver.com/list")
+        saved = save_candidates(candidates, "https://card-search.naver.com/list")
+
+        self.assertEqual(len(saved), 1)
+        tier = CardBenefitTier.objects.get(card_catalog=saved[0])
+        self.assertEqual(tier.fuel_type, "EV")
+        self.assertEqual(tier.discount_type, CardPolicy.DiscountType.PERCENTAGE)
+        self.assertEqual(tier.discount_value, Decimal("50"))
+
+    def test_infer_fuel_type_keeps_conventional_fuel_when_gasoline_evidence_exists(self):
+        self.assertEqual(infer_fuel_type("전기차 충전요금 최대 50% 캐시백"), "EV")
+        self.assertEqual(infer_fuel_type("주유소 리터당 80원 할인 전기차 충전요금 30% 할인"), "ALL")
 
     def test_extract_candidates_from_naver_card_search_text(self):
         page_text = """
@@ -339,3 +408,64 @@ KB국민 굿데이카드
         self.assertEqual(tier.min_payment_amount, 30000)
         self.assertEqual(tier.monthly_discount_limit, 20000)
 
+
+
+class CardBenefitRepairCommandTests(TestCase):
+    def test_repair_card_fuel_benefits_marks_ev_only_tier_as_ev(self):
+        catalog = CardCatalog.objects.create(
+            card_name="신한카드 EVerywhere",
+            issuer_name="신한카드",
+            source_url="https://card-search.naver.com/card/everywhere",
+            raw_summary="전기차 충전요금 최대 50% 캐시백",
+        )
+        CardBenefitTier.objects.create(
+            card_catalog=catalog,
+            fuel_type="ALL",
+            discount_type=CardPolicy.DiscountType.PERCENTAGE,
+            discount_value=50,
+        )
+        output = StringIO()
+
+        call_command("repair_card_fuel_benefits", stdout=output)
+
+        tier = CardBenefitTier.objects.get(card_catalog=catalog)
+        self.assertEqual(tier.fuel_type, "EV")
+        self.assertIn("updated=1", output.getvalue())
+
+    def test_repair_card_fuel_benefits_replaces_suspicious_tier_from_raw_summary(self):
+        catalog = CardCatalog.objects.create(
+            card_name="삼성 iD STATION 카드 (GS칼텍스)",
+            issuer_name="삼성카드",
+            source_url="https://card-search.naver.com/card/station-gs",
+            raw_summary="GS칼텍스 주유 10% 할인 신규 회원 최대 100% 지급",
+        )
+        CardBenefitTier.objects.create(
+            card_catalog=catalog,
+            fuel_type="ALL",
+            discount_type=CardPolicy.DiscountType.PERCENTAGE,
+            discount_value=100,
+        )
+        output = StringIO()
+
+        call_command("repair_card_fuel_benefits", stdout=output)
+
+        tier = CardBenefitTier.objects.get(card_catalog=catalog)
+        self.assertEqual(tier.discount_type, CardPolicy.DiscountType.PERCENTAGE)
+        self.assertEqual(tier.discount_value, Decimal("10.00"))
+        self.assertIn("updated=1", output.getvalue())
+
+    def test_repair_card_fuel_benefits_creates_missing_tier_from_raw_summary(self):
+        catalog = CardCatalog.objects.create(
+            card_name="SK 주유 400 우리카드",
+            issuer_name="우리카드",
+            source_url="https://card-search.naver.com/card/sk-400",
+            raw_summary="SK 주유 400 우리카드 SK 주유소 L당 청구할인",
+        )
+        output = StringIO()
+
+        call_command("repair_card_fuel_benefits", stdout=output)
+
+        tier = CardBenefitTier.objects.get(card_catalog=catalog)
+        self.assertEqual(tier.discount_type, CardPolicy.DiscountType.PER_LITER)
+        self.assertEqual(tier.discount_value, Decimal("400.00"))
+        self.assertIn("created=1", output.getvalue())

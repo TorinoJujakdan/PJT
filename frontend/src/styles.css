@@ -1511,6 +1511,12 @@ select:focus {
   width: 16px;
   height: 16px;
   margin-top: 2px;
+  outline: none;
+  cursor: pointer;
+}
+
+.priorityOption input:focus-visible {
+  outline: none;
 }
 
 .priorityOptionText {
@@ -2589,6 +2595,11 @@ body.modalOpen {
   margin-top: 14px;
   color: var(--slate-600);
   line-height: 1.6;
+  display: -webkit-box;
+  -webkit-line-clamp: 4;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
+  text-overflow: ellipsis;
 }
 
 .benefitHeadline {
