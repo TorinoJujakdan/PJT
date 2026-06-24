@@ -5,6 +5,7 @@ from rest_framework.test import APIClient
 from unittest.mock import Mock, patch
 
 from cards.models import CardCatalog, CardPolicy
+from stations.services import StationCandidate, calculate_card_discount
 from cards.selenium_ingestion import ScrapedCardCandidate, save_candidates
 from stations import geocoding_service
 from stations import naver_directions_client
@@ -259,7 +260,7 @@ class StationRefreshAPITests(TestCase):
 
 
 class CardAutoVerificationTests(TestCase):
-    def test_save_candidates_auto_verifies_high_confidence_card(self):
+    def test_save_candidates_keeps_all_selenium_cards_unverified(self):
         # 1. Candidate with high confidence (>= 0.85), valid discount_value (> 0) and non-empty name/issuer
         high_conf_candidate = ScrapedCardCandidate(
             card_name="KB국민 Easy All 카드",
@@ -295,9 +296,9 @@ class CardAutoVerificationTests(TestCase):
 
         self.assertEqual(len(saved_cards), 3)
 
-        # Verify high confidence card is ADMIN_VERIFIED
+        # Selenium-derived rows must remain unverified until human/AI review.
         card1 = CardCatalog.objects.get(source_url="https://card-search.naver.com/list#candidate-1")
-        self.assertEqual(card1.verification_status, CardPolicy.VerificationStatus.ADMIN_VERIFIED)
+        self.assertEqual(card1.verification_status, CardPolicy.VerificationStatus.UNVERIFIED)
         self.assertEqual(card1.card_name, "KB국민 Easy All 카드")
 
         # Verify low confidence card is UNVERIFIED
@@ -307,3 +308,34 @@ class CardAutoVerificationTests(TestCase):
         # Verify missing issuer card is UNVERIFIED
         card3 = CardCatalog.objects.get(source_url="https://card-search.naver.com/list#candidate-3")
         self.assertEqual(card3.verification_status, CardPolicy.VerificationStatus.UNVERIFIED)
+
+
+class CardRecommendationSafetyTests(TestCase):
+    def test_unrealistic_percentage_benefit_does_not_affect_recommendation(self):
+        station = GasStation(
+            name="GS Sample",
+            brand=GasStation.Brand.GS,
+            address="서울",
+            latitude=Decimal("37.5665"),
+            longitude=Decimal("126.9780"),
+        )
+        candidate = StationCandidate(
+            station=station,
+            distance_km=1.0,
+            fuel_type=FuelPrice.FuelType.GASOLINE,
+            fuel_price_per_liter=1700,
+        )
+        card = {
+            "card_name": "오염된 카드",
+            "issuer_name": "테스트카드",
+            "source_type": CardPolicy.SourceType.MANUAL,
+            "verification_status": CardPolicy.VerificationStatus.USER_CONFIRMED,
+            "discount_type": CardPolicy.DiscountType.PERCENTAGE,
+            "discount_value": "100",
+            "brand_scope": "all",
+        }
+
+        discount, selected_card = calculate_card_discount(candidate, 50000, 30, [card])
+
+        self.assertEqual(discount, 0)
+        self.assertIsNone(selected_card)
