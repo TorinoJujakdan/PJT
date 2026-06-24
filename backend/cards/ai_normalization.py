@@ -5,6 +5,7 @@ from decimal import Decimal
 
 from django.utils import timezone
 
+from .ai_chunks import compute_raw_hash
 from .llm_fuel_extraction import FuelTierData, JsonObject, build_line_numbered_document, validate_llm_fuel_payload
 from .models import CardBenefitTier, CardCatalog, CardPolicy
 from .selenium_ingestion import (
@@ -24,14 +25,15 @@ def save_ai_normalized_candidates(
 ) -> list[CardCatalog]:
     saved: list[CardCatalog] = []
     for candidate in candidates:
-        catalog_data, fallback_tier_data = normalize_candidate(candidate, source_url)
+        catalog_data, _ = normalize_candidate(candidate, source_url)
         if not catalog_data:
             continue
+        catalog_data["raw_hash"] = compute_raw_hash(candidate.raw_summary)
         validation = validate_llm_fuel_payload(
             build_line_numbered_document(candidate.raw_summary),
             normalizer(candidate),
         )
-        tier_data = _tier_dict_from_validated(validation.tier_data) or fallback_tier_data
+        tier_data = _tier_dict_from_validated(validation.tier_data)
         catalog_card = _upsert_catalog_card(catalog_data)
         persist_catalog_card_image(catalog_card, candidate)
         catalog_card.normalized_data = _build_payload(
@@ -43,7 +45,7 @@ def save_ai_normalized_candidates(
             tier_data,
         )
         catalog_card.save()
-        _save_tier(catalog_card, tier_data)
+        _replace_tier(catalog_card, tier_data)
         saved.append(catalog_card)
     return saved
 
@@ -73,10 +75,18 @@ def _build_payload(
     tier_data: dict | None,
 ) -> JsonObject:
     payload = build_normalized_catalog_payload(catalog_card, candidate, source_url, tier_data=tier_data)
-    payload["provider"] = "gms_llm_fuel_extraction"
+    source_provider = payload.get("provider", "naver_card_search")
+    payload["provider"] = "gemini_llm_fuel_extraction"
+    payload["source_provider"] = source_provider
+    payload["extraction_provider"] = "gemini_llm_fuel_extraction"
     payload["fuel_sections"] = llm_payload.get("fuel_sections", [])
-    payload["benefits"] = llm_payload.get("benefits", payload["benefits"])
+    payload["raw_llm_benefits"] = llm_payload.get("benefits", [])
+    if tier_data is None:
+        payload["benefits"] = []
     payload["quality"] = llm_payload.get("quality", {})
+    payload["model"] = llm_payload.get("model", "")
+    payload["usage_metadata"] = llm_payload.get("usage_metadata", {})
+    payload["cost_estimate"] = llm_payload.get("cost_estimate", {})
     quality = payload["quality"]
     if isinstance(quality, dict):
         quality["warnings"] = warnings
@@ -98,18 +108,17 @@ def _tier_dict_from_validated(tier_data: FuelTierData | None) -> dict | None:
     }
 
 
-def _save_tier(catalog_card: CardCatalog, tier_data: dict | None) -> None:
+def _replace_tier(catalog_card: CardCatalog, tier_data: dict | None) -> None:
+    CardBenefitTier.objects.filter(card_catalog=catalog_card).delete()
     if not tier_data or Decimal(tier_data["discount_value"]) <= 0:
         return
-    CardBenefitTier.objects.update_or_create(
+    CardBenefitTier.objects.create(
         card_catalog=catalog_card,
         fuel_type=tier_data["fuel_type"],
         min_performance_amount=tier_data["min_performance_amount"],
-        defaults={
-            "discount_type": tier_data["discount_type"],
-            "discount_value": tier_data["discount_value"],
-            "brand_scope": tier_data["brand_scope"],
-            "min_payment_amount": tier_data["min_payment_amount"],
-            "monthly_discount_limit": tier_data["monthly_discount_limit"],
-        },
+        discount_type=tier_data["discount_type"],
+        discount_value=tier_data["discount_value"],
+        brand_scope=tier_data["brand_scope"],
+        min_payment_amount=tier_data["min_payment_amount"],
+        monthly_discount_limit=tier_data["monthly_discount_limit"],
     )

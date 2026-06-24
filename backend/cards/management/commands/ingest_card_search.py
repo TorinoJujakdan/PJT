@@ -1,9 +1,8 @@
 from django.core.management.base import BaseCommand, CommandError
 
 from cards.ai_normalization import save_ai_normalized_candidates
-from cards.gms_client import GmsConfigurationError, GmsRequestError, normalize_card_fuel_benefit
+from cards.gemini_client import GeminiConfigurationError, GeminiRequestError, normalize_card_fuel_benefit
 from cards.llm_fuel_extraction import build_line_numbered_document, validate_llm_fuel_payload
-from cards.models import CardPolicy
 from cards.selenium_ingestion import (
     DEFAULT_CARD_SEARCH_URL,
     CardIngestionError,
@@ -29,9 +28,9 @@ class Command(BaseCommand):
         parser.add_argument("--scroll-count", type=int, default=8, help="Number of page-bottom scroll passes.")
         parser.add_argument(
             "--normalizer",
-            choices=["selenium", "gms"],
+            choices=["selenium", "gemini"],
             default="selenium",
-            help="Choose selenium parser fallback or GMS/LLM fuel benefit extraction.",
+            help="Choose selenium parser fallback or Gemini fuel benefit extraction.",
         )
         parser.add_argument(
             "--detail",
@@ -61,8 +60,8 @@ class Command(BaseCommand):
 
         if options["dry_run"]:
             for candidate in candidates:
-                if options["normalizer"] == "gms":
-                    self.write_gms_dry_run(candidate)
+                if options["normalizer"] == "gemini":
+                    self.write_gemini_dry_run(candidate)
                     continue
                 self.safe_write(
                     f"{candidate.card_name} | {candidate.discount_type} {candidate.discount_value} | "
@@ -73,34 +72,27 @@ class Command(BaseCommand):
             self.safe_write(self.style.SUCCESS(f"Collected {len(candidates)} candidates without saving."))
             return
 
-        if options["normalizer"] == "gms":
+        if options["normalizer"] == "gemini":
             try:
                 saved = save_ai_normalized_candidates(
                     candidates,
                     source_url=options["url"],
                     normalizer=normalize_card_fuel_benefit,
                 )
-            except (GmsConfigurationError, GmsRequestError) as exc:
+            except (GeminiConfigurationError, GeminiRequestError) as exc:
                 raise CommandError(str(exc)) from exc
         else:
             saved = save_candidates(candidates, source_url=options["url"])
-        verified_count = sum(
-            1
-            for candidate in saved
-            if candidate.verification_status == CardPolicy.VerificationStatus.ADMIN_VERIFIED
-        )
-        unverified_count = len(saved) - verified_count
         self.stdout.write(
             self.style.SUCCESS(
-                f"Saved {len(saved)} card catalog candidates "
-                f"({verified_count} admin verified, {unverified_count} unverified)."
+                f"Saved {len(saved)} card catalog candidates as unverified."
             )
         )
 
-    def write_gms_dry_run(self, candidate):
+    def write_gemini_dry_run(self, candidate):
         try:
             payload = normalize_card_fuel_benefit(candidate)
-        except (GmsConfigurationError, GmsRequestError) as exc:
+        except (GeminiConfigurationError, GeminiRequestError) as exc:
             raise CommandError(str(exc)) from exc
         validation = validate_llm_fuel_payload(
             build_line_numbered_document(candidate.raw_summary),
@@ -108,7 +100,7 @@ class Command(BaseCommand):
         )
         tier = validation.tier_data
         if tier is None:
-            self.safe_write(f"{candidate.card_name} | GMS no valid tier | warnings={validation.warnings}")
+            self.safe_write(f"{candidate.card_name} | Gemini no valid tier | warnings={validation.warnings}")
             return
         self.safe_write(
             f"{candidate.card_name} | {tier.discount_type} {tier.discount_value} | "
