@@ -1115,6 +1115,335 @@ select:focus {
   max-width: 100%;
 }
 
+.appBootScreen {
+  min-height: 100vh;
+  display: grid;
+  place-items: center;
+  align-content: center;
+  gap: 12px;
+  background:
+    radial-gradient(circle at top left, rgba(16, 185, 129, 0.16), transparent 34%),
+    linear-gradient(135deg, #f8fafc 0%, #eef8f3 100%);
+  color: var(--slate-800);
+  font-size: 15px;
+}
+
+.onboardingShell {
+  min-height: 100vh;
+  overflow-y: auto;
+  padding: 42px clamp(20px, 4vw, 64px);
+  display: grid;
+  grid-template-columns: minmax(0, 1.08fr) minmax(360px, 0.82fr);
+  gap: clamp(24px, 4vw, 52px);
+  background:
+    radial-gradient(circle at 12% 8%, rgba(16, 185, 129, 0.18), transparent 30%),
+    radial-gradient(circle at 88% 18%, rgba(15, 107, 79, 0.13), transparent 28%),
+    linear-gradient(145deg, #f8fafc 0%, #eef8f3 46%, #ffffff 100%);
+}
+
+.onboardingHero {
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  gap: 28px;
+}
+
+.onboardingLogo {
+  display: inline-flex;
+  align-items: center;
+  gap: 10px;
+  color: var(--slate-900);
+  font-size: 20px;
+  font-weight: 900;
+}
+
+.onboardingLogo span {
+  width: 42px;
+  height: 42px;
+  border-radius: 14px;
+  display: grid;
+  place-items: center;
+  color: var(--primary);
+  background: rgba(255, 255, 255, 0.92);
+  border: 1px solid rgba(15, 107, 79, 0.14);
+  box-shadow: var(--shadow-sm);
+}
+
+.heroCopy {
+  max-width: 760px;
+}
+
+.heroCopy h1 {
+  margin: 8px 0 14px;
+  color: var(--slate-950);
+  font-size: clamp(34px, 5vw, 60px);
+  line-height: 1.05;
+  letter-spacing: -0.055em;
+  font-weight: 950;
+}
+
+.heroCopy > p:last-child {
+  max-width: 640px;
+  margin: 0;
+  color: var(--slate-600);
+  font-size: 16px;
+  line-height: 1.75;
+  font-weight: 700;
+}
+
+.onboardingActions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 12px;
+  align-items: center;
+}
+
+.onboardingPrimary {
+  min-width: 160px;
+}
+
+.onboardingGhostButton {
+  height: 48px;
+  padding: 0 18px;
+  border-radius: 999px;
+  border: 1.5px solid rgba(15, 107, 79, 0.18);
+  background: rgba(255, 255, 255, 0.78);
+  color: var(--slate-800);
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  font-weight: 900;
+  cursor: pointer;
+  box-shadow: var(--shadow-sm);
+}
+
+.onboardingGhostButton:hover {
+  color: var(--primary);
+  border-color: rgba(15, 107, 79, 0.35);
+  transform: translateY(-1px);
+}
+
+.featurePreviewGrid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 14px;
+}
+
+.featurePreviewCard {
+  min-height: 178px;
+  padding: 20px;
+  border-radius: 24px;
+  background: rgba(255, 255, 255, 0.82);
+  border: 1px solid rgba(226, 232, 240, 0.9);
+  box-shadow: 0 18px 50px rgba(15, 23, 42, 0.07);
+  backdrop-filter: blur(14px);
+}
+
+.featureIcon {
+  width: 40px;
+  height: 40px;
+  display: grid;
+  place-items: center;
+  color: var(--primary);
+  border-radius: 14px;
+  background: var(--primary-light);
+  margin-bottom: 14px;
+}
+
+.featurePreviewCard p {
+  margin: 0 0 8px;
+  color: var(--primary);
+  font-size: 10px;
+  font-weight: 950;
+  letter-spacing: 0.12em;
+}
+
+.featurePreviewCard h2 {
+  margin: 0 0 8px;
+  color: var(--slate-900);
+  font-size: 16px;
+  line-height: 1.35;
+  font-weight: 900;
+  letter-spacing: -0.025em;
+}
+
+.featurePreviewCard span {
+  color: var(--slate-500);
+  font-size: 13px;
+  font-weight: 700;
+  line-height: 1.6;
+}
+
+.onboardingSetupCard {
+  align-self: center;
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+}
+
+.setupIntro,
+.setupPanel,
+.signupPageCard {
+  border-radius: 28px;
+  border: 1px solid rgba(226, 232, 240, 0.96);
+  background: rgba(255, 255, 255, 0.92);
+  box-shadow: 0 24px 70px rgba(15, 23, 42, 0.1);
+  backdrop-filter: blur(16px);
+}
+
+.setupIntro {
+  padding: 24px 24px 20px;
+}
+
+.setupIntro h2,
+.signupPageCard h2 {
+  margin: 4px 0 8px;
+  color: var(--slate-900);
+  font-size: 24px;
+  font-weight: 950;
+  letter-spacing: -0.04em;
+}
+
+.setupIntro p:last-child {
+  margin: 0;
+  color: var(--slate-500);
+  font-size: 13px;
+  font-weight: 700;
+  line-height: 1.55;
+}
+
+.setupPanel,
+.signupPageCard {
+  padding: 24px;
+}
+
+.onboardingFieldset {
+  min-inline-size: 0;
+  margin: 0 0 20px;
+  padding: 0;
+  border: 0;
+}
+
+.onboardingFieldset legend,
+.signupPageCard label span {
+  display: block;
+  margin-bottom: 8px;
+  color: var(--slate-700);
+  font-size: 13px;
+  font-weight: 900;
+}
+
+.fuelChoiceGrid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 10px;
+}
+
+.fuelChoice {
+  min-height: 46px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 16px;
+  border: 1.5px solid var(--slate-200);
+  background: var(--slate-50);
+  color: var(--slate-600);
+  font-size: 13px;
+  font-weight: 900;
+  cursor: pointer;
+}
+
+.fuelChoice input {
+  position: absolute;
+  opacity: 0;
+  pointer-events: none;
+}
+
+.fuelChoice.active {
+  border-color: var(--primary);
+  background: var(--primary-light);
+  color: var(--primary);
+  box-shadow: 0 0 0 3px rgba(15, 107, 79, 0.11);
+}
+
+.setupPanel .typePicker {
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 10px;
+}
+
+.setupSummary {
+  display: flex;
+  gap: 12px;
+  align-items: center;
+  padding: 14px 16px;
+  border-radius: 18px;
+  background: linear-gradient(135deg, rgba(15, 107, 79, 0.09), rgba(16, 185, 129, 0.12));
+  color: var(--primary);
+}
+
+.setupSummary div {
+  display: grid;
+  gap: 3px;
+}
+
+.setupSummary strong {
+  color: var(--slate-900);
+  font-size: 14px;
+  font-weight: 950;
+}
+
+.setupSummary span {
+  color: var(--slate-500);
+  font-size: 12px;
+  font-weight: 750;
+}
+
+.signupPageCard {
+  display: grid;
+  gap: 14px;
+}
+
+.signupPageCard label {
+  display: block;
+}
+
+.signupPageCard input {
+  width: 100%;
+}
+
+.errorPanel.warning {
+  border-color: rgba(245, 158, 11, 0.28);
+  background: rgba(255, 251, 235, 0.92);
+  color: #92400e;
+}
+
+@media (max-width: 1080px) {
+  .onboardingShell {
+    grid-template-columns: 1fr;
+  }
+
+  .onboardingSetupCard {
+    align-self: stretch;
+  }
+}
+
+@media (max-width: 640px) {
+  .onboardingShell {
+    padding: 24px 16px;
+  }
+
+  .featurePreviewGrid,
+  .fuelChoiceGrid {
+    grid-template-columns: 1fr;
+  }
+
+  .setupPanel .typePicker {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+}
+
 .appBackground {
   min-height: 0;
   flex: 1;
@@ -1249,9 +1578,9 @@ select:focus {
 }
 
 .iconSidebar .tabItem {
-  width: 50px;
-  height: 50px;
-  border-radius: var(--radius-md);
+  width: 58px;
+  height: 54px;
+  border-radius: 16px;
   border: none;
   background: transparent;
   color: var(--slate-400);
@@ -1276,10 +1605,17 @@ select:focus {
 }
 
 .iconSidebar .tabItem span {
-  font-size: 9px;
+  display: block;
+  width: 100%;
+  font-size: 8px;
   font-weight: 800;
-  margin-top: 3px;
-  text-transform: uppercase;
+  line-height: 1;
+  letter-spacing: -0.08em;
+  margin-top: 4px;
+  text-align: center;
+  word-break: keep-all;
+  white-space: nowrap;
+  text-transform: none;
 }
 
 .iconSidebar .bottomActions {
@@ -1533,6 +1869,78 @@ select:focus {
   font-size: 11px;
   font-weight: 600;
   color: var(--slate-500);
+}
+
+.priorityPocketLabel {
+  color: var(--slate-600);
+  font-size: 12px;
+  font-weight: 900;
+  letter-spacing: -0.01em;
+  margin: 4px 6px 6px;
+}
+
+.priorityPocketTabs {
+  align-items: flex-end;
+  display: flex;
+  gap: 4px;
+  margin: 0 0 8px;
+  padding: 0 6px;
+}
+
+.priorityPocketTab {
+  align-items: center;
+  background: linear-gradient(180deg, #f8fafc 0%, #e2e8f0 100%);
+  border: 1.5px solid var(--slate-200);
+  border-bottom-color: rgba(148, 163, 184, 0.45);
+  border-radius: 12px 12px 5px 5px;
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.75), 0 5px 10px rgba(15, 23, 42, 0.06);
+  color: var(--slate-600);
+  cursor: pointer;
+  display: inline-flex;
+  flex: 1 1 0;
+  font-size: 12px;
+  font-weight: 900;
+  justify-content: center;
+  letter-spacing: -0.01em;
+  min-height: 34px;
+  padding: 8px 10px 7px;
+  position: relative;
+  transition: transform 0.18s ease, background 0.18s ease, border-color 0.18s ease, color 0.18s ease, box-shadow 0.18s ease;
+}
+
+.priorityPocketTab::after {
+  background: rgba(255, 255, 255, 0.7);
+  border-radius: 999px;
+  content: "";
+  height: 3px;
+  left: 14px;
+  position: absolute;
+  right: 14px;
+  top: 5px;
+}
+
+.priorityPocketTab:hover {
+  background: linear-gradient(180deg, #ffffff 0%, #edf2f7 100%);
+  color: var(--slate-800);
+  transform: translateY(-1px);
+}
+
+.priorityPocketTab.active {
+  background: linear-gradient(180deg, #ffffff 0%, var(--primary-light) 100%);
+  border-color: rgba(15, 107, 79, 0.55);
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.9), 0 8px 16px rgba(15, 107, 79, 0.14);
+  color: var(--primary);
+  transform: translateY(-2px);
+}
+
+.priorityPocketTab input {
+  clip: rect(0 0 0 0);
+  clip-path: inset(50%);
+  height: 1px;
+  overflow: hidden;
+  position: absolute;
+  white-space: nowrap;
+  width: 1px;
 }
 
 /* Sidebar Result Candidate List & Accordion */

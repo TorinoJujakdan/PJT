@@ -1,14 +1,8 @@
 <script setup>
-import { onMounted } from "vue";
+import { onMounted, ref } from "vue";
 import {
-  Car,
-  CreditCard,
   Fuel,
-  LogIn,
-  LogOut,
-  MessageSquare,
   User,
-  UserPlus,
   X,
 } from "@lucide/vue";
 
@@ -22,6 +16,7 @@ import VehicleModalShell from "./components/vehicles/VehicleModalShell.vue";
 import VehicleView from "./views/VehicleView.vue";
 import CardsView from "./views/CardsView.vue";
 import CommunityView from "./views/CommunityView.vue";
+import OnboardingView from "./views/OnboardingView.vue";
 import { useAuthSession } from "./composables/useAuthSession";
 import { useModalState } from "./composables/useModalState";
 import { useSmartFuelDashboard } from "./composables/useSmartFuelDashboard";
@@ -49,6 +44,7 @@ const {
 });
 
 dashboard = useSmartFuelDashboard({ isAuthenticated });
+const bootstrapped = ref(false);
 
 const {
   vehicles,
@@ -74,12 +70,33 @@ const {
   handleMapClick,
 } = dashboard;
 
-onMounted(refreshMe);
+async function initializeSession() {
+  await refreshMe();
+  bootstrapped.value = true;
+}
+
+async function handleOnboardingAuthenticated(user) {
+  await handleAuthenticated(user);
+}
+
+onMounted(initializeSession);
 </script>
 
 <template>
   <div class="appShellUnified">
+    <div v-if="!bootstrapped" class="appBootScreen" role="status" aria-live="polite">
+      <Fuel :size="28" style="color: var(--primary);" />
+      <strong>SmartFuel 준비 중...</strong>
+    </div>
+
+    <OnboardingView
+      v-else-if="!isAuthenticated"
+      @login="openModal('auth', 'login')"
+      @authenticated="handleOnboardingAuthenticated"
+    />
+
     <div
+      v-else
       class="appBackground"
       :inert="activeModal === 'vehicle' || activeModal === 'cards' || activeModal === 'community'"
       :aria-hidden="activeModal === 'vehicle' || activeModal === 'cards' || activeModal === 'community' ? 'true' : undefined"
@@ -91,57 +108,9 @@ onMounted(refreshMe);
         <h1>SmartFuel</h1>
       </div>
 
-      <div class="navLinks">
-        <button
-          v-if="isAuthenticated"
-          class="linkBtn"
-          :class="{ active: activeModal === 'vehicle' }"
-          type="button"
-          @click="openModal('vehicle')"
-        >
-          <Car :size="15" />
-          <span>내 차량 설정</span>
-        </button>
-
-        <button
-          v-if="isAuthenticated"
-          class="linkBtn"
-          :class="{ active: activeModal === 'cards' }"
-          type="button"
-          @click="openModal('cards')"
-        >
-          <CreditCard :size="15" />
-          <span>할인 카드 관리</span>
-        </button>
-
-        <button
-          class="linkBtn"
-          :class="{ active: activeModal === 'community' }"
-          type="button"
-          @click="openModal('community')"
-        >
-          <MessageSquare :size="15" />
-          <span>커뮤니티</span>
-        </button>
-      </div>
-
-      <div class="userSection">
-        <div v-if="isAuthenticated" class="userIndicator">
-          <User :size="14" style="color: var(--primary);" />
-          <strong>{{ auth.user.username }}</strong>님
-        </div>
-        <button v-if="isAuthenticated" class="linkBtn" type="button" @click="handleLogout">
-          <LogOut :size="14" />
-          <span>로그아웃</span>
-        </button>
-        <button v-else class="linkBtn" type="button" @click="openModal('auth', 'login')">
-          <LogIn :size="14" />
-          <span>로그인</span>
-        </button>
-        <button v-if="!isAuthenticated" class="linkBtn" type="button" @click="openModal('auth', 'signup')">
-          <UserPlus :size="14" />
-          <span>회원 가입</span>
-        </button>
+      <div v-if="isAuthenticated" class="userIndicator" aria-label="로그인 사용자">
+        <User :size="14" style="color: var(--primary);" />
+        <strong>{{ auth.user.username }}</strong>님
       </div>
     </header>
 
@@ -169,6 +138,7 @@ onMounted(refreshMe);
         @go-card-settings="openModal('cards')"
         @login="openModal('auth', 'login')"
         @logout="handleLogout"
+        @open-community="openModal('community')"
       />
 
       <!-- 풀스크린 네이버 지도 장착 -->

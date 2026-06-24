@@ -8,6 +8,7 @@ import {
   LogIn,
   LogOut,
   MapPin,
+  MessageSquare,
   Search,
   Sliders
 } from "@lucide/vue";
@@ -85,12 +86,13 @@ const emit = defineEmits([
   "request-recommendation",
   "go-vehicle-settings",
   "go-card-settings",
+  "open-community",
   "logout",
   "login"
 ]);
 
 // 로컬 동기화용 computed/ref
-const activeTab = ref("location"); // "location", "vehicle_card", "settings"
+const activeTab = ref("location"); // "location", "vehicle_card", "settings", "community"
 const sidebarOpen = ref(true);
 const candidatesExpanded = ref(true);
 
@@ -179,14 +181,19 @@ function isPastData(station) {
           <span>위치</span>
         </button>
 
-        <button type="button" class="tabItem" :class="{ active: activeTab === 'vehicle_card' && sidebarOpen }" @click="handleTabClick('vehicle_card')" aria-label="차량·카드 조건 설정" title="차량·카드 조건 설정">
+        <button type="button" class="tabItem" :class="{ active: activeTab === 'vehicle_card' && sidebarOpen }" @click="handleTabClick('vehicle_card')" aria-label="나의 환경" title="나의 환경">
           <ListChecks :size="20" aria-hidden="true" />
-          <span>조건</span>
+          <span>나의 환경</span>
         </button>
 
-        <button type="button" class="tabItem" :class="{ active: activeTab === 'settings' && sidebarOpen }" @click="handleTabClick('settings')" aria-label="필터 및 우선순위 설정" title="필터 및 우선순위">
+        <button type="button" class="tabItem" :class="{ active: activeTab === 'settings' && sidebarOpen }" @click="handleTabClick('settings')" aria-label="선정 방식" title="선정 방식">
           <Sliders :size="20" aria-hidden="true" />
-          <span>설정</span>
+          <span>선정 방식</span>
+        </button>
+
+        <button type="button" class="tabItem" :class="{ active: activeTab === 'community' && sidebarOpen }" @click="handleTabClick('community')" aria-label="커뮤니티" title="커뮤니티">
+          <MessageSquare :size="20" aria-hidden="true" />
+          <span>커뮤니티</span>
         </button>
       </div>
 
@@ -211,23 +218,39 @@ function isPastData(station) {
           <!-- 위치 검색 연동 -->
           <LocationControl v-model="localLocation" />
 
-          <!-- 검색 반경 제어 셀렉트 박스 추가 -->
+          <!-- 주유 금액/유종 선택 간이 제공 -->
+          <FuelTargetControl v-model="localFuel" />
+
+          <!-- 검색 반경 제어 셀렉트 박스 -->
           <div class="sidebarSection" style="margin-top: 12px; margin-bottom: 12px; padding: 0; background: transparent; border: none;">
             <label style="display: block;">
               <span style="font-size: 13px; font-weight: 700; color: var(--slate-600); margin-bottom: 6px; display: block;">검색 반경</span>
               <select v-model="localRadiusKm" style="width: 100%; border: 1px solid var(--slate-200); border-radius: var(--radius-sm); padding: 10px 12px; font-size: 13.5px; font-weight: 700; color: var(--slate-700); background-color: #fff; outline: none; transition: border-color 0.2s;">
                 <option :value="1">1 km</option>
                 <option :value="3">3 km</option>
-                <option :value="5">5 km (실시간 추천 한계)</option>
-                <option :value="10">10 km (DB 가격 조회)</option>
-                <option :value="15">15 km (DB 가격 조회)</option>
+                <option :value="5">5 km (추천, 실시간 가격)</option>
+                <option :value="10">10 km (최근 수집 가격)</option>
+                <option :value="15">15 km (최근 수집 가격)</option>
               </select>
             </label>
           </div>
 
-          <!-- 주유 금액/유종 선택 간이 제공 -->
-          <FuelTargetControl v-model="localFuel" />
-
+          <!-- 추천 기준 빠른 변경 -->
+          <p class="priorityPocketLabel">빠른 설정 변경</p>
+          <div class="priorityPocketTabs" role="radiogroup" aria-label="추천 기준 빠른 변경">
+            <label class="priorityPocketTab" :class="{ active: localPriority === 'optimal' }">
+              <input v-model="localPriority" type="radio" value="optimal" />
+              <span>최적</span>
+            </label>
+            <label class="priorityPocketTab" :class="{ active: localPriority === 'price' }">
+              <input v-model="localPriority" type="radio" value="price" />
+              <span>가격</span>
+            </label>
+            <label class="priorityPocketTab" :class="{ active: localPriority === 'distance' }">
+              <input v-model="localPriority" type="radio" value="distance" />
+              <span>거리</span>
+            </label>
+          </div>
 
           <!-- 검색 실행 버튼 -->
           <button
@@ -374,6 +397,27 @@ function isPastData(station) {
                 </div>
               </label>
             </div>
+          </div>
+        </div>
+      </template>
+
+      <!-- 2.4 커뮤니티 탭 -->
+      <template v-if="activeTab === 'community'">
+        <header class="panelSidebarHeader">
+          <h2>커뮤니티</h2>
+        </header>
+        <div class="panelSidebarContent">
+          <div class="sidebarSection communityShortcutSection">
+            <div class="sidebarSectionHeader">
+              <h3>사용자 커뮤니티</h3>
+            </div>
+            <p class="hintText" style="margin: 0 0 12px;">
+              주유 정보와 차량 관리 팁을 공유하는 커뮤니티로 이동합니다.
+            </p>
+            <button class="primaryButton fullWidth" type="button" @click="emit('open-community')">
+              <MessageSquare :size="16" aria-hidden="true" />
+              <span>커뮤니티 열기</span>
+            </button>
           </div>
         </div>
       </template>

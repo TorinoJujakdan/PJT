@@ -47,15 +47,75 @@ const calculatedLiters = computed(() => {
         <span>이동 경로 기준</span>
         <select v-model="model.travel_mode">
           <option value="round_trip">왕복 (주유소 경유)</option>
-          <option value="one_way">편도 (도착지 기준)</option>
+          <option value="one_way">편도 (주유소 기준)</option>
         </select>
       </label>
 
-      <!-- Real-time estimated liters information helper -->
-      <div style="grid-column: 1 / -1; background: var(--slate-50); border: 1px dashed var(--slate-200); border-radius: var(--radius-sm); padding: 8px 12px; font-size: 12px; font-weight: 700; color: var(--slate-600); display: flex; justify-content: space-between; align-items: center; margin-top: 4px;">
-        <span>💡 기준 단가 대비 예상 주유량 <span style="font-weight: 500; color: var(--slate-400);">(주유소마다 다를 수 있음)</span></span>
-        <span style="color: var(--primary); font-weight: 800; font-size: 13px;">약 {{ calculatedLiters }} L</span>
+      <div class="estimatedFuelHint">
+        <div class="estimatedFuelCopy">
+          <span class="estimatedFuelIcon" aria-hidden="true">💡</span>
+          <span>
+            기준 단가로 계산한 예상 주유량
+            <small>주유소마다 실제 주유량은 달라질 수 있습니다.</small>
+          </span>
+        </div>
+        <strong class="estimatedFuelAmount">약 {{ calculatedLiters }} L</strong>
       </div>
     </div>
   </section>
 </template>
+
+<style scoped>
+.estimatedFuelHint {
+  align-items: center;
+  background: var(--slate-50);
+  border: 1px dashed var(--slate-200);
+  border-radius: var(--radius-sm);
+  color: var(--slate-600);
+  display: flex;
+  gap: 12px;
+  grid-column: 1 / -1;
+  justify-content: space-between;
+  margin-top: 4px;
+  padding: 10px 12px;
+}
+
+.estimatedFuelCopy {
+  align-items: flex-start;
+  display: flex;
+  font-size: 12px;
+  font-weight: 800;
+  gap: 8px;
+  line-height: 1.45;
+  min-width: 0;
+}
+
+.estimatedFuelCopy small {
+  color: var(--slate-400);
+  display: block;
+  font-size: 11px;
+  font-weight: 600;
+  margin-top: 2px;
+}
+
+.estimatedFuelIcon {
+  flex: 0 0 auto;
+}
+
+.estimatedFuelAmount {
+  color: var(--primary);
+  flex: 0 0 auto;
+  font-size: 16px;
+  font-weight: 900;
+  letter-spacing: -0.01em;
+  line-height: 1;
+  white-space: nowrap;
+}
+
+@media (max-width: 520px) {
+  .estimatedFuelHint {
+    align-items: flex-start;
+    flex-direction: column;
+  }
+}
+</style>
