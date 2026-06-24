@@ -5,7 +5,7 @@ from rest_framework.views import APIView
 import atexit
 
 from concurrent.futures import ThreadPoolExecutor
-from django.db import close_old_connections
+from django.db import close_old_connections, transaction
 from .models import CardCatalog, CardPolicy, CardIngestionTask
 from .serializers import (
     CardCatalogSerializer,
@@ -13,9 +13,9 @@ from .serializers import (
     CardFromCatalogSerializer,
     CardPolicySerializer,
 )
-from .selenium_ingestion import discover_card_benefits, scrape_card_search_candidates, save_candidates
+from .selenium_ingestion import discover_card_benefits, scrape_card_search_candidates
 from .ai_normalization import save_ai_normalized_candidates
-from .gms_client import GmsConfigurationError, GmsRequestError, normalize_card_fuel_benefit
+from .gemini_client import normalize_card_fuel_benefit
 
 
 
@@ -157,8 +157,8 @@ def run_background_ingestion(task_id, query):
     수집 흐름:
     1. Selenium으로 네이버 카드검색 목록 + 각 카드 상세 페이지 방문
        (include_detail=True → min_payment, monthly_limit 원문 확보)
-    2. GMS LLM(Gemini)으로 주유 혜택 섹션을 직접 청킹·추출 → DB 저장
-       GMS 호출 실패 시 정규식 파싱(save_candidates)으로 자동 fallback
+    2. Gemini LLM으로 주유 혜택 섹션을 직접 청킹·추출 → DB 저장
+       Gemini 호출 실패 시 task를 FAILED로 기록하며 heuristic fallback 저장은 하지 않습니다.
     """
     close_old_connections()
     try:
@@ -175,21 +175,18 @@ def run_background_ingestion(task_id, query):
             detail_wait_seconds=1,
         )
 
-        # 2. GMS LLM으로 청킹·추출 → DB 저장
-        #    실패 시 정규식 파싱(save_candidates)으로 graceful fallback
-        try:
+        # 2. Gemini LLM normalization and DB storage.
+        #    Fail closed on Gemini errors; do not fall back to heuristic Selenium persistence.
+        with transaction.atomic():
             saved_cards = save_ai_normalized_candidates(
                 candidates,
                 source_url=SOURCE_URL,
                 normalizer=normalize_card_fuel_benefit,
             )
-        except (GmsConfigurationError, GmsRequestError, Exception):
-            # GMS 장애·설정 오류 시 기존 정규식 방식으로 fallback
-            saved_cards = save_candidates(candidates, SOURCE_URL)
-
-        # 3. 태스크 결과 매핑 및 완료 처리
-        task.results.add(*saved_cards)
-        task.status = CardIngestionTask.Status.SUCCESS
+            # 3. 태스크 결과 매핑 및 완료 처리
+            task.results.add(*saved_cards)
+            task.status = CardIngestionTask.Status.SUCCESS
+            task.save(update_fields=["status"])
     except Exception as e:
         try:
             task = CardIngestionTask.objects.get(id=task_id)
