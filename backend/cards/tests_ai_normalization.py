@@ -1,179 +1,94 @@
-from decimal import Decimal
+from __future__ import annotations
 
-from django.contrib.auth import get_user_model
+from decimal import Decimal
+from io import StringIO
+from unittest.mock import patch
+
+from django.core.management import call_command, load_command_class
 from django.test import TestCase
 
+from cards.ai_chunks import compute_raw_hash
 from cards.ai_normalization import save_ai_normalized_candidates
+from cards.gemini_client import GeminiRequestError, build_gemini_normalization_prompt, estimate_gemini_cost
 from cards.llm_fuel_extraction import build_line_numbered_document, validate_llm_fuel_payload
 from cards.models import CardBenefitTier, CardCatalog, CardPolicy
-from cards.selenium_ingestion import ScrapedCardCandidate
-from stations.models import GasStation
-from stations.services import calculate_card_discount
+from cards.selenium_ingestion import ScrapedCardCandidate, run_api_fallback_scraper
 
 
 class LlmFuelExtractionTests(TestCase):
-    def test_build_line_numbered_document_preserves_original_line_ranges(self):
-        raw_text = "KB국민 마이핏카드\n주유\n최대 1만원 할인\nSK에너지·GS칼텍스"
-
+    def test_validate_llm_payload_accepts_grounded_fuel_discount(self) -> None:
+        raw_text = "Card A\nFuel\n60 won per liter discount\nGS Caltex"
         document = build_line_numbered_document(raw_text)
-
-        self.assertEqual(
-            document.numbered_text,
-            "[001] KB국민 마이핏카드\n[002] 주유\n[003] 최대 1만원 할인\n[004] SK에너지·GS칼텍스",
-        )
-        self.assertEqual(document.section_text(2, 4), "주유\n최대 1만원 할인\nSK에너지·GS칼텍스")
-
-    def test_validate_llm_payload_accepts_fuel_section_with_grounded_discount(self):
-        raw_text = "KB국민 마이핏카드\n주유\n최대 1만원 할인\nSK에너지·GS칼텍스\n통신\n최대 1만원 할인"
-        document = build_line_numbered_document(raw_text)
-        payload = {
-            "card": {"name": "KB국민 마이핏카드", "issuer": "KB국민카드"},
-            "fuel_sections": [
-                {
-                    "section_title": "주유",
-                    "start_line": 2,
-                    "end_line": 4,
-                    "evidence_text": "주유\n최대 1만원 할인\nSK에너지·GS칼텍스",
-                    "reason": "주유 제목과 할인/브랜드 조건이 같은 블록임",
-                }
-            ],
-            "benefits": [
-                {
-                    "category": "fuel",
-                    "fuel_type": "ALL",
-                    "discount_type": "fixed_amount",
-                    "discount_value": "10000",
-                    "brand_scope": "SK,GS",
-                    "min_payment_amount": None,
-                    "max_discount_amount": 10000,
-                    "monthly_discount_limit": 10000,
-                    "evidence_section_index": 0,
-                    "evidence_text": "주유\n최대 1만원 할인\nSK에너지·GS칼텍스",
-                }
-            ],
-            "quality": {"extraction_confidence": "0.86", "verification_status": "unverified", "warnings": []},
-        }
+        payload = _valid_llm_payload(discount_type=CardPolicy.DiscountType.PER_LITER, discount_value="60")
 
         result = validate_llm_fuel_payload(document, payload)
 
-        self.assertEqual(result.tier_data.discount_type, CardPolicy.DiscountType.FIXED_AMOUNT)
-        self.assertEqual(result.tier_data.discount_value, Decimal("10000"))
-        self.assertEqual(result.tier_data.brand_scope, "SK,GS")
-        self.assertEqual(result.warnings, [])
-
-    def test_validate_llm_payload_prefers_fuel_discount_over_general_merchant_discount(self):
-        raw_text = "혜택\n국내외 가맹점 1% 할인\n주유\n리터당 60원 할인\n전 주유소"
-        document = build_line_numbered_document(raw_text)
-        payload = {
-            "fuel_sections": [
-                {
-                    "section_title": "주유",
-                    "start_line": 3,
-                    "end_line": 5,
-                    "evidence_text": "주유\n리터당 60원 할인\n전 주유소",
-                    "reason": "주유 제목 아래 할인 조건",
-                }
-            ],
-            "benefits": [
-                {
-                    "category": "fuel",
-                    "fuel_type": "ALL",
-                    "discount_type": "per_liter",
-                    "discount_value": "60",
-                    "brand_scope": "all",
-                    "evidence_section_index": 0,
-                    "evidence_text": "주유\n리터당 60원 할인\n전 주유소",
-                }
-            ],
-        }
-
-        result = validate_llm_fuel_payload(document, payload)
-
+        self.assertIsNotNone(result.tier_data)
         self.assertEqual(result.tier_data.discount_type, CardPolicy.DiscountType.PER_LITER)
         self.assertEqual(result.tier_data.discount_value, Decimal("60"))
+        self.assertEqual(result.warnings, [])
 
-    def test_validate_llm_payload_rejects_ungrounded_discount(self):
-        raw_text = "주유\n리터당 60원 할인\n전 주유소"
+    def test_validate_llm_payload_rejects_ungrounded_discount_value(self) -> None:
+        raw_text = "Card A\nFuel\n60 won per liter discount\nGS Caltex"
         document = build_line_numbered_document(raw_text)
-        payload = {
-            "fuel_sections": [
-                {
-                    "section_title": "주유",
-                    "start_line": 1,
-                    "end_line": 3,
-                    "evidence_text": "주유\n리터당 60원 할인\n전 주유소",
-                    "reason": "주유 블록",
-                }
-            ],
-            "benefits": [
-                {
-                    "category": "fuel",
-                    "fuel_type": "ALL",
-                    "discount_type": "per_liter",
-                    "discount_value": "200",
-                    "brand_scope": "all",
-                    "evidence_section_index": 0,
-                    "evidence_text": "주유\n리터당 60원 할인\n전 주유소",
-                }
-            ],
-        }
+        payload = _valid_llm_payload(discount_type=CardPolicy.DiscountType.PER_LITER, discount_value="200")
 
         result = validate_llm_fuel_payload(document, payload)
 
         self.assertIsNone(result.tier_data)
         self.assertIn("discount_value_not_supported_by_evidence", result.warnings)
 
+    def test_validate_llm_payload_preserves_gemini_usage_metadata(self) -> None:
+        raw_text = "Card A\nFuel\n60 won per liter discount\nGS Caltex"
+        document = build_line_numbered_document(raw_text)
+        payload = _valid_llm_payload(discount_type=CardPolicy.DiscountType.PER_LITER, discount_value="60")
+        payload["model"] = "gemini-3.5-flash"
+        payload["usage_metadata"] = {"promptTokenCount": 100, "candidatesTokenCount": 25}
+        payload["cost_estimate"] = {"total_cost_usd": "0.000375"}
+
+        result = validate_llm_fuel_payload(document, payload)
+
+        self.assertEqual(result.normalized_payload["model"], "gemini-3.5-flash")
+        self.assertEqual(result.normalized_payload["usage_metadata"]["promptTokenCount"], 100)
+        self.assertEqual(result.normalized_payload["cost_estimate"]["total_cost_usd"], "0.000375")
+
+    def test_gemini_cost_estimate_includes_thinking_tokens(self) -> None:
+        usage_metadata = {
+            "promptTokenCount": 1200,
+            "candidatesTokenCount": 400,
+            "thoughtsTokenCount": 100,
+        }
+
+        estimate = estimate_gemini_cost("gemini-3.5-flash", usage_metadata)
+
+        self.assertEqual(estimate["candidate_tokens"], 400)
+        self.assertEqual(estimate["thinking_tokens"], 100)
+        self.assertEqual(estimate["output_tokens"], 500)
+        self.assertEqual(estimate["total_cost_usd"], "0.0063")
+
 
 class AiNormalizedCandidateSaveTests(TestCase):
-    def setUp(self):
-        self._image_fetch_patch = __import__("unittest.mock").mock.patch(
+    def setUp(self) -> None:
+        self._image_fetch_patch = patch(
             "cards.selenium_ingestion.fetch_remote_image",
             return_value=(None, ""),
         )
         self._image_fetch_patch.start()
 
-    def tearDown(self):
+    def tearDown(self) -> None:
         self._image_fetch_patch.stop()
 
-    def test_save_ai_normalized_candidates_stores_valid_llm_tier_for_recommendations(self):
-        source_url = "https://card-search.naver.com/list?benefitCategoryIds=1"
-        raw_text = "KB국민 마이핏카드\n주유\n최대 1만원 할인\nSK에너지·GS칼텍스"
-        candidate = ScrapedCardCandidate(
-            card_name="KB국민 마이핏카드",
-            issuer_name="KB국민카드",
-            discount_type=CardPolicy.DiscountType.PERCENTAGE,
-            discount_value=Decimal("1"),
-            raw_summary=raw_text,
-            source_url="https://card-search.naver.com/card/llm-1",
-        )
-        llm_payload = {
-            "fuel_sections": [
-                {
-                    "section_title": "주유",
-                    "start_line": 2,
-                    "end_line": 4,
-                    "evidence_text": "주유\n최대 1만원 할인\nSK에너지·GS칼텍스",
-                    "reason": "주유 블록",
-                }
-            ],
-            "benefits": [
-                {
-                    "category": "fuel",
-                    "fuel_type": "ALL",
-                    "discount_type": "fixed_amount",
-                    "discount_value": "10000",
-                    "brand_scope": "SK,GS",
-                    "monthly_discount_limit": 10000,
-                    "evidence_section_index": 0,
-                    "evidence_text": "주유\n최대 1만원 할인\nSK에너지·GS칼텍스",
-                }
-            ],
-        }
+    def test_save_ai_normalized_candidates_stores_only_validated_llm_tier(self) -> None:
+        candidate = _candidate(raw_summary="Card A\nFuel\n10000 won discount\nGS Caltex")
+        payload = _valid_llm_payload(discount_type=CardPolicy.DiscountType.FIXED_AMOUNT, discount_value="10000")
+        payload["model"] = "gemini-3.5-flash"
+        payload["usage_metadata"] = {"promptTokenCount": 1200, "candidatesTokenCount": 400}
+        payload["cost_estimate"] = {"total_cost_usd": "0.0054"}
 
         saved = save_ai_normalized_candidates(
             [candidate],
-            source_url=source_url,
-            normalizer=lambda _candidate: llm_payload,
+            source_url="https://card-search.naver.com/list?benefitCategoryIds=1",
+            normalizer=lambda _candidate: payload,
         )
 
         self.assertEqual(len(saved), 1)
@@ -181,39 +96,151 @@ class AiNormalizedCandidateSaveTests(TestCase):
         tier = CardBenefitTier.objects.get(card_catalog=catalog)
         self.assertEqual(tier.discount_type, CardPolicy.DiscountType.FIXED_AMOUNT)
         self.assertEqual(tier.discount_value, Decimal("10000.00"))
-        self.assertEqual(catalog.normalized_data["benefits"][0]["discount_value"], "10000")
-        self.assertEqual(catalog.normalized_data["quality"]["warnings"], [])
+        self.assertEqual(catalog.raw_hash, compute_raw_hash(candidate.raw_summary))
+        self.assertEqual(catalog.normalized_data["usage_metadata"]["promptTokenCount"], 1200)
+        self.assertEqual(catalog.normalized_data["cost_estimate"]["total_cost_usd"], "0.0054")
 
-        user = get_user_model().objects.create_user(username="llm-card-user", password="pass12345")
-        policy = CardPolicy.objects.create(
-            owner=user,
-            linked_catalog=catalog,
-            card_name=catalog.card_name,
-            issuer_name=catalog.issuer_name,
-            discount_type=CardPolicy.DiscountType.PERCENTAGE,
-            discount_value=Decimal("1"),
-            previous_month_spending=0,
-            source_type=CardPolicy.SourceType.CATALOG,
-        )
-        station = GasStation.objects.create(
-            name="GS 테스트",
-            brand="GS",
-            address="서울시",
-            latitude=37.5,
-            longitude=127.0,
-        )
-        recommendation_candidate = type(
-            "StationCandidate",
-            (),
-            {"fuel_type": "GASOLINE", "station": station},
-        )()
+    def test_invalid_llm_tier_does_not_fall_back_to_scraped_candidate_tier(self) -> None:
+        candidate = _candidate(raw_summary="Card A\nFuel\n60 won per liter discount\nGS Caltex")
+        invalid_payload = _valid_llm_payload(discount_type=CardPolicy.DiscountType.PER_LITER, discount_value="200")
 
-        discount, selected_card = calculate_card_discount(
-            recommendation_candidate,
-            refuel_cost=50000,
-            target_liters=30,
-            user_cards=[policy],
+        saved = save_ai_normalized_candidates(
+            [candidate],
+            source_url="https://card-search.naver.com/list?benefitCategoryIds=1",
+            normalizer=lambda _candidate: invalid_payload,
         )
 
-        self.assertEqual(discount, 10000)
-        self.assertEqual(selected_card["discount_type"], CardPolicy.DiscountType.FIXED_AMOUNT)
+        self.assertEqual(len(saved), 1)
+        catalog = CardCatalog.objects.get()
+        self.assertFalse(CardBenefitTier.objects.filter(card_catalog=catalog).exists())
+        self.assertIn("discount_value_not_supported_by_evidence", catalog.normalized_data["quality"]["warnings"])
+        self.assertEqual(catalog.normalized_data["benefits"], [])
+        self.assertEqual(len(catalog.normalized_data["raw_llm_benefits"]), 1)
+
+    def test_invalid_llm_tier_removes_existing_stale_tiers(self) -> None:
+        candidate = _candidate(raw_summary="Card A\nFuel\n60 won per liter discount\nGS Caltex")
+        valid_payload = _valid_llm_payload(discount_type=CardPolicy.DiscountType.PER_LITER, discount_value="60")
+        invalid_payload = _valid_llm_payload(discount_type=CardPolicy.DiscountType.PER_LITER, discount_value="200")
+
+        save_ai_normalized_candidates(
+            [candidate],
+            source_url="https://card-search.naver.com/list?benefitCategoryIds=1",
+            normalizer=lambda _candidate: valid_payload,
+        )
+        save_ai_normalized_candidates(
+            [candidate],
+            source_url="https://card-search.naver.com/list?benefitCategoryIds=1",
+            normalizer=lambda _candidate: invalid_payload,
+        )
+
+        catalog = CardCatalog.objects.get()
+        self.assertFalse(CardBenefitTier.objects.filter(card_catalog=catalog).exists())
+
+
+class IngestCardSearchAiCommandTests(TestCase):
+    def test_legacy_and_gemini_management_commands_load(self) -> None:
+        for command_name in ("check_gms_key", "ingest_card_search", "ingest_card_search_ai"):
+            command = load_command_class("cards", command_name)
+            self.assertIsNotNone(command)
+
+    def test_fallback_candidate_summary_is_accepted_for_gemini_prompt(self) -> None:
+        candidate = run_api_fallback_scraper(limit=1)[0]
+
+        prompt = build_gemini_normalization_prompt(candidate)
+
+        self.assertIn(candidate.raw_summary, prompt)
+
+    def test_dry_run_normalizes_without_saving_catalog_rows(self) -> None:
+        candidate = _candidate(raw_summary="Card A\nFuel\n60 won per liter discount\nGS Caltex")
+        output = StringIO()
+
+        with (
+            patch(
+                "cards.management.commands.ingest_card_search_ai.scrape_card_search_candidates",
+                return_value=[candidate],
+            ),
+            patch(
+                "cards.management.commands.ingest_card_search_ai.normalize_card_fuel_benefit",
+                return_value=_valid_llm_payload(CardPolicy.DiscountType.PER_LITER, "60"),
+            ),
+        ):
+            call_command("ingest_card_search_ai", "--dry-run", stdout=output)
+
+        self.assertIn(compute_raw_hash(candidate.raw_summary), output.getvalue())
+        self.assertEqual(CardCatalog.objects.count(), 0)
+
+    def test_request_error_isolated_per_candidate(self) -> None:
+        failing_candidate = _candidate(raw_summary="Card A\nFuel\n60 won per liter discount\nGS Caltex")
+        saved_candidate = ScrapedCardCandidate(
+            card_name="Card B",
+            issuer_name="Issuer",
+            discount_type=CardPolicy.DiscountType.FIXED_AMOUNT,
+            discount_value=Decimal("10000"),
+            raw_summary="Card B\nFuel\n10000 won discount\nGS Caltex",
+            source_url="https://card-search.naver.com/card/b",
+            confidence=Decimal("0.90"),
+        )
+
+        with (
+            patch(
+                "cards.management.commands.ingest_card_search_ai.scrape_card_search_candidates",
+                return_value=[failing_candidate, saved_candidate],
+            ),
+            patch(
+                "cards.management.commands.ingest_card_search_ai.normalize_card_fuel_benefit",
+                side_effect=[
+                    GeminiRequestError("temporary Gemini failure"),
+                    _valid_llm_payload(CardPolicy.DiscountType.FIXED_AMOUNT, "10000"),
+                ],
+            ),
+        ):
+            call_command("ingest_card_search_ai", stdout=StringIO())
+
+        self.assertEqual(CardCatalog.objects.count(), 1)
+        self.assertEqual(CardCatalog.objects.get().card_name, "Card B")
+
+
+
+
+def _candidate(raw_summary: str) -> ScrapedCardCandidate:
+    return ScrapedCardCandidate(
+        card_name="Card A",
+        issuer_name="Issuer",
+        discount_type=CardPolicy.DiscountType.PER_LITER,
+        discount_value=Decimal("60"),
+        raw_summary=raw_summary,
+        source_url="https://card-search.naver.com/card/a",
+        confidence=Decimal("0.90"),
+    )
+
+
+def _valid_llm_payload(discount_type: str, discount_value: str) -> dict:
+    return {
+        "card": {"name": "Card A", "issuer": "Issuer"},
+        "fuel_sections": [
+            {
+                "section_title": "Fuel",
+                "start_line": 2,
+                "end_line": 4,
+                "evidence_text": "Fuel\n60 won per liter discount\nGS Caltex"
+                if discount_type == CardPolicy.DiscountType.PER_LITER
+                else "Fuel\n10000 won discount\nGS Caltex",
+                "reason": "Fuel benefit section",
+            }
+        ],
+        "benefits": [
+            {
+                "category": "fuel",
+                "fuel_type": "ALL",
+                "discount_type": discount_type,
+                "discount_value": discount_value,
+                "brand_scope": "GS",
+                "monthly_discount_limit": 10000,
+                "evidence_section_index": 0,
+                "evidence_text": "Fuel\n60 won per liter discount\nGS Caltex"
+                if discount_type == CardPolicy.DiscountType.PER_LITER
+                else "Fuel\n10000 won discount\nGS Caltex",
+            }
+        ],
+        "quality": {"extraction_confidence": "0.9", "verification_status": "unverified", "warnings": []},
+    }

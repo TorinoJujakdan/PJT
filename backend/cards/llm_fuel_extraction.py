@@ -131,6 +131,7 @@ def validate_llm_fuel_payload(document: LineNumberedDocument, llm_payload: JsonO
     valid_sections = _validate_sections(document, parsed.fuel_sections, warnings)
     tier_data = _first_valid_tier(parsed.benefits, valid_sections, warnings)
     normalized_payload = parsed.model_dump(mode="json")
+    _copy_gemini_metadata(llm_payload, normalized_payload)
     quality = normalized_payload.setdefault("quality", {})
     if isinstance(quality, dict):
         quality["warnings"] = warnings
@@ -139,6 +140,18 @@ def validate_llm_fuel_payload(document: LineNumberedDocument, llm_payload: JsonO
         normalized_payload=normalized_payload,
         warnings=warnings,
     )
+
+
+def _copy_gemini_metadata(source_payload: JsonObject, normalized_payload: JsonObject) -> None:
+    model = source_payload.get("model")
+    if isinstance(model, str):
+        normalized_payload["model"] = model
+    usage_metadata = source_payload.get("usage_metadata")
+    if isinstance(usage_metadata, dict):
+        normalized_payload["usage_metadata"] = usage_metadata
+    cost_estimate = source_payload.get("cost_estimate")
+    if isinstance(cost_estimate, dict):
+        normalized_payload["cost_estimate"] = cost_estimate
 
 
 def _validate_sections(
