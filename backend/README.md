@@ -36,9 +36,10 @@ The recommendation service contract is defined in `docs/03_recommendation_algori
 - `GET /api/v1/stations/geocode/`: geocode an address or place query through the backend Naver proxy.
 - `GET /api/v1/stations/reverse-geocode/`: resolve a selected coordinate to an address label.
 - `POST /api/v1/stations/refresh/`: hydrate nearby station prices from Opinet for a selected coordinate.
-- `GET /api/v1/community/posts/`: list and search public community posts.
+- `GET /api/v1/community/posts/`: list and search public community posts; authenticated users may pass `starred=true` to view their private bookmarks.
 - `POST /api/v1/community/posts/`: create a community post with title, content, and optional tags.
 - `GET`/`PATCH`/`DELETE /api/v1/community/posts/{post_id}/`: read, update, or delete a community post.
+- `POST`/`DELETE /api/v1/community/posts/{post_id}/star/`: privately star or unstar a community post for the logged-in user.
 - `POST /api/v1/recommendations/quote/`: quote recommendations. Anonymous users must send `vehicle.fuel_efficiency_kmpl`; authenticated users may rely on a saved vehicle profile.
 
 ## Lightweight Search Sidecar

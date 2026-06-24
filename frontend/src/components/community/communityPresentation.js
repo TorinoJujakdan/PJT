@@ -33,3 +33,19 @@ export function canEditPost(post, user) {
   if (typeof post?.can_edit === "boolean") return post.can_edit;
   return Boolean(user?.id && post?.author?.id === user.id);
 }
+
+
+export function replacePostById(posts = [], updatedPost) {
+  if (!updatedPost?.id) return posts;
+  return posts.map((post) => (post.id === updatedPost.id ? { ...post, ...updatedPost } : post));
+}
+
+
+export function removePostById(posts = [], postId) {
+  return posts.filter((post) => post.id !== postId);
+}
+
+
+export function getStarredButtonLabel(post) {
+  return post?.is_starred ? "별표 해제" : "별표 저장";
+}

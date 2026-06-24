@@ -1,17 +1,22 @@
-<script setup>
-import { computed, onMounted, reactive, ref } from "vue";
-import { Edit3, MessageSquare, Plus, Search, Trash2 } from "@lucide/vue";
+﻿<script setup>
+import { computed, onMounted, reactive, ref, watch } from "vue";
+import { Edit3, MessageSquare, Plus, Search, Star, Trash2 } from "@lucide/vue";
 
 import {
   createCommunityPost,
   deleteCommunityPost,
   listCommunityPosts,
+  starCommunityPost,
+  unstarCommunityPost,
   updateCommunityPost,
 } from "../api/community";
 import {
   canEditPost,
   formatCommunityError,
+  getStarredButtonLabel,
   parseTagInput,
+  removePostById,
+  replacePostById,
   tagsToInput,
 } from "../components/community/communityPresentation";
 
@@ -33,9 +38,11 @@ const meta = ref({ count: 0, limit: 50 });
 const loading = ref(false);
 const saving = ref(false);
 const deletingId = ref(null);
+const starringId = ref(null);
 const error = ref("");
 const statusMessage = ref("");
 const editingPostId = ref(null);
+const activePostScope = ref("all");
 
 const filters = reactive({
   query: "",
@@ -49,11 +56,20 @@ const form = reactive({
 });
 
 const isEditing = computed(() => editingPostId.value !== null);
+const isStarredScope = computed(() => activePostScope.value === "starred");
 const canSubmit = computed(() => (
   props.isAuthenticated
   && form.title.trim()
   && form.content.trim()
   && !saving.value
+));
+const emptyTitle = computed(() => (
+  isStarredScope.value ? "아직 스크랩한 게시글이 없습니다." : "아직 게시글이 없습니다."
+));
+const emptyDescription = computed(() => (
+  isStarredScope.value
+    ? "마음에 드는 게시글을 스크랩하여 나중에 다시 모아보세요."
+    : "첫 게시글을 작성해 커뮤니티를 시작해 보세요."
 ));
 
 function resetForm() {
@@ -75,11 +91,13 @@ function requestLogin() {
 }
 
 function buildFilters() {
-  return {
+  const nextFilters = {
     query: filters.query.trim(),
     tag: filters.tag.trim(),
     limit: 50,
   };
+  if (isStarredScope.value) nextFilters.starred = true;
+  return nextFilters;
 }
 
 async function loadPosts() {
@@ -94,6 +112,17 @@ async function loadPosts() {
   } finally {
     loading.value = false;
   }
+}
+
+async function setPostScope(scope) {
+  if (scope === "starred" && !props.isAuthenticated) {
+    requestLogin();
+    return;
+  }
+  if (activePostScope.value === scope) return;
+  activePostScope.value = scope;
+  statusMessage.value = "";
+  await loadPosts();
 }
 
 async function submitPost() {
@@ -116,6 +145,7 @@ async function submitPost() {
       statusMessage.value = "게시글을 수정했습니다.";
     } else {
       await createCommunityPost(payload);
+      activePostScope.value = "all";
       statusMessage.value = "게시글을 등록했습니다.";
     }
     resetForm();
@@ -124,6 +154,37 @@ async function submitPost() {
     error.value = formatCommunityError(requestError);
   } finally {
     saving.value = false;
+  }
+}
+
+async function toggleStar(post) {
+  if (!props.isAuthenticated) {
+    requestLogin();
+    return;
+  }
+
+  const wasStarred = Boolean(post.is_starred);
+  starringId.value = post.id;
+  error.value = "";
+  statusMessage.value = "";
+
+  try {
+    const updatedPost = wasStarred
+      ? await unstarCommunityPost(post.id)
+      : await starCommunityPost(post.id);
+
+    if (isStarredScope.value && wasStarred) {
+      posts.value = removePostById(posts.value, post.id);
+      meta.value = { ...meta.value, count: posts.value.length };
+    } else {
+      posts.value = replacePostById(posts.value, updatedPost);
+    }
+
+    statusMessage.value = updatedPost.is_starred ? "스크랩했습니다." : "스크랩을 해제했습니다.";
+  } catch (requestError) {
+    error.value = formatCommunityError(requestError);
+  } finally {
+    starringId.value = null;
   }
 }
 
@@ -147,6 +208,14 @@ async function removePost(post) {
   }
 }
 
+watch(
+  () => props.isAuthenticated,
+  async (isAuthenticated) => {
+    if (!isAuthenticated && isStarredScope.value) activePostScope.value = "all";
+    await loadPosts();
+  },
+);
+
 onMounted(loadPosts);
 </script>
 
@@ -157,20 +226,20 @@ onMounted(loadPosts);
         <div>
           <p class="eyebrow">WRITE</p>
           <h3 id="community-write-title">{{ isEditing ? "게시글 수정" : "게시글 작성" }}</h3>
-          <p>제목, 내용, 태그만으로 커뮤니티에 글을 남길 수 있습니다.</p>
+          <p>제목, 내용, 태그만으로 커뮤니티 글을 남길 수 있습니다.</p>
         </div>
       </div>
 
       <div class="communityWriteGate">
         <template v-if="isAuthenticated">
           <p class="eyebrow">WRITE AS {{ user?.username }}</p>
-          <h3>로그인된 사용자로 작성 중</h3>
-          <p>커뮤니티 게시글은 추천 순위나 주유비 계산에 반영되지 않습니다.</p>
+          <h3>로그인한 사용자로 작성 중</h3>
+          <p>커뮤니티 게시글과 개인 스크랩은 추천 순위나 주유비 계산에 반영되지 않습니다.</p>
         </template>
         <template v-else>
           <p class="eyebrow">LOGIN REQUIRED</p>
-          <h3>작성은 로그인이 필요합니다</h3>
-          <p>목록 조회와 검색은 공개이며, 게시글 작성·수정·삭제만 로그인이 필요합니다.</p>
+          <h3>작성과 스크랩 저장은 로그인이 필요합니다</h3>
+          <p>목록 조회와 검색은 공개이며, 게시글 작성·수정·삭제와 스크랩 저장만 로그인이 필요합니다.</p>
           <button class="cardPrimaryButton" type="button" @click="requestLogin">로그인하고 작성하기</button>
         </template>
       </div>
@@ -215,11 +284,33 @@ onMounted(loadPosts);
       <header class="communityListHeader">
         <div>
           <p class="eyebrow">POSTS</p>
-          <h3 id="community-list-title">게시글 {{ meta.count }}개</h3>
+          <h3 id="community-list-title">{{ isStarredScope ? "스크랩한 게시글" : "게시글" }} {{ meta.count }}개</h3>
           <p>최근 게시글을 최대 {{ meta.limit }}개까지 보여줍니다.</p>
         </div>
         <button class="cardSecondaryButton" type="button" :disabled="loading" @click="loadPosts">새로고침</button>
       </header>
+
+      <div class="communityViewTabs" role="tablist" aria-label="커뮤니티 게시글 보기">
+        <button
+          type="button"
+          role="tab"
+          :aria-selected="activePostScope === 'all'"
+          :class="{ active: activePostScope === 'all' }"
+          @click="setPostScope('all')"
+        >
+          전체 글
+        </button>
+        <button
+          type="button"
+          role="tab"
+          :aria-selected="activePostScope === 'starred'"
+          :class="{ active: activePostScope === 'starred' }"
+          @click="setPostScope('starred')"
+        >
+          <Star :size="15" />
+          스크랩
+        </button>
+      </div>
 
       <form class="communitySearchForm communityListSearch" role="search" @submit.prevent="loadPosts">
         <label>
@@ -246,8 +337,8 @@ onMounted(loadPosts);
 
       <div v-else-if="!posts.length" class="cardsEmptyState">
         <MessageSquare :size="28" />
-        <strong>아직 게시글이 없습니다.</strong>
-        <span>첫 게시글을 작성해 커뮤니티를 시작해 보세요.</span>
+        <strong>{{ emptyTitle }}</strong>
+        <span>{{ emptyDescription }}</span>
       </div>
 
       <article v-for="post in posts" v-else :key="post.id" class="communityPostCard">
@@ -257,19 +348,32 @@ onMounted(loadPosts);
             <h4>{{ post.title }}</h4>
             <p>작성자 {{ post.author?.username || "unknown" }}</p>
           </div>
-          <div v-if="canEditPost(post, user)" class="communityActions">
-            <button class="cardIconButton" type="button" aria-label="게시글 수정" @click="fillFormForEdit(post)">
-              <Edit3 :size="16" />
-            </button>
+          <div class="communityActions">
             <button
-              class="cardIconButton danger"
+              class="cardIconButton star"
               type="button"
-              aria-label="게시글 삭제"
-              :disabled="deletingId === post.id"
-              @click="removePost(post)"
+              :class="{ active: post.is_starred }"
+              :aria-label="getStarredButtonLabel(post)"
+              :aria-pressed="Boolean(post.is_starred)"
+              :disabled="starringId === post.id"
+              @click="toggleStar(post)"
             >
-              <Trash2 :size="16" />
+              <Star :size="16" :fill="post.is_starred ? 'currentColor' : 'none'" />
             </button>
+            <template v-if="canEditPost(post, user)">
+              <button class="cardIconButton" type="button" aria-label="게시글 수정" @click="fillFormForEdit(post)">
+                <Edit3 :size="16" />
+              </button>
+              <button
+                class="cardIconButton danger"
+                type="button"
+                aria-label="게시글 삭제"
+                :disabled="deletingId === post.id"
+                @click="removePost(post)"
+              >
+                <Trash2 :size="16" />
+              </button>
+            </template>
           </div>
         </div>
 

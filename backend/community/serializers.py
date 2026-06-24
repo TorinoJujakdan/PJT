@@ -11,6 +11,7 @@ MAX_TAG_LENGTH = 20
 class CommunityPostSerializer(serializers.ModelSerializer):
     author = serializers.SerializerMethodField()
     can_edit = serializers.SerializerMethodField()
+    is_starred = serializers.SerializerMethodField()
 
     class Meta:
         model = CommunityPost
@@ -23,6 +24,7 @@ class CommunityPostSerializer(serializers.ModelSerializer):
             "created_at",
             "updated_at",
             "can_edit",
+            "is_starred",
         ]
 
     def get_author(self, obj):
@@ -35,6 +37,18 @@ class CommunityPostSerializer(serializers.ModelSerializer):
         request = self.context.get("request")
         user = getattr(request, "user", None)
         return bool(user and user.is_authenticated and user.id == obj.author_id)
+
+    def get_is_starred(self, obj):
+        request = self.context.get("request")
+        user = getattr(request, "user", None)
+        if not user or not user.is_authenticated:
+            return False
+
+        starred_post_ids = self.context.get("starred_post_ids")
+        if starred_post_ids is not None:
+            return obj.id in starred_post_ids
+
+        return obj.bookmarks.filter(user=user).exists()
 
 
 class CommunityPostWriteSerializer(serializers.Serializer):
