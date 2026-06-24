@@ -2,7 +2,7 @@ from django.contrib.auth import get_user_model
 from django.test import TestCase
 from rest_framework.test import APIClient
 
-from .models import CommunityPost
+from .models import CommunityPost, CommunityPostBookmark
 
 
 class CommunityPostAPITests(TestCase):
@@ -33,9 +33,11 @@ class CommunityPostAPITests(TestCase):
         self.assertEqual(list_response.json()["posts"][0]["id"], post.id)
         self.assertNotIn("station", list_response.json()["posts"][0])
         self.assertFalse(list_response.json()["posts"][0]["can_edit"])
+        self.assertFalse(list_response.json()["posts"][0]["is_starred"])
         self.assertEqual(detail_response.status_code, 200)
         self.assertEqual(detail_response.json()["id"], post.id)
         self.assertNotIn("station", detail_response.json())
+        self.assertFalse(detail_response.json()["is_starred"])
 
     def test_anonymous_user_cannot_create_post(self):
         response = self.client.post(
@@ -69,6 +71,7 @@ class CommunityPostAPITests(TestCase):
         self.assertEqual(data["author"]["id"], self.author.id)
         self.assertEqual(data["tags"], ["mvp", "review"])
         self.assertTrue(data["can_edit"])
+        self.assertFalse(data["is_starred"])
         self.assertEqual(CommunityPost.objects.count(), 1)
 
     def test_create_requires_only_title_and_content(self):
@@ -152,7 +155,7 @@ class CommunityPostAPITests(TestCase):
         exact_tag_response = self.client.get("/api/v1/community/posts/", {"tag": "clean"})
 
         self.assertEqual(search_response.status_code, 200)
-        self.assertEqual(search_response.json()["meta"]["filters"], {"query": "coffee", "tag": None})
+        self.assertEqual(search_response.json()["meta"]["filters"], {"query": "coffee", "tag": None, "starred": None})
         removed_filter_name = "_".join(["station", "id"])
         self.assertNotIn(removed_filter_name, search_response.json()["meta"]["filters"])
         self.assertEqual([post["id"] for post in search_response.json()["posts"]], [clean_post.id])
@@ -187,3 +190,66 @@ class CommunityPostAPITests(TestCase):
         self.assertNotIn("visit_proof", field_names)
         self.assertNotIn("recommendation_score", field_names)
         self.assertNotIn("ranking_weight", field_names)
+
+    def test_authenticated_user_can_star_and_unstar_post_privately(self):
+        post = self._create_post()
+        self.client.force_authenticate(self.other_user)
+        CommunityPostBookmark.objects.create(user=self.other_user, post=post)
+
+        self.client.force_authenticate(self.author)
+
+        star_response = self.client.post(f"/api/v1/community/posts/{post.id}/star/")
+        duplicate_response = self.client.post(f"/api/v1/community/posts/{post.id}/star/")
+        list_response = self.client.get("/api/v1/community/posts/")
+
+        self.assertEqual(star_response.status_code, 201)
+        self.assertTrue(star_response.json()["is_starred"])
+        self.assertEqual(duplicate_response.status_code, 200)
+        self.assertEqual(CommunityPostBookmark.objects.filter(user=self.author, post=post).count(), 1)
+        self.assertTrue(list_response.json()["posts"][0]["is_starred"])
+
+        unstar_response = self.client.delete(f"/api/v1/community/posts/{post.id}/star/")
+
+        self.assertEqual(unstar_response.status_code, 200)
+        self.assertFalse(unstar_response.json()["is_starred"])
+        self.assertFalse(CommunityPostBookmark.objects.filter(user=self.author, post=post).exists())
+        self.assertTrue(CommunityPostBookmark.objects.filter(user=self.other_user, post=post).exists())
+
+    def test_anonymous_user_cannot_star_post_or_view_private_starred_filter(self):
+        post = self._create_post()
+
+        star_response = self.client.post(f"/api/v1/community/posts/{post.id}/star/")
+        starred_list_response = self.client.get("/api/v1/community/posts/", {"starred": "true"})
+
+        self.assertEqual(star_response.status_code, 403)
+        self.assertEqual(star_response.json()["code"], "AUTHENTICATION_REQUIRED")
+        self.assertEqual(starred_list_response.status_code, 403)
+        self.assertEqual(starred_list_response.json()["code"], "AUTHENTICATION_REQUIRED")
+
+    def test_starred_filter_returns_only_current_users_bookmarked_posts_with_existing_filters(self):
+        clean_post = self._create_post(
+            title="Saved clean tip",
+            content="A reusable tip for clean stops.",
+            tags=["clean", "tip"],
+        )
+        quiet_post = self._create_post(
+            title="Saved quiet tip",
+            content="Quiet rest area.",
+            tags=["quiet"],
+        )
+        other_post = self._create_post(
+            title="Other user saved post",
+            content="The current user did not save this.",
+            tags=["clean"],
+        )
+        CommunityPostBookmark.objects.create(user=self.author, post=clean_post)
+        CommunityPostBookmark.objects.create(user=self.author, post=quiet_post)
+        CommunityPostBookmark.objects.create(user=self.other_user, post=other_post)
+        self.client.force_authenticate(self.author)
+
+        response = self.client.get("/api/v1/community/posts/", {"starred": "true", "tag": "clean"})
+
+        self.assertEqual(response.status_code, 200)
+        self.assertEqual(response.json()["meta"]["filters"], {"query": None, "tag": "clean", "starred": True})
+        self.assertEqual([post["id"] for post in response.json()["posts"]], [clean_post.id])
+        self.assertTrue(response.json()["posts"][0]["is_starred"])

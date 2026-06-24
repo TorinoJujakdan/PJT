@@ -12,7 +12,7 @@
       "method": "GET",
       "path": "/community/posts/",
       "auth": "optional",
-      "description": "Return public community posts. Anonymous users can read and search the list.",
+      "description": "Return public community posts. Anonymous users can read and search the full list; starred=true returns the authenticated user's private bookmarked posts only.",
       "query": {
         "properties": {
           "query": {
@@ -28,6 +28,10 @@
             "default": 50,
             "maximum": 100,
             "description": "Server-bounded list size. Invalid or values below 1 fall back to 50; values above 100 are capped at 100."
+          },
+          "starred": {
+            "type": "boolean",
+            "description": "When true, return only posts privately starred/bookmarked by the authenticated user. Anonymous requests with starred=true return AUTHENTICATION_REQUIRED."
           }
         }
       },
@@ -58,6 +62,10 @@
                   },
                   "tag": {
                     "type": "string",
+                    "nullable": true
+                  },
+                  "starred": {
+                    "type": "boolean",
                     "nullable": true
                   }
                 }
@@ -109,6 +117,29 @@
       "response204": {
         "description": "No response body."
       }
+    },
+    {
+      "name": "Star community post privately",
+      "method": "POST",
+      "path": "/community/posts/{post_id}/star/",
+      "auth": "required",
+      "description": "Privately star/bookmark a community post for the current authenticated user. Idempotent for an already-starred post and never exposes public counts.",
+      "response200": {
+        "$ref": "#/schemas/CommunityPost"
+      },
+      "response201": {
+        "$ref": "#/schemas/CommunityPost"
+      }
+    },
+    {
+      "name": "Unstar community post privately",
+      "method": "DELETE",
+      "path": "/community/posts/{post_id}/star/",
+      "auth": "required",
+      "description": "Remove the current authenticated user's private star/bookmark from a community post. Idempotent for an unstarred post.",
+      "response200": {
+        "$ref": "#/schemas/CommunityPost"
+      }
     }
   ],
   "schemas": {
@@ -148,6 +179,10 @@
         "can_edit": {
           "type": "boolean",
           "description": "True only for the authenticated author."
+        },
+        "is_starred": {
+          "type": "boolean",
+          "description": "True only when the current authenticated user privately starred/bookmarked this post. Always false for anonymous users."
         }
       }
     },
@@ -235,6 +270,10 @@
     "Update/delete must return COMMUNITY_POST_FORBIDDEN with HTTP 403 for authenticated non-authors.",
     "The Community tab is public in the frontend navigation; write controls show login guidance for anonymous users.",
     "No visit proof field, location-link workflow, or proof upload is part of this contract.",
-    "Community posts must not be read by recommendation endpoints and must not influence recommendation ranking, distance, discount, or cost."
+    "Community posts must not be read by recommendation endpoints and must not influence recommendation ranking, distance, discount, or cost.",
+    "Private stars/bookmarks are stored per authenticated user and are not visible as public counts or popularity signals.",
+    "The starred=true list filter requires authentication and returns only the current user's privately starred posts while preserving query/tag filters.",
+    "Community post responses include is_starred for the current request user; anonymous users always receive false.",
+    "Private stars/bookmarks must not influence recommendation ranking, distance, discount, or cost."
   ]
 }
