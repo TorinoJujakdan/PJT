@@ -37,8 +37,8 @@ The recommendation service contract is defined in `docs/03_recommendation_algori
 - `GET /api/v1/stations/reverse-geocode/`: resolve a selected coordinate to an address label.
 - `POST /api/v1/stations/refresh/`: hydrate nearby station prices from Opinet for a selected coordinate.
 - `GET /api/v1/community/posts/`: list and search public community posts; authenticated users may pass `starred=true` to view their private bookmarks.
-- `POST /api/v1/community/posts/`: create a community post with title, content, and optional tags.
-- `GET`/`PATCH`/`DELETE /api/v1/community/posts/{post_id}/`: read, update, or delete a community post.
+- `POST /api/v1/community/posts/`: create a community post with title, content, and optional tags. Title/content pass through Gemini moderation before save.
+- `GET`/`PATCH`/`DELETE /api/v1/community/posts/{post_id}/`: read, update, or delete a community post. PATCH moderation runs only for changed title/content fields.
 - `POST`/`DELETE /api/v1/community/posts/{post_id}/star/`: privately star or unstar a community post for the logged-in user.
 - `POST /api/v1/recommendations/quote/`: quote recommendations. Anonymous users must send `vehicle.fuel_efficiency_kmpl`; authenticated users may rely on a saved vehicle profile.
 
@@ -76,8 +76,16 @@ cd backend
 - `NAVER_GEOCODING_CLIENT_ID` / `NAVER_GEOCODING_CLIENT_SECRET`: server-side Naver Cloud Maps credentials shared by Geocoding, Reverse Geocoding, and Directions. Legacy `NAVER_CLIENT_ID` / `NAVER_CLIENT_SECRET` remain accepted for these Maps APIs.
 - `NAVER_LOCAL_CLIENT_ID` / `NAVER_LOCAL_CLIENT_SECRET`: optional NAVER Developers Search credentials for registered businesses, buildings, and landmarks. `NAVER_SEARCH_*` and `NAVER_OPENAPI_*` aliases are also accepted. Cloud Maps `NAVER_CLIENT_*` credentials are intentionally not used for Local Search.
 - `CARD_INGESTION_ALLOWED_DOMAINS`: comma-separated allowlist for card ingestion sources.
-- `GEMINI_API_KEY`: server-side key for Gemini card fuel-benefit extraction. Keep it only in `backend/.env`; never expose it through frontend `VITE_*` variables.
+- `GEMINI_API_KEY`: server-side key for Gemini card fuel-benefit extraction and community post moderation. Keep it only in `backend/.env`; never expose it through frontend `VITE_*` variables.
 - `GEMINI_MODEL`, `GEMINI_TIMEOUT_SECONDS`, `GEMINI_MAX_OUTPUT_TOKENS`: optional Gemini extraction runtime settings. The default model in code and `.env.example` is `gemini-3.5-flash`.
+- `COMMUNITY_MODERATION_MODEL`, `COMMUNITY_MODERATION_TIMEOUT_SECONDS`: optional Gemini moderation overrides for community title/content checks.
+- `COMMUNITY_MODERATION_FAIL_CLOSED`: when true, block community writes if moderation is unavailable. Defaults to true in production (`DEBUG=False`) and false in development unless explicitly set.
+
+## Community Post Moderation
+
+Community post create/update requests use `community.moderation.moderate_post_fields()` through `CommunityPostWriteSerializer.validate()`. Only `title` and `content` are sent to Gemini; `tags`-only PATCH requests skip moderation. The classifier must return JSON booleans for `title` and `content`, where true means profanity, abuse, slurs, or clearly offensive language.
+
+If Gemini is unavailable, the backend follows `COMMUNITY_MODERATION_FAIL_CLOSED`: production blocks the write with `non_field_errors`, while development can fail open for local work.
 
 ## Gemini Fuel-Benefit Extraction Accounting
 

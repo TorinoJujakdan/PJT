@@ -6,6 +6,7 @@ Naver 지도/경로와 유가 데이터를 기반으로 주유소와 카드 혜�
 - **Backend**: Django REST Framework (`8000`)
 - **Search API**: FastAPI sidecar (`8001`, 선택 실행)
 - **AI normalization**: Google Gemini API로 카드 원문에서 주유 혜택을 구조화
+- **Community safety**: Gemini 기반 커뮤니티 게시글 비속어/욕설 moderation
 
 ---
 
@@ -57,20 +58,25 @@ copy frontend\.env.example frontend\.env
 | `NAVER_CLIENT_ID` / `NAVER_CLIENT_SECRET` | Naver Cloud Maps, Geocoding, Directions | 주유소 위치/경로 계산 |
 | `NAVER_LOCAL_CLIENT_ID` / `NAVER_LOCAL_CLIENT_SECRET` | Naver OpenAPI Local Search | 지역 검색 |
 | `OPINET_API_KEY` | Opinet 유가 데이터 | 주유소 가격 조회 |
-| `GEMINI_API_KEY` | Google Gemini API | 카드 원문에서 주유 혜택 추출 |
+| `GEMINI_API_KEY` | Google Gemini API | 카드 원문에서 주유 혜택 추출 및 커뮤니티 게시글 moderation |
 | `GEMINI_BASE_URL` | Gemini API base URL | 기본값: `https://generativelanguage.googleapis.com` |
 | `GEMINI_MODEL` | Gemini 모델명 | 기본값: `gemini-3.5-flash` |
 | `GEMINI_TIMEOUT_SECONDS` | Gemini 요청 timeout | 기본값: `30` |
 | `GEMINI_MAX_OUTPUT_TOKENS` | Gemini 최대 출력 토큰 | 기본값: `2048` |
+| `COMMUNITY_MODERATION_MODEL` | 커뮤니티 moderation 전용 Gemini 모델 override | 비우면 `GEMINI_MODEL`, 그다음 `gemini-3.5-flash` 사용 |
+| `COMMUNITY_MODERATION_TIMEOUT_SECONDS` | 커뮤니티 moderation 요청 timeout | 기본값: `10` |
+| `COMMUNITY_MODERATION_FAIL_CLOSED` | moderation 불가 시 게시 차단 여부 | 운영(`DEBUG=False`)은 기본 차단, 개발은 기본 허용 |
 
 #### 중요한 AI API 주의사항
 
-- 현재 카드 혜택 정규화는 **GMS가 아니라 Google Gemini API**를 사용합니다.
-- 따라서 서비스 실행/카드 재수집/AI 정규화를 하려면 `backend/.env`에 반드시 `GEMINI_API_KEY`를 넣어야 합니다.
+- 현재 카드 혜택 정규화와 커뮤니티 게시글 moderation은 **GMS가 아니라 Google Gemini API**를 사용합니다.
+- 따라서 서비스 실행/카드 재수집/AI 정규화/커뮤니티 비속어 차단을 하려면 `backend/.env`에 반드시 `GEMINI_API_KEY`를 넣어야 합니다.
 - `GEMINI_API_KEY`는 `frontend/.env`에 넣지 마세요. 프론트엔드의 `VITE_` 변수는 브라우저 번들에 노출됩니다.
 - `GMS_*` 키가 있더라도 현재 Gemini 정규화 경로의 대체값으로 사용되지 않습니다.
 - Selenium으로 네이버 카드 데이터를 다시 수집한 뒤 AI 정규화를 실행하면 Gemini API 토큰이 실제로 사용됩니다.
-- 비용/사용량 확인이 필요하면 실행 전 `--limit`을 작게 두고 `--dry-run`으로 먼저 검증하세요.
+- 커뮤니티 게시글 생성/수정 시 제목과 본문을 Gemini가 `profanity`, `abuse`, `slurs`, `offensive language` 기준으로 판정합니다.
+- moderation API 키가 없거나 호출에 실패하면 `COMMUNITY_MODERATION_FAIL_CLOSED`에 따라 개발 환경에서는 허용, 운영 환경에서는 차단될 수 있습니다.
+- 비용/사용량 확인이 필요하면 카드 재수집은 실행 전 `--limit`을 작게 두고 `--dry-run`으로 먼저 검증하세요.
 
 #### Frontend `frontend/.env` 값
 
