@@ -1,8 +1,10 @@
 from django.contrib.auth import get_user_model
-from django.test import TestCase
+from django.test import TestCase, override_settings
 from rest_framework.test import APIClient
+from unittest.mock import patch
 
 from .models import CommunityPost, CommunityPostBookmark
+from .moderation import MODERATION_MESSAGE, ModerationResult
 
 
 class CommunityPostAPITests(TestCase):
@@ -87,6 +89,108 @@ class CommunityPostAPITests(TestCase):
         self.assertEqual(response.json()["code"], "INVALID_COMMUNITY_POST")
         self.assertIn("content", response.json()["details"])
 
+    @patch("community.serializers.moderate_post_fields")
+    def test_authenticated_user_can_create_post_when_moderation_allows(self, moderate_post_fields):
+        self.client.force_authenticate(self.author)
+        moderate_post_fields.return_value = ModerationResult(violations={}, unavailable=False)
+
+        response = self.client.post(
+            "/api/v1/community/posts/",
+            {
+                "title": "Fresh post",
+                "content": "Only title, content, and tags are required for the community post.",
+                "tags": ["mvp", "review"],
+            },
+            format="json",
+        )
+
+        self.assertEqual(response.status_code, 201)
+        self.assertEqual(CommunityPost.objects.count(), 1)
+        moderate_post_fields.assert_called_once_with(
+            {
+                "title": "Fresh post",
+                "content": "Only title, content, and tags are required for the community post.",
+            }
+        )
+
+    @patch("community.serializers.moderate_post_fields")
+    def test_create_post_blocked_when_title_is_unsafe(self, moderate_post_fields):
+        self.client.force_authenticate(self.author)
+        moderate_post_fields.return_value = ModerationResult(violations={"title": MODERATION_MESSAGE}, unavailable=False)
+
+        response = self.client.post(
+            "/api/v1/community/posts/",
+            {
+                "title": "Bad title",
+                "content": "Clean body text.",
+            },
+            format="json",
+        )
+
+        self.assertEqual(response.status_code, 400)
+        self.assertEqual(response.json()["code"], "INVALID_COMMUNITY_POST")
+        self.assertEqual(response.json()["details"]["title"][0], MODERATION_MESSAGE)
+        self.assertEqual(CommunityPost.objects.count(), 0)
+
+    @patch("community.serializers.moderate_post_fields")
+    def test_patch_post_blocked_when_content_is_unsafe(self, moderate_post_fields):
+        post = self._create_post()
+        self.client.force_authenticate(self.author)
+        moderate_post_fields.return_value = ModerationResult(violations={"content": MODERATION_MESSAGE}, unavailable=False)
+
+        response = self.client.patch(
+            f"/api/v1/community/posts/{post.id}/",
+            {"content": "Bad content"},
+            format="json",
+        )
+
+        self.assertEqual(response.status_code, 400)
+        self.assertEqual(response.json()["code"], "INVALID_COMMUNITY_POST")
+        self.assertEqual(response.json()["details"]["content"][0], MODERATION_MESSAGE)
+        post.refresh_from_db()
+        self.assertEqual(post.content, "The pumps were clean and the staff was kind.")
+
+    @patch("community.serializers.moderate_post_fields")
+    @override_settings(COMMUNITY_MODERATION_FAIL_CLOSED=False)
+    def test_moderation_unavailable_fails_open_in_dev_and_allows_save(self, moderate_post_fields):
+        self.client.force_authenticate(self.author)
+        moderate_post_fields.return_value = ModerationResult(violations={}, unavailable=True)
+
+        response = self.client.post(
+            "/api/v1/community/posts/",
+            {
+                "title": "Safe title",
+                "content": "Safe content.",
+            },
+            format="json",
+        )
+
+        self.assertEqual(response.status_code, 201)
+        self.assertEqual(CommunityPost.objects.count(), 1)
+        self.assertNotIn("non_field_errors", response.json())
+
+    @patch("community.serializers.moderate_post_fields")
+    @override_settings(COMMUNITY_MODERATION_FAIL_CLOSED=True)
+    def test_moderation_unavailable_fails_closed_in_production(self, moderate_post_fields):
+        post = self._create_post()
+        self.client.force_authenticate(self.author)
+        moderate_post_fields.return_value = ModerationResult(
+            violations={"non_field_errors": MODERATION_MESSAGE},
+            unavailable=True,
+        )
+
+        response = self.client.patch(
+            f"/api/v1/community/posts/{post.id}/",
+            {"title": "Still safe title"},
+            format="json",
+        )
+
+        self.assertEqual(response.status_code, 400)
+        self.assertEqual(response.json()["code"], "INVALID_COMMUNITY_POST")
+        self.assertEqual(response.json()["details"]["non_field_errors"][0], MODERATION_MESSAGE)
+        post.refresh_from_db()
+        self.assertEqual(post.title, "Useful community post")
+
     def test_author_can_update_post(self):
         post = self._create_post()
         self.client.force_authenticate(self.author)
@@ -100,6 +204,21 @@ class CommunityPostAPITests(TestCase):
         self.assertEqual(response.status_code, 200)
         self.assertEqual(response.json()["title"], "Updated title")
         self.assertEqual(response.json()["tags"], ["updated"])
+
+    @patch("community.serializers.moderate_post_fields")
+    def test_tags_only_patch_skips_moderation(self, moderate_post_fields):
+        post = self._create_post()
+        self.client.force_authenticate(self.author)
+
+        response = self.client.patch(
+            f"/api/v1/community/posts/{post.id}/",
+            {"tags": ["updated", "fresh"]},
+            format="json",
+        )
+
+        self.assertEqual(response.status_code, 200)
+        moderate_post_fields.assert_not_called()
+        self.assertEqual(response.json()["tags"], ["updated", "fresh"])
 
     def test_author_can_delete_post(self):
         post = self._create_post()
