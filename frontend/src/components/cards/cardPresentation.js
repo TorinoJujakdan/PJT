@@ -6,7 +6,45 @@ const brandLabels = {
   HD_HYUNDAI: "HD현대오일뱅크",
 };
 
+export function requiresManualBenefitEntry(card) {
+  return Boolean(
+    card?.requires_manual_benefit_entry
+    || (card?.fuel_benefit_status && card.fuel_benefit_status !== "verified"),
+  );
+}
+
+export function fuelBenefitStatusLabel(card) {
+  switch (card?.fuel_benefit_status) {
+    case "verified":
+      return "검증된 주유 혜택";
+    case "held_relevance_missing":
+      return "주유 혜택 확인 필요";
+    case "skipped_insufficient_source":
+      return "출처 정보 부족";
+    case "unknown":
+      return "재검증 대기";
+    default:
+      return requiresManualBenefitEntry(card) ? "주유 혜택 확인 필요" : "검증된 주유 혜택";
+  }
+}
+
+export function manualBenefitNotice(card) {
+  switch (card?.fuel_benefit_status) {
+    case "held_relevance_missing":
+      return "수집된 혜택이 주유 할인과 직접 관련되지 않아 자동 등록할 수 없어요. 카드사에서 실제 주유 조건을 확인한 뒤 아래 값을 입력해 주세요.";
+    case "skipped_insufficient_source":
+      return "출처나 원문이 부족해 주유 할인 조건을 확정하지 못했어요. 카드사 안내를 확인하고 직접 조건을 입력해 주세요.";
+    case "unknown":
+      return "아직 새 검증 기준으로 재확인되지 않은 카드예요. 등록하려면 주유 할인 조건을 직접 입력해 주세요.";
+    default:
+      return requiresManualBenefitEntry(card)
+        ? "주유 혜택을 확정하려면 직접 확인한 할인 조건을 입력해 주세요."
+        : "검증된 주유 혜택을 기본값으로 등록할 수 있어요.";
+  }
+}
+
 export function discountLabel(card) {
+  if (requiresManualBenefitEntry(card)) return fuelBenefitStatusLabel(card);
   const benefit = cardWithEffectiveBenefit(card);
   const value = Number(benefit?.discount_value || 0).toLocaleString("ko-KR");
   if (benefit?.discount_type === "percentage") return `결제 금액의 ${value}% 할인`;
@@ -51,6 +89,9 @@ export function validateCardDraft(draft) {
   }
   const value = Number(draft.discount_value);
   if (Number.isNaN(value) || value < 0) return "할인값은 0 이상의 숫자로 입력해 주세요.";
+  if (requiresManualBenefitEntry(draft) && value <= 0) {
+    return "확인 필요 카드는 직접 확인한 0보다 큰 주유 할인값을 입력해야 등록할 수 있습니다.";
+  }
   if (draft.discount_type === "percentage" && value > 100) {
     return "비율 할인은 100%를 초과할 수 없습니다.";
   }
@@ -62,6 +103,7 @@ function firstBenefit(benefits) {
 }
 
 export function effectiveBenefit(card) {
+  if (requiresManualBenefitEntry(card)) return null;
   return (
     card?.effective_benefit
     || firstBenefit(card?.catalog_benefit_tiers)
@@ -105,11 +147,18 @@ export function cardPayload(draft) {
 }
 
 export function catalogCardDraft(card) {
+  const needsManualEntry = requiresManualBenefitEntry(card);
+  const baseCard = cardWithEffectiveBenefit(card);
   return {
     ...cardPayload({
-      ...cardWithEffectiveBenefit(card),
-      user_memo: "카탈로그 혜택 확인 후 등록",
+      ...baseCard,
+      discount_type: needsManualEntry ? "per_liter" : baseCard.discount_type,
+      discount_value: needsManualEntry ? "" : baseCard.discount_value,
+      brand_scope: needsManualEntry ? "all" : baseCard.brand_scope,
+      user_memo: needsManualEntry ? "주유 혜택 직접 확인 후 등록" : "카탈로그 혜택 확인 후 등록",
     }),
+    fuel_benefit_status: card.fuel_benefit_status || "verified",
+    requires_manual_benefit_entry: needsManualEntry,
     catalog_card_id: card.catalog_card_id,
   };
 }

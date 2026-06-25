@@ -4,12 +4,16 @@ import re
 from dataclasses import replace
 from decimal import Decimal
 
+from cards.brand_scope import normalize_brand_scope
 from cards.models import CardPolicy
 
 from .money import MONEY_PATTERN, extract_first_amount
 
 def infer_brand_scope(text):
     source_text = str(text or "")
+    canonical_scope = normalize_brand_scope(source_text)
+    if canonical_scope.reason != "unmapped_original_scope":
+        return canonical_scope.scope
     normalized = source_text.upper()
     all_patterns = ["모든 주유", "전국 주유", "모든 충전", "주유 충전", "전 가맹점", "all fuel"]
     if any(pattern in source_text.lower() for pattern in all_patterns):

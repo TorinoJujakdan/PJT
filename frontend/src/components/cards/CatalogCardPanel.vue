@@ -1,5 +1,5 @@
 <script setup>
-import { ref } from "vue";
+import { computed, ref } from "vue";
 import { ArrowLeft, Check, ExternalLink, Search } from "@lucide/vue";
 import { createMyCardFromCatalog, searchCardCatalog } from "../../api/cards";
 import {
@@ -14,7 +14,11 @@ import {
   catalogCardDraft,
   catalogCardPayload,
   discountLabel,
+  fuelBenefitStatusLabel,
+  manualBenefitNotice,
+  requiresManualBenefitEntry,
   trustDisclosure,
+  validateCardDraft,
   wonLabel,
 } from "./cardPresentation";
 
@@ -68,6 +72,12 @@ async function save() {
   saving.value = true;
   error.value = "";
   const draft = cardsWorkspaceStore.catalogDraft;
+  const validationError = validateCardDraft(draft);
+  if (validationError) {
+    error.value = validationError;
+    saving.value = false;
+    return;
+  }
   try {
     await createMyCardFromCatalog(catalogCardPayload(draft));
     cardsWorkspaceStore.selectedCatalogCard = null;
@@ -80,6 +90,13 @@ async function save() {
     saving.value = false;
   }
 }
+
+
+const selectedRequiresManualEntry = computed(() => (
+  requiresManualBenefitEntry(cardsWorkspaceStore.selectedCatalogCard)
+));
+const selectedManualNotice = computed(() => manualBenefitNotice(cardsWorkspaceStore.selectedCatalogCard));
+const selectedStatusLabel = computed(() => fuelBenefitStatusLabel(cardsWorkspaceStore.selectedCatalogCard));
 
 const trust = (card) => trustDisclosure(card);
 </script>
@@ -153,7 +170,9 @@ const trust = (card) => trustDisclosure(card);
 
         <div class="catalogBenefitCard">
           <p class="eyebrow">주유 혜택</p>
-          <strong class="benefitHeadline">{{ discountLabel(cardsWorkspaceStore.catalogDraft) }}</strong>
+          <p v-if="selectedRequiresManualEntry" class="benefitStatusBadge">{{ selectedStatusLabel }}</p>
+          <strong class="benefitHeadline" :data-manual-required="selectedRequiresManualEntry">{{ discountLabel(cardsWorkspaceStore.catalogDraft) }}</strong>
+          <p v-if="selectedRequiresManualEntry" class="manualBenefitCopy">{{ selectedManualNotice }}</p>
           <dl class="benefitFacts">
             <div><dt>적용 주유소</dt><dd>{{ brandLabel(cardsWorkspaceStore.catalogDraft.brand_scope) }}</dd></div>
             <div><dt>최소 결제</dt><dd>{{ wonLabel(cardsWorkspaceStore.catalogDraft.min_payment_amount) }}</dd></div>
@@ -173,8 +192,8 @@ const trust = (card) => trustDisclosure(card);
             </a>
           </div>
 
-          <details class="benefitAdjustments">
-            <summary>내가 확인한 조건으로 조정하기</summary>
+          <details class="benefitAdjustments" :open="selectedRequiresManualEntry">
+            <summary>{{ selectedRequiresManualEntry ? "직접 확인한 주유 조건 입력하기" : "내가 확인한 조건으로 조정하기" }}</summary>
             <CardPolicyFields
               :draft="cardsWorkspaceStore.catalogDraft"
               @dirty="markCardsWorkspaceDirty('catalog')"
@@ -184,7 +203,7 @@ const trust = (card) => trustDisclosure(card);
           <p v-if="error" class="cardError" role="alert">{{ error }}</p>
           <button class="cardPrimaryButton cardRegisterButton" type="button" :disabled="saving" @click="save">
             <Check :size="19" />
-            {{ saving ? "등록 중…" : "이 혜택으로 바로 등록" }}
+            {{ saving ? "등록 중" : selectedRequiresManualEntry ? "입력한 조건으로 등록" : "이 혜택으로 바로 등록" }}
           </button>
         </div>
       </div>

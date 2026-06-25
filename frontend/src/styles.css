@@ -3670,6 +3670,34 @@ body.modalOpen {
   letter-spacing: -0.04em;
 }
 
+.benefitHeadline[data-manual-required="true"] {
+  margin-bottom: 8px;
+  color: var(--accent);
+  font-size: clamp(22px, 3vw, 30px);
+  letter-spacing: -0.025em;
+}
+
+.benefitStatusBadge {
+  display: inline-flex;
+  align-items: center;
+  width: fit-content;
+  margin: 4px 0 0;
+  padding: 5px 10px;
+  border: 1px solid rgba(245, 158, 11, 0.35);
+  border-radius: 999px;
+  color: #92400e;
+  background: #fffbeb;
+  font-size: 12px;
+  font-weight: 800;
+}
+
+.manualBenefitCopy {
+  margin: -2px 0 18px;
+  color: var(--slate-600);
+  font-size: 14px;
+  line-height: 1.55;
+}
+
 .benefitFacts {
   display: grid;
   gap: 10px;

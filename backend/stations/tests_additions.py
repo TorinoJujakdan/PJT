@@ -311,6 +311,36 @@ class CardAutoVerificationTests(TestCase):
 
 
 class CardRecommendationSafetyTests(TestCase):
+
+    def test_four_major_station_scope_matches_hyundai_oilbank_station(self):
+        station = GasStation(
+            name="Oilbank Sample",
+            brand=GasStation.Brand.HD_HYUNDAI,
+            address="Seoul",
+            latitude=Decimal("37.5665"),
+            longitude=Decimal("126.9780"),
+        )
+        candidate = StationCandidate(
+            station=station,
+            distance_km=1.0,
+            fuel_type=FuelPrice.FuelType.GASOLINE,
+            fuel_price_per_liter=1700,
+        )
+        card = {
+            "card_name": "Four Major Card",
+            "issuer_name": "Test Bank",
+            "source_type": CardPolicy.SourceType.MANUAL,
+            "verification_status": CardPolicy.VerificationStatus.USER_CONFIRMED,
+            "discount_type": CardPolicy.DiscountType.PER_LITER,
+            "discount_value": "100",
+            "brand_scope": "4대 주유소",
+        }
+
+        discount, selected_card = calculate_card_discount(candidate, 50000, 30, [card])
+
+        self.assertEqual(discount, 3000)
+        self.assertIsNotNone(selected_card)
+
     def test_unrealistic_percentage_benefit_does_not_affect_recommendation(self):
         station = GasStation(
             name="GS Sample",

@@ -7,6 +7,9 @@ import {
   catalogCardDraft,
   catalogCardPayload,
   discountLabel,
+  fuelBenefitStatusLabel,
+  manualBenefitNotice,
+  requiresManualBenefitEntry,
   trustDisclosure,
   validateCardDraft,
 } from "./cardPresentation.js";
@@ -111,4 +114,48 @@ test("쓰기 payload에는 전월 실적 입력값을 숫자 또는 null로 포�
   assert.equal(cardPayload(draft).previous_month_spending, 300000);
   assert.equal(cardPayload({ ...draft, previous_month_spending: "" }).previous_month_spending, null);
   assert.equal(catalogCardPayload({ ...draft, catalog_card_id: 3 }).previous_month_spending, 300000);
+});
+
+
+test("held catalog cards do not expose stale benefit tiers as an active benefit", () => {
+  const heldCard = {
+    catalog_card_id: 13,
+    card_name: "OTT 카드",
+    issuer_name: "테스트카드",
+    fuel_benefit_status: "held_relevance_missing",
+    requires_manual_benefit_entry: true,
+    effective_benefit: null,
+    benefit_tiers: [
+      {
+        discount_type: "percentage",
+        discount_value: "30.00",
+        brand_scope: "all",
+      },
+    ],
+  };
+
+  const draft = catalogCardDraft(heldCard);
+
+  assert.equal(requiresManualBenefitEntry(heldCard), true);
+  assert.equal(discountLabel(heldCard), "주유 혜택 확인 필요");
+  assert.equal(fuelBenefitStatusLabel(heldCard), "주유 혜택 확인 필요");
+  assert.match(manualBenefitNotice(heldCard), /직접/);
+  assert.equal(draft.discount_value, 0);
+  assert.equal(draft.requires_manual_benefit_entry, true);
+});
+
+test("manual-entry-required catalog drafts need a positive fuel discount before registration", () => {
+  const draft = {
+    catalog_card_id: 13,
+    card_name: "확인 필요 카드",
+    issuer_name: "테스트카드",
+    discount_type: "per_liter",
+    discount_value: 0,
+    brand_scope: "all",
+    requires_manual_benefit_entry: true,
+  };
+
+  assert.match(validateCardDraft(draft), /0보다 큰/);
+  assert.equal(validateCardDraft({ ...draft, discount_value: 80 }), "");
+  assert.equal(catalogCardPayload({ ...draft, discount_value: 80 }).discount_value, 80);
 });

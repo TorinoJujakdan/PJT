@@ -3,16 +3,61 @@ from rest_framework import serializers
 from .benefit_safety import is_suspicious_fuel_discount
 from .models import CardBenefitTier, CardCatalog, CardPolicy
 
+FUEL_BENEFIT_STATUS_VERIFIED = "verified"
+FUEL_BENEFIT_STATUS_HELD_RELEVANCE_MISSING = "held_relevance_missing"
+FUEL_BENEFIT_STATUS_SKIPPED_INSUFFICIENT_SOURCE = "skipped_insufficient_source"
+FUEL_BENEFIT_STATUS_UNKNOWN = "unknown"
+FUEL_BENEFIT_RELEVANCE_MISSING_WARNING = "fuel_benefit_relevance_missing"
+FUEL_BENEFIT_INSUFFICIENT_SOURCE_WARNING = "fuel_benefit_insufficient_source"
+NON_VERIFIED_FUEL_BENEFIT_STATUSES = {
+    FUEL_BENEFIT_STATUS_HELD_RELEVANCE_MISSING,
+    FUEL_BENEFIT_STATUS_SKIPPED_INSUFFICIENT_SOURCE,
+    FUEL_BENEFIT_STATUS_UNKNOWN,
+}
+
 
 def _first_benefit_tier(catalog):
     if catalog is None:
         return None
     prefetched = getattr(catalog, "_prefetched_objects_cache", {}).get("benefit_tiers")
     benefit_tiers = prefetched if prefetched is not None else catalog.benefit_tiers.all()
+    evidence_text = getattr(catalog, "raw_summary", "") or ""
     for tier in benefit_tiers:
-        if not is_suspicious_fuel_discount(tier.discount_type, tier.discount_value):
+        if not is_suspicious_fuel_discount(tier.discount_type, tier.discount_value, evidence_text):
             return tier
     return None
+
+
+def _quality_data(catalog):
+    normalized_data = getattr(catalog, "normalized_data", {}) or {}
+    quality = normalized_data.get("quality", {})
+    return quality if isinstance(quality, dict) else {}
+
+
+def _quality_warnings(catalog):
+    warnings = _quality_data(catalog).get("warnings", [])
+    if isinstance(warnings, list):
+        return {str(warning) for warning in warnings}
+    return set()
+
+
+def catalog_fuel_benefit_status(catalog):
+    warnings = _quality_warnings(catalog)
+    quality = _quality_data(catalog)
+    explicit_status = quality.get("fuel_benefit_status")
+    if explicit_status in NON_VERIFIED_FUEL_BENEFIT_STATUSES:
+        return explicit_status
+    if FUEL_BENEFIT_RELEVANCE_MISSING_WARNING in warnings:
+        return FUEL_BENEFIT_STATUS_HELD_RELEVANCE_MISSING
+    if FUEL_BENEFIT_INSUFFICIENT_SOURCE_WARNING in warnings:
+        return FUEL_BENEFIT_STATUS_SKIPPED_INSUFFICIENT_SOURCE
+    if _first_benefit_tier(catalog) is not None:
+        return FUEL_BENEFIT_STATUS_VERIFIED
+    return FUEL_BENEFIT_STATUS_UNKNOWN
+
+
+def catalog_requires_manual_benefit_entry(catalog):
+    return catalog_fuel_benefit_status(catalog) != FUEL_BENEFIT_STATUS_VERIFIED
 
 
 def _policy_benefit(policy):
@@ -132,6 +177,8 @@ class CardCatalogSerializer(serializers.ModelSerializer):
     catalog_card_id = serializers.IntegerField(source="id", read_only=True)
     benefit_tiers = CardBenefitTierSerializer(many=True, read_only=True)
     effective_benefit = serializers.SerializerMethodField()
+    fuel_benefit_status = serializers.SerializerMethodField()
+    requires_manual_benefit_entry = serializers.SerializerMethodField()
     card_image_file = serializers.FileField(read_only=True)
 
     class Meta:
@@ -152,14 +199,24 @@ class CardCatalogSerializer(serializers.ModelSerializer):
             "confidence",
             "collected_at",
             "benefit_tiers",
+            "fuel_benefit_status",
+            "requires_manual_benefit_entry",
             "effective_benefit",
         ]
 
     def get_effective_benefit(self, obj):
+        if catalog_requires_manual_benefit_entry(obj):
+            return None
         tier = _first_benefit_tier(obj)
         if tier:
             return CardBenefitTierSerializer(tier).data
         return None
+
+    def get_fuel_benefit_status(self, obj):
+        return catalog_fuel_benefit_status(obj)
+
+    def get_requires_manual_benefit_entry(self, obj):
+        return catalog_requires_manual_benefit_entry(obj)
 
 
 class CardFromCatalogSerializer(serializers.Serializer):

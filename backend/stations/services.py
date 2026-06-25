@@ -8,6 +8,7 @@ from typing import Any, Optional
 from django.db.models import OuterRef, Subquery
 
 from cards.benefit_safety import decimal_or_zero, is_suspicious_fuel_discount
+from cards.brand_scope import normalize_brand_scope, normalize_station_brand
 from cards.models import CardPolicy
 
 from .models import FuelPrice, GasStation
@@ -212,11 +213,12 @@ def card_can_affect_recommendation(card):
 
 
 def brand_matches(brand_scope, station_brand):
-    if not brand_scope or str(brand_scope).lower() == "all":
+    normalized_scope = normalize_brand_scope(str(brand_scope or "")).scope
+    if normalized_scope == "all":
         return True
 
-    normalized_station_brand = str(station_brand).strip().lower()
-    scopes = [item.strip().lower() for item in str(brand_scope).split(",")]
+    normalized_station_brand = normalize_station_brand(str(station_brand or "")).lower()
+    scopes = [item.strip().lower() for item in normalized_scope.split(",")]
     return normalized_station_brand in scopes
 
 
