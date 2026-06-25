@@ -9,7 +9,13 @@ from django.test import TestCase
 
 from cards.ai_chunks import compute_raw_hash
 from cards.ai_normalization import save_ai_normalized_candidates
-from cards.gemini_client import GeminiRequestError, build_gemini_normalization_prompt, estimate_gemini_cost
+from cards.gemini_client import (
+    GeminiClientConfig,
+    GeminiRequestError,
+    _build_request_payload,
+    build_gemini_normalization_prompt,
+    estimate_gemini_cost,
+)
 from cards.llm_fuel_extraction import build_line_numbered_document, validate_llm_fuel_payload
 from cards.models import CardBenefitTier, CardCatalog, CardPolicy
 from cards.selenium_ingestion import ScrapedCardCandidate, run_api_fallback_scraper
@@ -65,6 +71,26 @@ class LlmFuelExtractionTests(TestCase):
         self.assertEqual(estimate["thinking_tokens"], 100)
         self.assertEqual(estimate["output_tokens"], 500)
         self.assertEqual(estimate["total_cost_usd"], "0.0063")
+
+    def test_request_payload_uses_gemini_compatible_inline_schema(self) -> None:
+        config = GeminiClientConfig(
+            api_key="test-key",
+            model="gemini-3.5-flash",
+            base_url="https://example.test",
+            timeout_seconds=30,
+            max_output_tokens=128,
+        )
+
+        payload = _build_request_payload("prompt", config)
+        response_schema = payload["generationConfig"]["responseSchema"]
+
+        for unsupported_key in ("$defs", "$ref", "$schema", "default", "pattern", "title", "anyOf"):
+            self.assertFalse(_contains_key(response_schema, unsupported_key), unsupported_key)
+        card_schema = response_schema["properties"]["card"]
+        self.assertEqual(card_schema["properties"]["name"]["type"], "string")
+        benefit_schema = response_schema["properties"]["benefits"]["items"]
+        self.assertEqual(benefit_schema["properties"]["discount_value"]["type"], "number")
+        self.assertTrue(benefit_schema["properties"]["min_payment_amount"]["nullable"])
 
 
 class AiNormalizedCandidateSaveTests(TestCase):
@@ -244,3 +270,11 @@ def _valid_llm_payload(discount_type: str, discount_value: str) -> dict:
         ],
         "quality": {"extraction_confidence": "0.9", "verification_status": "unverified", "warnings": []},
     }
+
+
+def _contains_key(value: object, key: str) -> bool:
+    if isinstance(value, dict):
+        return key in value or any(_contains_key(child, key) for child in value.values())
+    if isinstance(value, list):
+        return any(_contains_key(child, key) for child in value)
+    return False

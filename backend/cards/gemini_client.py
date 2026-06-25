@@ -7,7 +7,7 @@ from dataclasses import dataclass
 from decimal import Decimal, InvalidOperation
 from typing import Final
 
-from .llm_fuel_extraction import JsonObject, LlmFuelPayload, build_line_numbered_document
+from .llm_fuel_extraction import JsonObject, JsonValue, LlmFuelPayload, build_line_numbered_document
 from .selenium_ingestion import ScrapedCardCandidate
 
 logger = logging.getLogger(__name__)
@@ -19,6 +19,9 @@ DEFAULT_GEMINI_MAX_OUTPUT_TOKENS: Final = 2048
 MAX_RAW_SUMMARY_LENGTH: Final = 3000
 GEMINI_35_FLASH_INPUT_USD_PER_1M: Final = Decimal("1.50")
 GEMINI_35_FLASH_OUTPUT_USD_PER_1M: Final = Decimal("9.00")
+UNSUPPORTED_GEMINI_SCHEMA_KEYS: Final = frozenset(
+    {"$defs", "$ref", "$schema", "anyOf", "default", "pattern", "title"}
+)
 
 
 @dataclass(frozen=True, slots=True)
@@ -187,11 +190,106 @@ def _build_request_payload(prompt: str, config: GeminiClientConfig) -> JsonObjec
         "contents": [{"parts": [{"text": prompt}], "role": "user"}],
         "generationConfig": {
             "responseMimeType": "application/json",
-            "responseSchema": LlmFuelPayload.model_json_schema(),
+            "responseSchema": _build_gemini_response_schema(),
             "temperature": 0.0,
             "maxOutputTokens": config.max_output_tokens,
         },
     }
+
+
+def _build_gemini_response_schema() -> JsonObject:
+    pydantic_schema = LlmFuelPayload.model_json_schema()
+    definitions = _schema_definitions(pydantic_schema)
+    return _gemini_schema_node(pydantic_schema, definitions)
+
+
+def _schema_definitions(schema: JsonObject) -> dict[str, JsonObject]:
+    raw_definitions = schema.get("$defs")
+    if not isinstance(raw_definitions, dict):
+        return {}
+    return {
+        name: definition
+        for name, definition in raw_definitions.items()
+        if isinstance(name, str) and isinstance(definition, dict)
+    }
+
+
+def _gemini_schema_node(schema: JsonObject, definitions: dict[str, JsonObject]) -> JsonObject:
+    ref = schema.get("$ref")
+    if isinstance(ref, str):
+        definition = definitions.get(ref.rsplit("/", maxsplit=1)[-1])
+        if definition is None:
+            return {}
+        return _gemini_schema_node(definition, definitions)
+
+    any_of = schema.get("anyOf")
+    if isinstance(any_of, list):
+        return _gemini_any_of_node(any_of, definitions)
+
+    converted: JsonObject = {}
+    for key, value in schema.items():
+        if key in UNSUPPORTED_GEMINI_SCHEMA_KEYS:
+            continue
+        if key == "properties" and isinstance(value, dict):
+            converted[key] = _gemini_schema_properties(value, definitions)
+            continue
+        if key == "items" and isinstance(value, dict):
+            converted[key] = _gemini_schema_node(value, definitions)
+            continue
+        if key == "required" and isinstance(value, list):
+            converted[key] = [item for item in value if isinstance(item, str)]
+            continue
+        if key == "additionalProperties" and isinstance(value, bool):
+            converted[key] = value
+            continue
+        if key in {"description", "type"} and isinstance(value, str):
+            converted[key] = value
+            continue
+        if key == "enum" and isinstance(value, list):
+            converted[key] = _json_scalar_list(value)
+            continue
+
+    return converted
+
+
+def _gemini_schema_properties(
+    properties: dict[str, JsonValue],
+    definitions: dict[str, JsonObject],
+) -> JsonObject:
+    converted: JsonObject = {}
+    for property_name, property_schema in properties.items():
+        if isinstance(property_name, str) and isinstance(property_schema, dict):
+            converted[property_name] = _gemini_schema_node(property_schema, definitions)
+    return converted
+
+
+def _gemini_any_of_node(options: list[JsonValue], definitions: dict[str, JsonObject]) -> JsonObject:
+    converted_options = [
+        _gemini_schema_node(option, definitions)
+        for option in options
+        if isinstance(option, dict)
+    ]
+    non_null_options = [
+        option for option in converted_options if option.get("type") != "null"
+    ]
+    if not non_null_options:
+        return {}
+
+    selected = next(
+        (option for option in non_null_options if option.get("type") == "number"),
+        non_null_options[0],
+    )
+    if len(non_null_options) < len(converted_options):
+        selected["nullable"] = True
+    return selected
+
+
+def _json_scalar_list(values: list[JsonValue]) -> list[JsonValue]:
+    return [
+        value
+        for value in values
+        if isinstance(value, str | int | float | bool) or value is None
+    ]
 
 
 def _extract_generate_content_text(response_json: JsonObject) -> str:
