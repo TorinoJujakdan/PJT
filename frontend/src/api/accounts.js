@@ -11,6 +11,10 @@ export function signupAccount(payload) {
   });
 }
 
+export function checkUsernameAvailability(username) {
+  return apiRequest(`/accounts/username-availability/?username=${encodeURIComponent(username)}`);
+}
+
 export async function signupAndAuthenticate(payload) {
   const signupPayload = await signupAccount(payload);
 

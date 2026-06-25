@@ -1,4 +1,4 @@
-from django.contrib.auth import authenticate, login, logout
+from django.contrib.auth import authenticate, get_user_model, login, logout
 from django.views.decorators.csrf import ensure_csrf_cookie
 from django.utils.decorators import method_decorator
 from rest_framework import status
@@ -8,6 +8,8 @@ from rest_framework.views import APIView
 from rest_framework.throttling import AnonRateThrottle
 
 from .serializers import LoginSerializer, SignupSerializer, UserSerializer
+
+User = get_user_model()
 
 
 ERROR_MESSAGES = {
@@ -42,6 +44,54 @@ class SignupAPIView(APIView):
         return Response(
             {"authenticated": True, "user": UserSerializer(user).data},
             status=status.HTTP_201_CREATED,
+        )
+
+
+class EmailAvailabilityAPIView(APIView):
+    permission_classes = [AllowAny]
+    throttle_classes = [AnonRateThrottle]
+
+    def get(self, request):
+        email = (request.query_params.get("email") or "").strip()
+        if not email:
+            return Response(
+                {
+                    "available": False,
+                    "message": "이메일을 입력해 주세요.",
+                },
+                status=status.HTTP_400_BAD_REQUEST,
+            )
+
+        exists = User.objects.filter(email__iexact=email).exists()
+        return Response(
+            {
+                "available": not exists,
+                "message": "사용 가능한 이메일입니다." if not exists else "이미 사용 중인 이메일입니다.",
+            }
+        )
+
+
+class UsernameAvailabilityAPIView(APIView):
+    permission_classes = [AllowAny]
+    throttle_classes = [AnonRateThrottle]
+
+    def get(self, request):
+        username = (request.query_params.get("username") or "").strip()
+        if not username:
+            return Response(
+                {
+                    "available": False,
+                    "message": "아이디를 입력해 주세요.",
+                },
+                status=status.HTTP_400_BAD_REQUEST,
+            )
+
+        exists = User.objects.filter(username__iexact=username).exists()
+        return Response(
+            {
+                "available": not exists,
+                "message": "사용 가능한 아이디입니다." if not exists else "이미 사용 중인 아이디입니다.",
+            }
         )
 
 

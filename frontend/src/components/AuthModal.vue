@@ -89,9 +89,6 @@ function switchMode(newMode) {
           <LogIn :size="18" />
           <span>{{ loading ? "로그인 중..." : "로그인" }}</span>
         </button>
-        <button class="textButton" type="button" @click="switchMode('signup')">
-          계정 만들기
-        </button>
       </form>
 
       <!-- SIGNUP MODE -->
@@ -115,9 +112,6 @@ function switchMode(newMode) {
         <button class="primaryButton fullWidth" type="submit" :disabled="loading">
           <UserPlus :size="18" />
           <span>{{ loading ? "가입 처리 중..." : "가입하기" }}</span>
-        </button>
-        <button class="textButton" type="button" @click="switchMode('login')">
-          이미 계정이 있으신가요? 로그인
         </button>
       </form>
     </div>

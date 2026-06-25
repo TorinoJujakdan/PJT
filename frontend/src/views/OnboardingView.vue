@@ -1,8 +1,9 @@
 <script setup>
-import { computed, reactive, ref } from "vue";
+import { computed, reactive, ref, watch } from "vue";
 import {
   ArrowRight,
   Car,
+  Check,
   CreditCard,
   Fuel,
   LogIn,
@@ -11,7 +12,7 @@ import {
   Users,
 } from "@lucide/vue";
 
-import { signupAndAuthenticate } from "../api/accounts";
+import { checkUsernameAvailability, signupAndAuthenticate } from "../api/accounts";
 
 const emit = defineEmits(["login", "authenticated"]);
 
@@ -22,6 +23,13 @@ const signupForm = reactive({
   username: "",
   email: "",
   password: "",
+  passwordConfirm: "",
+});
+
+const usernameCheck = reactive({
+  status: "idle",
+  message: "",
+  checkedUsername: "",
 });
 
 const copy = {
@@ -73,14 +81,51 @@ const copy = {
   signupTitle: "\ud68c\uc6d0\uac00\uc785",
   username: "\uc544\uc774\ub514",
   usernamePlaceholder: "\uc0ac\uc6a9\ud560 \uc544\uc774\ub514",
+  usernameCheck: "\uc911\ubcf5\ud655\uc778",
+  usernameChecking: "\ud655\uc778 \uc911",
+  usernameCheckRequired: "\uc544\uc774\ub514 \uc911\ubcf5\ud655\uc778\uc744 \uc644\ub8cc\ud574 \uc8fc\uc138\uc694.",
   email: "\uc774\uba54\uc77c",
+  emailPlaceholder: "you@example.com",
   password: "\ube44\ubc00\ubc88\ud638",
   passwordPlaceholder: "\ube44\ubc00\ubc88\ud638 \uc785\ub825",
+  passwordConfirm: "\ube44\ubc00\ubc88\ud638 \ud655\uc778",
+  passwordConfirmPlaceholder: "\ube44\ubc00\ubc88\ud638\ub97c \ub2e4\uc2dc \uc785\ub825",
+  passwordMatched: "\ube44\ubc00\ubc88\ud638\uac00 \uc77c\uce58\ud569\ub2c8\ub2e4.",
+  passwordMismatched: "\ube44\ubc00\ubc88\ud638\uac00 \uc77c\uce58\ud558\uc9c0 \uc54a\uc2b5\ub2c8\ub2e4.",
   signupSubmit: "\uacc4\uc815 \ub9cc\ub4e4\uace0 \uc2dc\uc791\ud558\uae30",
   signupLoading: "\uac00\uc785 \ucc98\ub9ac \uc911...",
-  alreadyAccount: "\uc774\ubbf8 \uacc4\uc815\uc774 \uc788\ub2e4\uba74 \ub85c\uadf8\uc778",
   signupFailed: "\ud68c\uc6d0\uac00\uc785 \uc694\uccad\uc744 \ucc98\ub9ac\ud558\uc9c0 \ubabb\ud588\uc2b5\ub2c8\ub2e4.",
 };
+
+const passwordRules = computed(() => [
+  { key: "length", label: "8\uc790 \uc774\uc0c1", passed: signupForm.password.length >= 8 },
+  { key: "letter", label: "\uc601\ubb38 \ud3ec\ud568", passed: /[A-Za-z]/.test(signupForm.password) },
+  { key: "number", label: "\uc22b\uc790 \ud3ec\ud568", passed: /\d/.test(signupForm.password) },
+  {
+    key: "special",
+    label: "\ud2b9\uc218\ubb38\uc790 \ud3ec\ud568",
+    passed: /[^A-Za-z0-9]/.test(signupForm.password),
+  },
+]);
+
+const passwordIsValid = computed(() => passwordRules.value.every((rule) => rule.passed));
+const passwordConfirmStatus = computed(() => {
+  if (!signupForm.passwordConfirm) return "idle";
+  return signupForm.password === signupForm.passwordConfirm ? "valid" : "invalid";
+});
+const emailIsValid = computed(() => /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(signupForm.email));
+const usernameIsAvailable = computed(
+  () => usernameCheck.status === "available" && usernameCheck.checkedUsername === signupForm.username
+);
+const canSubmitSignup = computed(
+  () =>
+    Boolean(signupForm.username.trim()) &&
+    emailIsValid.value &&
+    usernameIsAvailable.value &&
+    passwordIsValid.value &&
+    passwordConfirmStatus.value === "valid" &&
+    !loading.value
+);
 
 const heroMetrics = [
   { value: "1\ubd84", label: "\uc870\uac74 \uc785\ub825\ubd80\ud130 \ucd94\ucc9c\uae4c\uc9c0" },
@@ -168,12 +213,21 @@ const errorMessage = computed(() => {
   return error.value.message || copy.signupFailed;
 });
 
+watch(
+  () => signupForm.username,
+  () => {
+    usernameCheck.status = "idle";
+    usernameCheck.message = "";
+    usernameCheck.checkedUsername = "";
+  }
+);
+
 function scrollToSignup() {
   document.getElementById("onboarding-signup")?.scrollIntoView({ behavior: "smooth", block: "center" });
 }
 
 async function handleSignup() {
-  if (loading.value) return;
+  if (!canSubmitSignup.value) return;
 
   loading.value = true;
   error.value = null;
@@ -189,6 +243,23 @@ async function handleSignup() {
     error.value = err.payload || { message: err.message };
   } finally {
     loading.value = false;
+  }
+}
+
+async function handleUsernameCheck() {
+  if (!signupForm.username.trim() || usernameCheck.status === "checking") return;
+
+  usernameCheck.status = "checking";
+  usernameCheck.message = "";
+  usernameCheck.checkedUsername = signupForm.username;
+
+  try {
+    const payload = await checkUsernameAvailability(signupForm.username);
+    usernameCheck.status = payload.available ? "available" : "unavailable";
+    usernameCheck.message = payload.message;
+  } catch (err) {
+    usernameCheck.status = "unavailable";
+    usernameCheck.message = err.payload?.message || err.message;
   }
 }
 </script>
@@ -314,36 +385,110 @@ async function handleSignup() {
         </h2>
       </div>
 
-      <form class="signupPageCard refined" @submit.prevent="handleSignup" aria-labelledby="signup-title">
+      <form class="signupPageCard modernSignupCard" @submit.prevent="handleSignup" aria-labelledby="signup-title">
         <div>
           <p class="eyebrow">{{ copy.signupFormEyebrow }}</p>
           <h2 id="signup-title">{{ copy.signupTitle }}</h2>
         </div>
 
-        <label>
-          <span>{{ copy.username }}</span>
-          <input v-model.trim="signupForm.username" autocomplete="username" required :placeholder="copy.usernamePlaceholder" />
-        </label>
-        <label>
-          <span>{{ copy.email }}</span>
-          <input v-model.trim="signupForm.email" type="email" autocomplete="email" required placeholder="you@example.com" />
-        </label>
-        <label>
-          <span>{{ copy.password }}</span>
-          <input v-model="signupForm.password" type="password" autocomplete="new-password" required :placeholder="copy.passwordPlaceholder" />
-        </label>
+        <div class="signupFieldCard">
+          <div class="signupField">
+            <label for="onboarding-signup-username">
+              <span>{{ copy.username }}</span>
+            </label>
+            <div class="duplicateCheckRow">
+              <input
+                id="onboarding-signup-username"
+                v-model.trim="signupForm.username"
+                autocomplete="username"
+                required
+                :placeholder="copy.usernamePlaceholder"
+                aria-describedby="onboarding-signup-username-status"
+              />
+              <button
+                class="duplicateCheckButton"
+                type="button"
+                :disabled="!signupForm.username.trim() || usernameCheck.status === 'checking'"
+                @click="handleUsernameCheck"
+              >
+                {{ usernameCheck.status === "checking" ? copy.usernameChecking : copy.usernameCheck }}
+              </button>
+            </div>
+          </div>
+          <p
+            v-if="usernameCheck.message || (signupForm.username && !usernameIsAvailable)"
+            id="onboarding-signup-username-status"
+            class="signupStatusText"
+            :class="{
+              success: usernameCheck.status === 'available',
+              danger: usernameCheck.status === 'unavailable',
+              muted: usernameCheck.status === 'idle' || usernameCheck.status === 'checking'
+            }"
+            role="status"
+          >
+            {{ usernameCheck.message || copy.usernameCheckRequired }}
+          </p>
+
+          <div class="signupField">
+            <label for="onboarding-signup-email">
+              <span>{{ copy.email }}</span>
+            </label>
+            <input
+              id="onboarding-signup-email"
+              v-model.trim="signupForm.email"
+              type="email"
+              autocomplete="email"
+              required
+              :placeholder="copy.emailPlaceholder"
+            />
+          </div>
+
+          <label>
+            <span>{{ copy.password }}</span>
+            <input
+              v-model="signupForm.password"
+              type="password"
+              autocomplete="new-password"
+              required
+              :placeholder="copy.passwordPlaceholder"
+            />
+          </label>
+
+          <ul class="passwordRuleList" aria-label="비밀번호 조건">
+            <li v-for="rule in passwordRules" :key="rule.key" :class="{ passed: rule.passed }">
+              <span><Check :size="13" /></span>
+              {{ rule.label }}
+            </li>
+          </ul>
+
+          <label>
+            <span>{{ copy.passwordConfirm }}</span>
+            <input
+              v-model="signupForm.passwordConfirm"
+              type="password"
+              autocomplete="new-password"
+              required
+              :placeholder="copy.passwordConfirmPlaceholder"
+            />
+          </label>
+          <p
+            v-if="passwordConfirmStatus !== 'idle'"
+            class="signupStatusText"
+            :class="{ success: passwordConfirmStatus === 'valid', danger: passwordConfirmStatus === 'invalid' }"
+            role="status"
+          >
+            {{ passwordConfirmStatus === "valid" ? copy.passwordMatched : copy.passwordMismatched }}
+          </p>
+        </div>
 
         <div v-if="error" class="errorPanel compact" role="alert">
           <strong>{{ error.code || "SIGNUP_FAILED" }}</strong>
           <span>{{ errorMessage }}</span>
         </div>
 
-        <button class="primaryButton fullWidth" type="submit" :disabled="loading">
+        <button class="primaryButton fullWidth" type="submit" :disabled="!canSubmitSignup">
           <UserPlus :size="18" />
           <span>{{ loading ? copy.signupLoading : copy.signupSubmit }}</span>
-        </button>
-        <button class="textButton" type="button" @click="emit('login')">
-          {{ copy.alreadyAccount }}
         </button>
       </form>
     </section>
