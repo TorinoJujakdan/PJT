@@ -20,8 +20,9 @@ describe("App navigation labels", () => {
     assert.match(accountsApi, /signupAndAuthenticate/);
     assert.match(accountsApi, /getCurrentUser/);
     assert.match(accountsApi, /loginAccount/);
+    assert.match(accountsApi, /checkUsernameAvailability/);
     assert.doesNotMatch(onboardingVue, /VEHICLE_FUEL_LABELS|VehicleTypePicker|smartfuel:onboarding-draft|addVehicle/);
-    assert.doesNotMatch(onboardingVue, /checkUsername|socialLogin|guestMode/);
+    assert.doesNotMatch(onboardingVue, /socialLogin|guestMode/);
   });
 
   it("consolidates duplicated top navigation into the left sidebar", () => {

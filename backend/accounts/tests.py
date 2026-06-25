@@ -43,6 +43,21 @@ class AccountAPITests(TestCase):
         me = self.client.get("/api/v1/accounts/me/")
         self.assertTrue(me.json()["authenticated"])
 
+    def test_username_availability_reports_available_and_taken(self):
+        get_user_model().objects.create_user(
+            username="existing-user",
+            email="taken@example.com",
+            password="pass12345",
+        )
+
+        available_response = self.client.get("/api/v1/accounts/username-availability/?username=fresh-user")
+        taken_response = self.client.get("/api/v1/accounts/username-availability/?username=EXISTING-user")
+
+        self.assertEqual(available_response.status_code, 200)
+        self.assertTrue(available_response.json()["available"])
+        self.assertEqual(taken_response.status_code, 200)
+        self.assertFalse(taken_response.json()["available"])
+
     def test_login_and_logout_flow(self):
         get_user_model().objects.create_user(username="login-user", password="pass12345")
 
