@@ -413,10 +413,10 @@ KB국민 굿데이카드
 class CardBenefitRepairCommandTests(TestCase):
     def test_repair_card_fuel_benefits_marks_ev_only_tier_as_ev(self):
         catalog = CardCatalog.objects.create(
-            card_name="신한카드 EVerywhere",
-            issuer_name="신한카드",
+            card_name="Shinhan EVerywhere",
+            issuer_name="Shinhan",
             source_url="https://card-search.naver.com/card/everywhere",
-            raw_summary="전기차 충전요금 최대 50% 캐시백",
+            raw_summary="EV charging 50% cashback",
         )
         CardBenefitTier.objects.create(
             card_catalog=catalog,
@@ -434,10 +434,10 @@ class CardBenefitRepairCommandTests(TestCase):
 
     def test_repair_card_fuel_benefits_replaces_suspicious_tier_from_raw_summary(self):
         catalog = CardCatalog.objects.create(
-            card_name="삼성 iD STATION 카드 (GS칼텍스)",
-            issuer_name="삼성카드",
+            card_name="Samsung iD STATION",
+            issuer_name="Samsung",
             source_url="https://card-search.naver.com/card/station-gs",
-            raw_summary="GS칼텍스 주유 10% 할인 신규 회원 최대 100% 지급",
+            raw_summary="GS\uce7c\ud14d\uc2a4 \uc8fc\uc720 10% \ud560\uc778 \uc2e0\uaddc \ud68c\uc6d0 \ucd5c\ub300 100% \uc9c0\uae09",
         )
         CardBenefitTier.objects.create(
             card_catalog=catalog,
@@ -454,18 +454,16 @@ class CardBenefitRepairCommandTests(TestCase):
         self.assertEqual(tier.discount_value, Decimal("10.00"))
         self.assertIn("updated=1", output.getvalue())
 
-    def test_repair_card_fuel_benefits_creates_missing_tier_from_raw_summary(self):
+    def test_repair_card_fuel_benefits_does_not_create_suspicious_per_liter_tier(self):
         catalog = CardCatalog.objects.create(
-            card_name="SK 주유 400 우리카드",
-            issuer_name="우리카드",
+            card_name="SK Oil 400 Card",
+            issuer_name="Woori",
             source_url="https://card-search.naver.com/card/sk-400",
-            raw_summary="SK 주유 400 우리카드 SK 주유소 L당 청구할인",
+            raw_summary="SK \uc8fc\uc720 400 \uc6b0\ub9ac\uce74\ub4dc SK \uc8fc\uc720\uc18c L\ub2f9 \uccad\uad6c\ud560\uc778",
         )
         output = StringIO()
 
         call_command("repair_card_fuel_benefits", stdout=output)
 
-        tier = CardBenefitTier.objects.get(card_catalog=catalog)
-        self.assertEqual(tier.discount_type, CardPolicy.DiscountType.PER_LITER)
-        self.assertEqual(tier.discount_value, Decimal("400.00"))
-        self.assertIn("created=1", output.getvalue())
+        self.assertFalse(CardBenefitTier.objects.filter(card_catalog=catalog).exists())
+        self.assertIn("created=0", output.getvalue())

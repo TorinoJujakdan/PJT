@@ -6,12 +6,16 @@ import atexit
 
 from concurrent.futures import ThreadPoolExecutor
 from django.db import close_old_connections, transaction
+from .ai_normalization import save_ai_normalized_candidates
+from .gemini_client import normalize_card_fuel_benefit
+from .selenium_ingestion import scrape_card_search_candidates
 from .models import CardCatalog, CardPolicy, CardIngestionTask
 from .serializers import (
     CardCatalogSerializer,
     CardDiscoveryQuerySerializer,
     CardFromCatalogSerializer,
     CardPolicySerializer,
+    catalog_requires_manual_benefit_entry,
 )
 
 
@@ -23,6 +27,7 @@ ERROR_MESSAGES = {
     "INVALID_CARD_POLICY": "카드 정책 입력값이 올바르지 않습니다.",
     "INVALID_CARD_DISCOVERY_QUERY": "카드 혜택 검색어가 올바르지 않습니다.",
 }
+MANUAL_BENEFIT_REQUIRED_FIELDS = ("discount_type", "discount_value", "brand_scope")
 
 
 def error_response(code, http_status, details=None):
@@ -67,9 +72,19 @@ class MyCardPolicyFromCatalogAPIView(APIView):
         ).first()
         if catalog is None:
             return error_response("CARD_CATALOG_NOT_FOUND", status.HTTP_404_NOT_FOUND)
+        requires_manual_entry = catalog_requires_manual_benefit_entry(catalog)
+        if requires_manual_entry and not _has_manual_benefit(serializer.validated_data):
+            return error_response(
+                "INVALID_CARD_POLICY",
+                status.HTTP_400_BAD_REQUEST,
+                {
+                    "catalog_card_id": "manual benefit fields are required for unverified catalog fuel benefits.",
+                    "required_fields": MANUAL_BENEFIT_REQUIRED_FIELDS,
+                },
+            )
 
         # CardBenefitTier에서 첫 번째 혜택 구간의 기본값을 가져옵니다.
-        default_tier = catalog.benefit_tiers.first()
+        default_tier = None if requires_manual_entry else catalog.benefit_tiers.first()
         default_discount_type = default_tier.discount_type if default_tier else CardPolicy.DiscountType.PER_LITER
         default_discount_value = default_tier.discount_value if default_tier else 0
         default_brand_scope = default_tier.brand_scope if default_tier else "all"
@@ -105,6 +120,15 @@ class MyCardPolicyFromCatalogAPIView(APIView):
             user_memo=serializer.validated_data.get("user_memo", ""),
         )
         return Response(CardPolicySerializer(policy).data, status=status.HTTP_201_CREATED)
+
+
+def _has_manual_benefit(validated_data):
+    return (
+        validated_data.get("discount_type") is not None
+        and validated_data.get("discount_value") is not None
+        and validated_data["discount_value"] > 0
+        and bool(validated_data.get("brand_scope"))
+    )
 
 
 class MyCardPolicyDetailAPIView(APIView):
@@ -165,10 +189,6 @@ def run_background_ingestion(task_id, query):
         task.save()
 
         SOURCE_URL = "https://card-search.naver.com/list"
-
-        from .selenium_ingestion import scrape_card_search_candidates
-        from .ai_normalization import save_ai_normalized_candidates
-        from .gemini_client import normalize_card_fuel_benefit
 
         # 1. Selenium 수집 — 상세 페이지 방문으로 혜택 원문 전체 확보
         candidates = scrape_card_search_candidates(

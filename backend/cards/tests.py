@@ -397,6 +397,88 @@ class CardPolicyAPITests(TestCase):
         self.assertEqual(response.status_code, 400)
         self.assertEqual(response.json()["code"], "INVALID_CARD_POLICY")
 
+    def test_create_card_policy_from_held_catalog_requires_manual_benefit_fields(self):
+        catalog = CardCatalog.objects.create(
+            card_name="Held Card",
+            issuer_name="Held Bank",
+            source_url="https://card-search.naver.com/card/held",
+            normalized_data={"quality": {"warnings": ["fuel_benefit_relevance_missing"]}},
+        )
+
+        self.client.force_authenticate(self.user)
+        response = self.client.post(
+            "/api/v1/me/cards/from-catalog/",
+            {"catalog_card_id": catalog.id},
+            format="json",
+        )
+
+        self.assertEqual(response.status_code, 400)
+        self.assertEqual(response.json()["code"], "INVALID_CARD_POLICY")
+        self.assertEqual(CardPolicy.objects.filter(owner=self.user).count(), 0)
+
+    def test_create_card_policy_from_held_catalog_accepts_manual_benefit_fields(self):
+        catalog = CardCatalog.objects.create(
+            card_name="Held Card",
+            issuer_name="Held Bank",
+            source_url="https://card-search.naver.com/card/held-manual",
+            normalized_data={"quality": {"warnings": ["fuel_benefit_relevance_missing"]}},
+        )
+
+        self.client.force_authenticate(self.user)
+        response = self.client.post(
+            "/api/v1/me/cards/from-catalog/",
+            {
+                "catalog_card_id": catalog.id,
+                "discount_type": "per_liter",
+                "discount_value": "70",
+                "brand_scope": "GS",
+            },
+            format="json",
+        )
+
+        self.assertEqual(response.status_code, 201)
+        policy = CardPolicy.objects.get(owner=self.user)
+        self.assertEqual(policy.linked_catalog, catalog)
+        self.assertEqual(policy.discount_value, 70)
+        self.assertEqual(policy.verification_status, "user_confirmed")
+
+    def test_create_card_policy_from_held_catalog_does_not_inherit_stale_tier_limits(self):
+        catalog = CardCatalog.objects.create(
+            card_name="Held Card",
+            issuer_name="Held Bank",
+            source_url="https://card-search.naver.com/card/held-stale",
+            normalized_data={"quality": {"warnings": ["fuel_benefit_relevance_missing"]}},
+        )
+        CardBenefitTier.objects.create(
+            card_catalog=catalog,
+            fuel_type="ALL",
+            discount_type=CardPolicy.DiscountType.PERCENTAGE,
+            discount_value=30,
+            brand_scope="all",
+            min_payment_amount=300000,
+            monthly_discount_limit=50000,
+        )
+
+        self.client.force_authenticate(self.user)
+        response = self.client.post(
+            "/api/v1/me/cards/from-catalog/",
+            {
+                "catalog_card_id": catalog.id,
+                "discount_type": "per_liter",
+                "discount_value": "70",
+                "brand_scope": "GS",
+            },
+            format="json",
+        )
+
+        self.assertEqual(response.status_code, 201)
+        policy = CardPolicy.objects.get(owner=self.user)
+        self.assertEqual(policy.discount_type, CardPolicy.DiscountType.PER_LITER)
+        self.assertEqual(policy.discount_value, 70)
+        self.assertEqual(policy.brand_scope, "GS")
+        self.assertIsNone(policy.min_payment_amount)
+        self.assertIsNone(policy.monthly_discount_limit)
+
     def test_create_card_policy_from_missing_catalog_returns_404(self):
         self.client.force_authenticate(self.user)
 
@@ -408,3 +490,70 @@ class CardPolicyAPITests(TestCase):
 
         self.assertEqual(response.status_code, 404)
         self.assertEqual(response.json()["code"], "CARD_CATALOG_NOT_FOUND")
+
+
+class CardBenefitDataQualityTests(TestCase):
+    def test_normalize_brand_scope_expands_four_major_station_scope(self):
+        from cards.brand_scope import normalize_brand_scope
+
+        result = normalize_brand_scope("4대 주유소")
+
+        self.assertEqual(result.scope, "SK,GS,S-OIL,HD현대오일뱅크")
+        self.assertTrue(result.inferred)
+        self.assertEqual(result.reason, "expanded_four_major_stations")
+
+    def test_normalize_brand_scope_keeps_all_scope_canonical(self):
+        from cards.brand_scope import normalize_brand_scope
+
+        result = normalize_brand_scope("ALL")
+
+        self.assertEqual(result.scope, "all")
+        self.assertFalse(result.inferred)
+
+    def test_unrealistic_percentage_fuel_benefit_is_not_usable(self):
+        from cards.benefit_safety import is_usable_fuel_benefit
+
+        self.assertFalse(is_usable_fuel_benefit("percentage", 40, "주유 40% 할인"))
+
+    def test_normalize_card_fixture_dry_run_writes_report_without_mutating_fixture(self):
+        import json
+        from pathlib import Path
+        from tempfile import TemporaryDirectory
+
+        from django.core.management import call_command
+
+        fixture = [
+            {
+                "model": "cards.cardbenefittier",
+                "pk": 1,
+                "fields": {
+                    "card_catalog": 1,
+                    "fuel_type": "ALL",
+                    "min_performance_amount": 0,
+                    "discount_type": "percentage",
+                    "discount_value": "40.00",
+                    "brand_scope": "4대 주유소",
+                },
+            }
+        ]
+        with TemporaryDirectory() as tmpdir:
+            fixture_path = Path(tmpdir) / "card_data.json"
+            report_path = Path(tmpdir) / "report.json"
+            fixture_path.write_text(json.dumps(fixture, ensure_ascii=False), encoding="utf-8")
+
+            call_command(
+                "normalize_card_fuel_benefits",
+                "--fixture",
+                str(fixture_path),
+                "--report",
+                str(report_path),
+                "--dry-run",
+            )
+
+            saved_fixture = json.loads(fixture_path.read_text(encoding="utf-8"))
+            report = json.loads(report_path.read_text(encoding="utf-8"))
+            self.assertEqual(saved_fixture[0]["fields"]["brand_scope"], "4대 주유소")
+            self.assertEqual(report["summary"]["normalized_brand_scopes"], 1)
+            self.assertEqual(report["summary"]["suspicious_tiers"], 1)
+            self.assertEqual(report["items"][0]["normalized_brand_scope"], "SK,GS,S-OIL,HD현대오일뱅크")
+            self.assertTrue(report["items"][0]["brand_scope_inferred"])

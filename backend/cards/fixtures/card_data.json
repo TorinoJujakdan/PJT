@@ -9185,7 +9185,7 @@
     "max_performance_amount": null,
     "discount_type": "per_liter",
     "discount_value": "400.00",
-    "brand_scope": "SK주유소",
+    "brand_scope": "SK",
     "min_payment_amount": 400000,
     "monthly_discount_limit": null
   }
@@ -9200,7 +9200,7 @@
     "max_performance_amount": null,
     "discount_type": "percentage",
     "discount_value": "10.00",
-    "brand_scope": "모든 주유소",
+    "brand_scope": "all",
     "min_payment_amount": 500000,
     "monthly_discount_limit": null
   }
@@ -9215,7 +9215,7 @@
     "max_performance_amount": null,
     "discount_type": "percentage",
     "discount_value": "1.60",
-    "brand_scope": "주유소 전체",
+    "brand_scope": "all",
     "min_payment_amount": null,
     "monthly_discount_limit": null
   }
@@ -9230,7 +9230,7 @@
     "max_performance_amount": null,
     "discount_type": "percentage",
     "discount_value": "0.70",
-    "brand_scope": "국내 주유소",
+    "brand_scope": "all",
     "min_payment_amount": null,
     "monthly_discount_limit": null
   }
@@ -9245,7 +9245,7 @@
     "max_performance_amount": null,
     "discount_type": "percentage",
     "discount_value": "5.00",
-    "brand_scope": "SK에너지, 농협주유소(충전소 제외)",
+    "brand_scope": "SK",
     "min_payment_amount": 30000,
     "monthly_discount_limit": 40000
   }
@@ -9260,7 +9260,7 @@
     "max_performance_amount": null,
     "discount_type": "per_liter",
     "discount_value": "100.00",
-    "brand_scope": "ALL",
+    "brand_scope": "all",
     "min_payment_amount": 300000,
     "monthly_discount_limit": null
   }
@@ -9290,7 +9290,7 @@
     "max_performance_amount": null,
     "discount_type": "percentage",
     "discount_value": "1.00",
-    "brand_scope": "모든 주유소",
+    "brand_scope": "all",
     "min_payment_amount": 750000,
     "monthly_discount_limit": null
   }
@@ -9305,7 +9305,7 @@
     "max_performance_amount": null,
     "discount_type": "percentage",
     "discount_value": "5.00",
-    "brand_scope": "ALL",
+    "brand_scope": "all",
     "min_payment_amount": 400000,
     "monthly_discount_limit": 60000
   }
@@ -9335,7 +9335,7 @@
     "max_performance_amount": null,
     "discount_type": "percentage",
     "discount_value": "0.50",
-    "brand_scope": "국내 모든 주유소",
+    "brand_scope": "all",
     "min_payment_amount": 300000,
     "monthly_discount_limit": null
   }
@@ -9350,7 +9350,7 @@
     "max_performance_amount": null,
     "discount_type": "percentage",
     "discount_value": "0.50",
-    "brand_scope": "ALL",
+    "brand_scope": "all",
     "min_payment_amount": null,
     "monthly_discount_limit": null
   }
@@ -9380,7 +9380,7 @@
     "max_performance_amount": null,
     "discount_type": "percentage",
     "discount_value": "1.00",
-    "brand_scope": "모든 주유소",
+    "brand_scope": "all",
     "min_payment_amount": 500000,
     "monthly_discount_limit": null
   }
@@ -9425,7 +9425,7 @@
     "max_performance_amount": null,
     "discount_type": "percentage",
     "discount_value": "10.00",
-    "brand_scope": "GS칼텍스",
+    "brand_scope": "GS",
     "min_payment_amount": 400000,
     "monthly_discount_limit": 35000
   }
@@ -9440,7 +9440,7 @@
     "max_performance_amount": null,
     "discount_type": "percentage",
     "discount_value": "7.00",
-    "brand_scope": "전주유소",
+    "brand_scope": "all",
     "min_payment_amount": 400000,
     "monthly_discount_limit": null
   }
@@ -9455,7 +9455,7 @@
     "max_performance_amount": null,
     "discount_type": "percentage",
     "discount_value": "3.00",
-    "brand_scope": "국내 모든 주유소",
+    "brand_scope": "all",
     "min_payment_amount": 500000,
     "monthly_discount_limit": null
   }
@@ -9470,7 +9470,7 @@
     "max_performance_amount": null,
     "discount_type": "percentage",
     "discount_value": "1.00",
-    "brand_scope": "SK주유소",
+    "brand_scope": "SK",
     "min_payment_amount": 300000,
     "monthly_discount_limit": null
   }
@@ -9485,7 +9485,7 @@
     "max_performance_amount": null,
     "discount_type": "percentage",
     "discount_value": "10.00",
-    "brand_scope": "국내 주유소",
+    "brand_scope": "all",
     "min_payment_amount": 300000,
     "monthly_discount_limit": 25000
   }
@@ -9500,7 +9500,7 @@
     "max_performance_amount": null,
     "discount_type": "percentage",
     "discount_value": "1.00",
-    "brand_scope": "SK주유소",
+    "brand_scope": "SK",
     "min_payment_amount": 300000,
     "monthly_discount_limit": null
   }
@@ -9515,7 +9515,7 @@
     "max_performance_amount": null,
     "discount_type": "percentage",
     "discount_value": "5.00",
-    "brand_scope": "GS칼텍스, S-OIL, SK에너지, HD현대오일뱅크, 전",
+    "brand_scope": "HD현대오일뱅크,GS,SK,S-OIL",
     "min_payment_amount": 500000,
     "monthly_discount_limit": 20000
   }
@@ -9560,7 +9560,7 @@
     "max_performance_amount": null,
     "discount_type": "percentage",
     "discount_value": "5.00",
-    "brand_scope": "SK, GS, 충전소 포함",
+    "brand_scope": "GS,SK",
     "min_payment_amount": 500000,
     "monthly_discount_limit": 16000
   }
@@ -9575,7 +9575,7 @@
     "max_performance_amount": null,
     "discount_type": "per_liter",
     "discount_value": "60.00",
-    "brand_scope": "4대 주유소",
+    "brand_scope": "HD현대오일뱅크,GS,SK,S-OIL",
     "min_payment_amount": 500000,
     "monthly_discount_limit": 10000
   }
@@ -9590,7 +9590,7 @@
     "max_performance_amount": null,
     "discount_type": "per_liter",
     "discount_value": "80.00",
-    "brand_scope": "모든 주유소",
+    "brand_scope": "all",
     "min_payment_amount": 400000,
     "monthly_discount_limit": 10000
   }
@@ -9605,7 +9605,7 @@
     "max_performance_amount": null,
     "discount_type": "percentage",
     "discount_value": "10.00",
-    "brand_scope": "모든 주유소/충전소",
+    "brand_scope": "all",
     "min_payment_amount": 400000,
     "monthly_discount_limit": null
   }
@@ -9620,7 +9620,7 @@
     "max_performance_amount": null,
     "discount_type": "per_liter",
     "discount_value": "60.00",
-    "brand_scope": "SK주유소",
+    "brand_scope": "SK",
     "min_payment_amount": 300000,
     "monthly_discount_limit": 30000
   }
@@ -9635,7 +9635,7 @@
     "max_performance_amount": null,
     "discount_type": "fixed_amount",
     "discount_value": "60.00",
-    "brand_scope": "ALL",
+    "brand_scope": "all",
     "min_payment_amount": 300000,
     "monthly_discount_limit": null
   }
@@ -9650,7 +9650,7 @@
     "max_performance_amount": null,
     "discount_type": "fixed_amount",
     "discount_value": "10000.00",
-    "brand_scope": "SK에너지, GS칼텍스 (충전소 포함)",
+    "brand_scope": "GS,SK",
     "min_payment_amount": 300000,
     "monthly_discount_limit": 10000
   }
@@ -9665,7 +9665,7 @@
     "max_performance_amount": null,
     "discount_type": "per_liter",
     "discount_value": "40.00",
-    "brand_scope": "GS칼텍스",
+    "brand_scope": "GS",
     "min_payment_amount": 300000,
     "monthly_discount_limit": null
   }
@@ -9680,7 +9680,7 @@
     "max_performance_amount": null,
     "discount_type": "per_liter",
     "discount_value": "80.00",
-    "brand_scope": "ALL",
+    "brand_scope": "all",
     "min_payment_amount": 300000,
     "monthly_discount_limit": 10000
   }

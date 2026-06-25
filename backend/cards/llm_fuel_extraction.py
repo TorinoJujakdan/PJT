@@ -130,6 +130,8 @@ def validate_llm_fuel_payload(document: LineNumberedDocument, llm_payload: JsonO
 
     valid_sections = _validate_sections(document, parsed.fuel_sections, warnings)
     tier_data = _first_valid_tier(parsed.benefits, valid_sections, warnings)
+    if tier_data is None and "non_fuel_benefit_ignored" in warnings:
+        warnings.append("fuel_benefit_relevance_missing")
     normalized_payload = parsed.model_dump(mode="json")
     _copy_gemini_metadata(llm_payload, normalized_payload)
     quality = normalized_payload.setdefault("quality", {})

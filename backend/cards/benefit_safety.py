@@ -22,9 +22,11 @@ FUEL_CONTEXT_KEYWORDS: tuple[str, ...] = (
     "diesel",
     "liter",
     "litre",
+    "EV",
+    "charging",
 )
-MAX_REASONABLE_PERCENTAGE = Decimal("50")
-MAX_REASONABLE_PER_LITER = Decimal("500")
+MAX_REASONABLE_PERCENTAGE = Decimal("30")
+MAX_REASONABLE_PER_LITER = Decimal("300")
 MAX_REASONABLE_FIXED_AMOUNT = Decimal("50000")
 
 
@@ -41,11 +43,13 @@ def has_fuel_context(text: str) -> bool:
     return any(keyword in source_text or keyword.lower() in normalized_text for keyword in FUEL_CONTEXT_KEYWORDS)
 
 
-def is_suspicious_fuel_discount(discount_type: str, discount_value: Decimal) -> bool:
+def is_suspicious_fuel_discount(discount_type: str, discount_value: Decimal, evidence_text: str = "") -> bool:
     value = decimal_or_zero(discount_value)
     if value <= 0:
         return True
     if discount_type == "percentage":
+        if "EV" in str(evidence_text).upper() or "???" in str(evidence_text):
+            return value > Decimal("50")
         return value > MAX_REASONABLE_PERCENTAGE
     if discount_type == "per_liter":
         return value > MAX_REASONABLE_PER_LITER
@@ -57,4 +61,4 @@ def is_suspicious_fuel_discount(discount_type: str, discount_value: Decimal) -> 
 def is_usable_fuel_benefit(discount_type: str, discount_value: Decimal, evidence_text: str = "") -> bool:
     if evidence_text and not has_fuel_context(evidence_text):
         return False
-    return not is_suspicious_fuel_discount(discount_type, discount_value)
+    return not is_suspicious_fuel_discount(discount_type, discount_value, evidence_text)
