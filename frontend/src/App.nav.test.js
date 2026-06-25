@@ -4,18 +4,23 @@ import { describe, it } from "node:test";
 
 
 describe("App navigation labels", () => {
-  it("routes unauthenticated users through feature-preview onboarding and signup setup", () => {
+  it("routes unauthenticated users through one-page onboarding and lightweight signup", () => {
     const appVue = readFileSync(new URL("./App.vue", import.meta.url), "utf8");
     const onboardingVue = readFileSync(new URL("./views/OnboardingView.vue", import.meta.url), "utf8");
 
     assert.match(appVue, /OnboardingView/);
     assert.match(appVue, /v-else-if="!isAuthenticated"/);
-    assert.match(onboardingVue, /featurePreviewGrid/);
-    assert.match(onboardingVue, /VEHICLE_FUEL_LABELS/);
-    assert.match(onboardingVue, /VehicleTypePicker/);
-    assert.match(onboardingVue, /smartfuel:onboarding-draft/);
-    assert.match(onboardingVue, /addVehicle/);
-    assert.match(onboardingVue, /signupAccount/);
+    assert.match(onboardingVue, /landingHero/);
+    assert.match(onboardingVue, /EXPECTED EFFECTS/);
+    assert.match(onboardingVue, /SERVICE INTRO/);
+    assert.match(onboardingVue, /HOW IT WORKS/);
+    assert.match(onboardingVue, /signupAndAuthenticate/);
+    assert.match(onboardingVue, /onboarding-signup/);
+    const accountsApi = readFileSync(new URL("./api/accounts.js", import.meta.url), "utf8");
+    assert.match(accountsApi, /signupAndAuthenticate/);
+    assert.match(accountsApi, /getCurrentUser/);
+    assert.match(accountsApi, /loginAccount/);
+    assert.doesNotMatch(onboardingVue, /VEHICLE_FUEL_LABELS|VehicleTypePicker|smartfuel:onboarding-draft|addVehicle/);
     assert.doesNotMatch(onboardingVue, /checkUsername|socialLogin|guestMode/);
   });
 
@@ -23,19 +28,15 @@ describe("App navigation labels", () => {
     const appVue = readFileSync(new URL("./App.vue", import.meta.url), "utf8");
     const sidebarVue = readFileSync(new URL("./components/DoubleSidebar.vue", import.meta.url), "utf8");
 
-    assert.doesNotMatch(appVue, />내 차량 설정</);
-    assert.doesNotMatch(appVue, />할인 카드 관리</);
-    assert.doesNotMatch(appVue, />커뮤니티</);
-    assert.doesNotMatch(appVue, />로그인</);
-    assert.doesNotMatch(appVue, />로그아웃</);
-    assert.doesNotMatch(appVue, />회원 가입</);
+    for (const label of ["\uB0B4 \uCC28\uB7C9 \uC124\uC815", "\uD560\uC778 \uCE74\uB4DC \uAD00\uB9AC", "\uCEE4\uBBA4\uB2C8\uD2F0", "\uB85C\uADF8\uC778", "\uB85C\uADF8\uC544\uC6C3", "\uD68C\uC6D0 \uAC00\uC785"]) {
+      assert.doesNotMatch(appVue, new RegExp(`>${label}<`));
+    }
     assert.match(appVue, /v-if="isAuthenticated" class="userIndicator"/);
     assert.match(appVue, /auth\.user\.username/);
 
-    assert.match(sidebarVue, />위치</);
-    assert.match(sidebarVue, />나의 환경</);
-    assert.match(sidebarVue, />선정 방식</);
-    assert.match(sidebarVue, />커뮤니티</);
+    for (const label of ["\uC704\uCE58", "\uB098\uC758 \uD658\uACBD", "\uC120\uC815 \uBC29\uC2DD", "\uCEE4\uBBA4\uB2C8\uD2F0"]) {
+      assert.match(sidebarVue, new RegExp(`>${label}<`));
+    }
     assert.match(sidebarVue, /emit\('open-community'\)/);
     assert.match(appVue, /@open-community="openModal\('community'\)"/);
     assert.match(appVue, /activeModal === 'community'/);
@@ -50,10 +51,10 @@ describe("App navigation labels", () => {
     const orderedMarkers = [
       "<LocationControl",
       "<FuelTargetControl",
-      "검색 반경",
-      "빠른 설정 변경",
+      "\uAC80\uC0C9 \uBC18\uACBD",
+      "\uBE60\uB978 \uC124\uC815 \uBCC0\uACBD",
       "priorityPocketTabs",
-      "맞춤 추천 검색"
+      "\uB9DE\uCDA4 \uCD94\uCC9C \uAC80\uC0C9"
     ];
     const markerIndexes = orderedMarkers.map((marker) => locationSection.indexOf(marker));
 
@@ -63,7 +64,7 @@ describe("App navigation labels", () => {
       [...markerIndexes].sort((a, b) => a - b)
     );
     assert.doesNotMatch(locationSection, /quickRecommendationPanel/);
-    const priorityMarkers = [">최적</", ">가격</", ">거리</"];
+    const priorityMarkers = [">\uCD5C\uC801<", ">\uAC00\uACA9<", ">\uAC70\uB9AC<"];
     const priorityIndexes = priorityMarkers.map((marker) => locationSection.indexOf(marker));
     assert.ok(priorityIndexes.every((index) => index >= 0));
     assert.deepEqual(
@@ -83,7 +84,7 @@ describe("App navigation labels", () => {
     assert.ok(presetIndex < searchIndex);
     assert.match(locationControl, /@click="usePreset\('home'\)"/);
     assert.match(locationControl, /@click="usePreset\('work'\)"/);
-    assert.doesNotMatch(locationControl, /장소 추가/);
+    assert.doesNotMatch(locationControl, /\uC7A5\uC18C \uCD94\uAC00/);
     assert.doesNotMatch(locationControl, /openPresetAddTab/);
     assert.match(locationControl, /@click="openPresetEditor\('home'\)"/);
     assert.match(locationControl, /@click="openPresetEditor\('work'\)"/);
