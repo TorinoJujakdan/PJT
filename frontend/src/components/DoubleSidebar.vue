@@ -15,6 +15,9 @@ import {
 
 import LocationControl from "./LocationControl.vue";
 import FuelTargetControl from "./FuelTargetControl.vue";
+import CardArtwork from "./cards/CardArtwork.vue";
+import { NO_DISCOUNT_CARD_ID } from "../composables/useSavedCards.js";
+import { discountLabel } from "./cards/cardPresentation.js";
 import {
   getVehiclePresentation,
   getVehicleSelectorLabel
@@ -53,6 +56,10 @@ const props = defineProps({
     type: [Number, String],
     default: "manual"
   },
+  selectedCardId: {
+    type: [Number, String],
+    default: NO_DISCOUNT_CARD_ID
+  },
   candidates: {
     type: Array,
     default: () => []
@@ -79,6 +86,7 @@ const emit = defineEmits([
   "update:location",
   "update:fuel",
   "update:card",
+  "update:selectedCardId",
   "update:selectedVehicleId",
   "update:priority",
   "update:searchRadiusKm",
@@ -115,6 +123,11 @@ const localCard = computed({
   set: (val) => emit("update:card", val)
 });
 
+const localSelectedCardId = computed({
+  get: () => props.selectedCardId,
+  set: (val) => emit("update:selectedCardId", val)
+});
+
 const localSelectedVehicleId = computed({
   get: () => props.selectedVehicleId,
   set: (val) => emit("update:selectedVehicleId", val)
@@ -134,6 +147,14 @@ const selectedSavedVehicle = computed(() => {
   if (localSelectedVehicleId.value === "manual") return null;
   return props.savedVehicles.find((vehicle) => vehicle.id === localSelectedVehicleId.value) || null;
 });
+
+const selectedSavedCard = computed(() => {
+  return props.savedCards.find((card) => String(card.card_id) === String(localSelectedCardId.value)) || null;
+});
+
+function cardImageSource(card) {
+  return card?.card_image_url || card?.card_image_file || "";
+}
 
 // 탭 토글 로직
 function handleTabClick(tab) {
@@ -341,17 +362,41 @@ function isPastData(station) {
               <button class="inlineFormLink" type="button" @click="emit('go-card-settings')">할인 카드 관리 &gt;</button>
             </div>
             <p class="hintText" style="margin: 0 0 10px;">
-              현재 등록된 {{ savedCards.length }}개의 할인 카드가 가격 산정에 자동 대입됩니다.
+              이번 가격 산정에 적용할 할인 카드를 선택하세요.
             </p>
-            <!-- 간단 체크박스 리스트 -->
-            <div class="cardCheckboxGroup" v-if="savedCards.length">
-              <div
-                v-for="c in savedCards"
-                :key="c.card_id"
-                class="cardCheckboxItem checked"
-              >
-                <CreditCard :size="12" />
-                <span>{{ c.issuer_name }}</span>
+            <div v-if="savedCards.length" class="selectedCardPicker">
+              <label style="margin-top: 6px;">
+                <span>시뮬레이션 할인 카드</span>
+                <select v-model="localSelectedCardId">
+                  <option :value="NO_DISCOUNT_CARD_ID">카드 혜택 사용 안 함</option>
+                  <option
+                    v-for="c in savedCards"
+                    :key="c.card_id"
+                    :value="c.card_id"
+                  >
+                    {{ c.issuer_name }} · {{ discountLabel(c) }}
+                  </option>
+                </select>
+              </label>
+
+              <div v-if="selectedSavedCard" class="selectedCardPhotoPreview">
+                <CardArtwork
+                  :src="cardImageSource(selectedSavedCard)"
+                  :alt="selectedSavedCard.card_name"
+                />
+                <div class="selectedCardPhotoCopy">
+                  <strong>{{ selectedSavedCard.issuer_name }}</strong>
+                  <span>{{ discountLabel(selectedSavedCard) }}</span>
+                </div>
+              </div>
+              <div v-else class="selectedCardPhotoPreview muted">
+                <div class="selectedCardNoPhoto">
+                  <CreditCard :size="24" aria-hidden="true" />
+                </div>
+                <div class="selectedCardPhotoCopy">
+                  <strong>카드 혜택 미사용</strong>
+                  <span>주유 가격과 이동 비용만으로 추천합니다.</span>
+                </div>
               </div>
             </div>
             <p v-else class="hintText" style="color: var(--accent); font-weight: 700;">

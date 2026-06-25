@@ -78,6 +78,8 @@ export function useSmartFuelDashboard({ isAuthenticated } = {}) {
 
   const {
     cards,
+    selectedCardId,
+    selectedSavedCard,
     loadCards,
     clearCards,
     selectedCards,
@@ -173,6 +175,8 @@ export function useSmartFuelDashboard({ isAuthenticated } = {}) {
   return {
     vehicles,
     cards,
+    selectedCardId,
+    selectedSavedCard,
     selectedVehicleId,
     location,
     fuel,
