@@ -49,6 +49,7 @@ const bootstrapped = ref(false);
 const {
   vehicles,
   cards,
+  selectedCardId,
   selectedVehicleId,
   location,
   fuel,
@@ -121,6 +122,7 @@ onMounted(initializeSession);
         v-model:location="location"
         v-model:fuel="fuel"
         v-model:card="tempCard"
+        v-model:selectedCardId="selectedCardId"
         v-model:selectedVehicleId="selectedVehicleId"
         v-model:priority="priority"
         v-model:searchRadiusKm="searchRadiusKm"

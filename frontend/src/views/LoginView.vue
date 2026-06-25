@@ -52,7 +52,6 @@ async function submit() {
           <LogIn :size="18" />
           <span>{{ loading ? "확인 중" : "로그인" }}</span>
         </button>
-        <button class="textButton" type="button" @click="emit('go-signup')">계정 만들기</button>
       </form>
     </section>
   </main>

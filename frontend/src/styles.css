@@ -2470,6 +2470,96 @@ select:focus {
   height: 14px;
 }
 
+.selectedCardPicker {
+  display: grid;
+  gap: 12px;
+}
+
+.selectedCardPhotoPreview {
+  display: grid;
+  grid-template-columns: 108px minmax(0, 1fr);
+  align-items: center;
+  gap: 12px;
+  min-height: 88px;
+  padding: 12px;
+  border: 1px solid var(--primary);
+  border-radius: var(--radius-md);
+  background: var(--primary-light);
+  color: var(--slate-900);
+}
+
+.selectedCardPhotoPreview.muted {
+  border-color: var(--slate-200);
+  background: var(--slate-50);
+  color: var(--slate-700);
+}
+
+.selectedCardPhotoPreview .cardArtwork {
+  width: 108px;
+  height: 68px;
+  border-radius: var(--radius-sm);
+  background: #fff;
+  box-shadow: 0 8px 18px rgba(15, 23, 42, 0.08);
+}
+
+.selectedCardPhotoPreview .cardArtwork img {
+  max-width: 96px;
+  max-height: 58px;
+}
+
+.selectedCardNoPhoto {
+  display: grid;
+  place-items: center;
+  width: 108px;
+  height: 68px;
+  border-radius: var(--radius-sm);
+  background: #fff;
+  color: var(--slate-400);
+  border: 1px dashed var(--slate-300);
+}
+
+.selectedCardPhotoCopy {
+  display: grid;
+  gap: 5px;
+  min-width: 0;
+}
+
+.selectedCardPhotoCopy strong,
+.selectedCardPhotoCopy span {
+  min-width: 0;
+  overflow-wrap: anywhere;
+}
+
+.selectedCardPhotoCopy strong {
+  font-size: 15px;
+  font-weight: 900;
+  line-height: 1.35;
+}
+
+.selectedCardPhotoCopy span {
+  font-size: 12px;
+  font-weight: 700;
+  color: var(--slate-600);
+  line-height: 1.4;
+}
+
+@media (max-width: 520px) {
+  .selectedCardPhotoPreview {
+    grid-template-columns: 92px minmax(0, 1fr);
+  }
+
+  .selectedCardPhotoPreview .cardArtwork,
+  .selectedCardNoPhoto {
+    width: 92px;
+    height: 58px;
+  }
+
+  .selectedCardPhotoPreview .cardArtwork img {
+    max-width: 82px;
+    max-height: 50px;
+  }
+}
+
 /* Priority Option Selector */
 .prioritySelector {
   display: flex;
@@ -5482,5 +5572,267 @@ body.modalOpen {
   .signupLandingSection.signupPage .signupCopyPanel,
   .signupLandingSection.signupPage .signupPageCard {
     justify-self: center;
+  }
+}
+
+/* Modern mobile-app signup surface */
+.signupLandingSection.signupPage.onboardingPage {
+  --signup-blue: var(--primary);
+  --signup-blue-dark: var(--primary-hover);
+  --signup-blue-soft: var(--primary-light);
+  --signup-red: #ef4444;
+  --signup-red-soft: #fef2f2;
+  background: #ffffff !important;
+  color: var(--slate-900);
+}
+
+.signupLandingSection.signupPage .signupCopyPanel {
+  color: var(--slate-900);
+}
+
+.signupLandingSection.signupPage .signupCopyPanel .eyebrow,
+.modernSignupCard .eyebrow {
+  color: var(--signup-blue, #0284c7);
+  letter-spacing: 0;
+}
+
+.signupLandingSection.signupPage .signupCopyPanel h2 {
+  color: var(--slate-900);
+  letter-spacing: 0;
+}
+
+.signupStandaloneShell {
+  --signup-blue: var(--primary);
+  --signup-blue-dark: var(--primary-hover);
+  --signup-blue-soft: var(--primary-light);
+  --signup-red: #ef4444;
+  --signup-red-soft: #fef2f2;
+  margin-block: 24px;
+  padding-inline: 16px;
+}
+
+.signupPageCard.modernSignupCard {
+  display: grid;
+  gap: 22px;
+  width: min(100%, 520px);
+  padding: clamp(24px, 5vw, 34px);
+  border: 1px solid rgba(2, 132, 199, 0.16);
+  border-radius: 24px;
+  background: #ffffff;
+  box-shadow: 0 18px 50px rgba(15, 23, 42, 0.07);
+}
+
+.signupPageCard.modernSignupCard:hover {
+  box-shadow: 0 18px 50px rgba(15, 23, 42, 0.07);
+}
+
+.modernSignupCard h2 {
+  margin: 0;
+  color: var(--slate-900);
+  font-size: clamp(26px, 4vw, 34px);
+  line-height: 1.18;
+  letter-spacing: 0;
+}
+
+.modernSignupCard .fieldGrid {
+  gap: 18px;
+}
+
+.signupFieldCard {
+  display: grid;
+  gap: 16px;
+  padding: 18px;
+  border: 1px solid var(--slate-200);
+  border-radius: 16px;
+  background: #fbfdfc;
+  box-shadow: none;
+}
+
+.modernSignupCard label {
+  gap: 8px;
+  color: var(--slate-700);
+  font-size: 13px;
+  font-weight: 800;
+  letter-spacing: 0;
+  text-transform: none;
+}
+
+.modernSignupCard .signupField {
+  display: grid;
+  gap: 8px;
+}
+
+.modernSignupCard label span {
+  color: var(--slate-800);
+  font-size: 14px;
+  font-weight: 800;
+}
+
+.modernSignupCard input {
+  min-height: 54px;
+  padding: 0 16px;
+  border: 1px solid rgba(203, 213, 225, 0.9);
+  border-radius: 16px;
+  background: #ffffff;
+  color: var(--slate-900);
+  font-size: 15px;
+}
+
+.modernSignupCard input::placeholder {
+  color: var(--slate-400);
+}
+
+.modernSignupCard input:focus {
+  border-color: var(--signup-blue, #0284c7);
+  box-shadow: 0 0 0 4px rgba(2, 132, 199, 0.14);
+}
+
+.duplicateCheckRow {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  gap: 8px;
+}
+
+.duplicateCheckButton {
+  min-width: 94px;
+  min-height: 54px;
+  padding: 0 14px;
+  border: 1px solid rgba(2, 132, 199, 0.28);
+  border-radius: 16px;
+  background: var(--signup-blue-soft, #e0f2fe);
+  color: var(--signup-blue-dark, #0369a1);
+  cursor: pointer;
+  font-size: 13px;
+  font-weight: 900;
+  letter-spacing: 0;
+  white-space: nowrap;
+}
+
+.duplicateCheckButton:hover:not(:disabled) {
+  border-color: var(--signup-blue, #0284c7);
+  background: #dbeafe;
+}
+
+.duplicateCheckButton:disabled {
+  cursor: not-allowed;
+  opacity: 0.54;
+}
+
+.passwordRuleList {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 8px;
+  margin: -2px 0 0;
+  padding: 0;
+  list-style: none;
+}
+
+.passwordRuleList li {
+  display: inline-flex;
+  align-items: center;
+  gap: 7px;
+  min-width: 0;
+  color: var(--slate-500);
+  font-size: 12px;
+  font-weight: 800;
+  line-height: 1.35;
+}
+
+.passwordRuleList li span {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  flex: 0 0 18px;
+  width: 18px;
+  height: 18px;
+  border-radius: 999px;
+  background: var(--slate-100);
+  color: var(--slate-400);
+}
+
+.passwordRuleList li.passed {
+  color: var(--signup-blue-dark, #0369a1);
+}
+
+.passwordRuleList li.passed span {
+  background: var(--signup-blue, #0284c7);
+  color: #ffffff;
+}
+
+.signupStatusText {
+  margin: -8px 0 0;
+  font-size: 13px;
+  font-weight: 800;
+  line-height: 1.45;
+}
+
+.signupStatusText.success {
+  color: var(--signup-blue-dark, #0369a1);
+}
+
+.signupStatusText.danger {
+  color: var(--signup-red, #ef4444);
+}
+
+.signupStatusText.muted {
+  color: var(--slate-500);
+}
+
+.modernSignupCard .primaryButton.fullWidth {
+  min-height: 56px;
+  border-radius: 16px;
+  background: var(--signup-blue, #0284c7);
+  box-shadow: none;
+  font-size: 16px;
+  letter-spacing: 0;
+}
+
+.modernSignupCard .primaryButton.fullWidth:hover:not(:disabled) {
+  background: var(--signup-blue-dark, #0369a1);
+  box-shadow: none;
+  transform: translateY(-1px);
+}
+
+.modernSignupCard .primaryButton.fullWidth:disabled {
+  background: var(--slate-200);
+  color: var(--slate-500);
+  cursor: not-allowed;
+  opacity: 1;
+}
+
+.modernSignupCard .textButton {
+  min-height: 48px;
+  border: 0;
+  border-radius: 16px;
+  background: transparent;
+  color: var(--slate-500);
+  font-weight: 800;
+}
+
+.modernSignupCard .textButton:hover {
+  background: var(--signup-blue-soft, #e0f2fe);
+  color: var(--signup-blue-dark, #0369a1);
+}
+
+@media (max-width: 640px) {
+  .signupPageCard.modernSignupCard {
+    border-radius: 20px;
+    padding: 22px 18px;
+  }
+
+  .signupFieldCard {
+    padding: 16px;
+  }
+
+  .duplicateCheckRow {
+    grid-template-columns: 1fr;
+  }
+
+  .duplicateCheckButton {
+    width: 100%;
+  }
+
+  .passwordRuleList {
+    grid-template-columns: 1fr;
   }
 }
