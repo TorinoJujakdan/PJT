@@ -224,7 +224,6 @@ onMounted(loadPosts);
     <aside class="communityPanel communityWritePanel" aria-labelledby="community-write-title">
       <div class="cardsSectionHeading communityHeading">
         <div>
-          <p class="eyebrow">WRITE</p>
           <h3 id="community-write-title">{{ isEditing ? "게시글 수정" : "게시글 작성" }}</h3>
           <p>제목, 내용, 태그만으로 커뮤니티 글을 남길 수 있습니다.</p>
         </div>
@@ -232,7 +231,6 @@ onMounted(loadPosts);
 
       <div class="communityWriteGate">
         <template v-if="isAuthenticated">
-          <p class="eyebrow">WRITE AS {{ user?.username }}</p>
           <h3>로그인한 사용자로 작성 중</h3>
           <p>커뮤니티 게시글과 개인 스크랩은 추천 순위나 주유비 계산에 반영되지 않습니다.</p>
         </template>
