@@ -94,6 +94,12 @@ MEDIA_URL = "/media/"
 MEDIA_ROOT = BASE_DIR / "media"
 DEFAULT_AUTO_FIELD = "django.db.models.BigAutoField"
 
+COMMUNITY_MODERATION_API_KEY = os.environ.get("GEMINI_API_KEY", "").strip()
+COMMUNITY_MODERATION_MODEL = os.environ.get("COMMUNITY_MODERATION_MODEL", "").strip() or os.environ.get("GEMINI_MODEL", "").strip() or "gemini-3.5-flash"
+COMMUNITY_MODERATION_BASE_URL = os.environ.get("COMMUNITY_MODERATION_BASE_URL", "").strip() or "https://generativelanguage.googleapis.com"
+COMMUNITY_MODERATION_TIMEOUT_SECONDS = int(os.environ.get("COMMUNITY_MODERATION_TIMEOUT_SECONDS", "10"))
+COMMUNITY_MODERATION_FAIL_CLOSED = os.environ.get("COMMUNITY_MODERATION_FAIL_CLOSED", "").strip().lower() in ("true", "1", "yes", "on") or not DEBUG
+
 REST_FRAMEWORK = {
     "DEFAULT_AUTHENTICATION_CLASSES": [
         "rest_framework.authentication.SessionAuthentication",

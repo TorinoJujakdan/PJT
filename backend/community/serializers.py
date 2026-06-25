@@ -1,5 +1,7 @@
+from django.conf import settings
 from rest_framework import serializers
 
+from .moderation import NON_FIELD_ERROR_KEY, moderate_post_fields
 from .models import CommunityPost
 
 
@@ -98,6 +100,14 @@ class CommunityPostWriteSerializer(serializers.Serializer):
                 raise serializers.ValidationError({field: "This field is required." for field in missing_fields})
         if not attrs:
             raise serializers.ValidationError("At least one field must be provided.")
+
+        moderation_fields = {field: attrs[field] for field in ("title", "content") if field in attrs}
+        if moderation_fields:
+            result = moderate_post_fields(moderation_fields)
+            if result.unavailable and settings.COMMUNITY_MODERATION_FAIL_CLOSED and NON_FIELD_ERROR_KEY in result.violations:
+                raise serializers.ValidationError({NON_FIELD_ERROR_KEY: [result.violations[NON_FIELD_ERROR_KEY]]})
+            if result.violations:
+                raise serializers.ValidationError({field: [message] for field, message in result.violations.items()})
         return attrs
 
     def create(self, validated_data):
