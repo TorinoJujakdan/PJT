@@ -34,7 +34,7 @@ describe("App navigation labels", () => {
     assert.match(appVue, /v-if="isAuthenticated" class="userIndicator"/);
     assert.match(appVue, /auth\.user\.username/);
 
-    for (const label of ["\uC704\uCE58", "\uB098\uC758 \uD658\uACBD", "\uC120\uC815 \uBC29\uC2DD", "\uCEE4\uBBA4\uB2C8\uD2F0"]) {
+    for (const label of ["\uC704\uCE58", "\uCC28\uB7C9 \u00B7 \uCE74\uB4DC", "\uCD94\uCC9C \uAE30\uC900", "\uCEE4\uBBA4\uB2C8\uD2F0"]) {
       assert.match(sidebarVue, new RegExp(`>${label}<`));
     }
     assert.match(sidebarVue, /emit\('open-community'\)/);
