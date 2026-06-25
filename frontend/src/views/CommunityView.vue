@@ -229,17 +229,11 @@ onMounted(loadPosts);
         </div>
       </div>
 
-      <div class="communityWriteGate">
-        <template v-if="isAuthenticated">
-          <h3>로그인한 사용자로 작성 중</h3>
-          <p>커뮤니티 게시글과 개인 스크랩은 추천 순위나 주유비 계산에 반영되지 않습니다.</p>
-        </template>
-        <template v-else>
-          <p class="eyebrow">LOGIN REQUIRED</p>
-          <h3>작성과 스크랩 저장은 로그인이 필요합니다</h3>
-          <p>목록 조회와 검색은 공개이며, 게시글 작성·수정·삭제와 스크랩 저장만 로그인이 필요합니다.</p>
-          <button class="cardPrimaryButton" type="button" @click="requestLogin">로그인하고 작성하기</button>
-        </template>
+      <div v-if="!isAuthenticated" class="communityWriteGate">
+        <p class="eyebrow">LOGIN REQUIRED</p>
+        <h3>작성과 스크랩 저장은 로그인이 필요합니다</h3>
+        <p>목록 조회와 검색은 공개이며, 게시글 작성·수정·삭제와 스크랩 저장만 로그인이 필요합니다.</p>
+        <button class="cardPrimaryButton" type="button" @click="requestLogin">로그인하고 작성하기</button>
       </div>
 
       <form v-if="isAuthenticated" class="communityPostForm" @submit.prevent="submitPost">

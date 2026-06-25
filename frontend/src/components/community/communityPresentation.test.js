@@ -32,11 +32,11 @@ describe("communityPresentation", () => {
   it("maps contract error codes to user-facing guidance", () => {
     assert.equal(
       formatCommunityError({ payload: { code: "COMMUNITY_POST_FORBIDDEN" } }),
-      "작성자만 수정하거나 삭제할 수 있습니다.",
+      "\uc791\uc131\uc790\ub9cc \uc218\uc815\ud558\uac70\ub098 \uc0ad\uc81c\ud560 \uc218 \uc788\uc2b5\ub2c8\ub2e4.",
     );
     assert.equal(
       formatCommunityError({ payload: { code: "INVALID_COMMUNITY_POST" } }),
-      "게시글 입력값을 확인해 주세요.",
+      "\ubd80\uc801\uc808\ud55c \uba54\uc138\uc9c0 \uc785\ub2c8\ub2e4",
     );
   });
 
@@ -54,7 +54,7 @@ describe("communityPresentation", () => {
   });
 
   it("labels the private star action from the current post state", () => {
-    assert.equal(getStarredButtonLabel({ is_starred: true }), "별표 해제");
-    assert.equal(getStarredButtonLabel({ is_starred: false }), "별표 저장");
+    assert.equal(getStarredButtonLabel({ is_starred: true }), "\ubcc4\ud45c \ud574\uc81c");
+    assert.equal(getStarredButtonLabel({ is_starred: false }), "\ubcc4\ud45c \uc800\uc7a5");
   });
 });

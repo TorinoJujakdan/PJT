@@ -20,11 +20,11 @@ export function tagsToInput(tags = []) {
 }
 
 
-export function formatCommunityError(error, fallback = "커뮤니티 요청을 처리하지 못했습니다.") {
+export function formatCommunityError(error, fallback = "\ucee4\ubba4\ub2c8\ud2f0 \uc694\uccad\uc744 \ucc98\ub9ac\ud558\uc9c0 \ubabb\ud588\uc2b5\ub2c8\ub2e4.") {
   const code = error?.payload?.code;
-  if (code === "AUTHENTICATION_REQUIRED") return "로그인 후 이용할 수 있습니다.";
-  if (code === "COMMUNITY_POST_FORBIDDEN") return "작성자만 수정하거나 삭제할 수 있습니다.";
-  if (code === "INVALID_COMMUNITY_POST") return "게시글 입력값을 확인해 주세요.";
+  if (code === "AUTHENTICATION_REQUIRED") return "\ub85c\uadf8\uc778 \ud6c4 \uc774\uc6a9\ud560 \uc218 \uc788\uc2b5\ub2c8\ub2e4.";
+  if (code === "COMMUNITY_POST_FORBIDDEN") return "\uc791\uc131\uc790\ub9cc \uc218\uc815\ud558\uac70\ub098 \uc0ad\uc81c\ud560 \uc218 \uc788\uc2b5\ub2c8\ub2e4.";
+  if (code === "INVALID_COMMUNITY_POST") return "\ubd80\uc801\uc808\ud55c \uba54\uc138\uc9c0 \uc785\ub2c8\ub2e4";
   return error?.payload?.message || error?.message || fallback;
 }
 
@@ -47,5 +47,5 @@ export function removePostById(posts = [], postId) {
 
 
 export function getStarredButtonLabel(post) {
-  return post?.is_starred ? "별표 해제" : "별표 저장";
+  return post?.is_starred ? "\ubcc4\ud45c \ud574\uc81c" : "\ubcc4\ud45c \uc800\uc7a5";
 }

@@ -132,6 +132,25 @@ class CommunityPostAPITests(TestCase):
         self.assertEqual(response.json()["details"]["title"][0], MODERATION_MESSAGE)
         self.assertEqual(CommunityPost.objects.count(), 0)
 
+    @override_settings(COMMUNITY_MODERATION_FAIL_CLOSED=False, COMMUNITY_MODERATION_API_KEY="")
+    def test_create_post_blocks_obvious_korean_profanity_before_llm(self):
+        self.client.force_authenticate(self.author)
+
+        response = self.client.post(
+            "/api/v1/community/posts/",
+            {
+                "title": "\uc2dc\ubc1c",
+                "content": "\uc2dc\ubc1c",
+            },
+            format="json",
+        )
+
+        self.assertEqual(response.status_code, 400)
+        self.assertEqual(response.json()["code"], "INVALID_COMMUNITY_POST")
+        self.assertEqual(response.json()["details"]["title"][0], MODERATION_MESSAGE)
+        self.assertEqual(response.json()["details"]["content"][0], MODERATION_MESSAGE)
+        self.assertEqual(CommunityPost.objects.count(), 0)
+
     @patch("community.serializers.moderate_post_fields")
     def test_patch_post_blocked_when_content_is_unsafe(self, moderate_post_fields):
         post = self._create_post()
