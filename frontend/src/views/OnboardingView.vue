@@ -60,7 +60,7 @@ const copy = {
   guideEyebrow: "HOW IT WORKS",
   guideTitle: "\uc0ac\uc6a9 \ud750\ub984 \uc18c\uac1c",
   guideDescription:
-    "\uacc4\uc815\uc744 \ub9cc\ub4e0 \ub4a4 \uc815\ubcf4\ub97c \ub4f1\ub85d\ud558\uace0 \uc11c\ube44\uc2a4\ub97c \uc774\uc6a9\ud558\uc138\uc694.",
+    "\uc815\ubcf4\ub97c \ub4f1\ub85d\ud558\uace0 \uc11c\ube44\uc2a4\ub97c \uc774\uc6a9\ud558\uc138\uc694.",
   signupEyebrow: "START SMARTFUEL",
   signupCopyTitleFirst: "\uc900\ube44\uac00 \ub05d\ub0ac\ub2e4\uba74,",
   signupCopyTitleLast: "\uc774\uc81c \uac00\ubccd\uac8c \uc2dc\uc791\ud574\ubcf4\uc138\uc694.",
@@ -84,10 +84,10 @@ const copy = {
 
 const heroMetrics = [
   { value: "1\ubd84", label: "\uc870\uac74 \uc785\ub825\ubd80\ud130 \ucd94\ucc9c\uae4c\uc9c0" },
-  { value: "\ud55c\ubc88 \uc124\uc815", label: "\ucc28\ub7c9\u00b7\uce74\ub4dc \uc800\uc7a5 \ud6c4 \ubc18\ubcf5 \uc0ac\uc6a9" },
+  { value: "\u0031\ud68c \uc124\uc815", label: "\ucc28\ub7c9\u00b7\uce74\ub4dc \uc800\uc7a5 \ud6c4 \ubc18\ubcf5 \uc0ac\uc6a9" },
   {
     value: "\ucd5c\uc801 \ube44\uc6a9 \ucd94\ucc9c",
-    label: "\uc8fc\uc720\ube44, \uc774\ub3d9\uac70\ub9ac, \uce74\ub4dc \ud61c\ud0dd\uc744 \uc885\ud569\ud574 \uac00\uc7a5 \uacbd\uc81c\uc801\uc778 \uc8fc\uc720\uc18c \ucd94\ucc9c",
+    label: "\uc8fc\uc720\ube44, \uc774\ub3d9\uac70\ub9ac, \uce74\ub4dc \ud61c\ud0dd\uc744 \uc885\ud569\ud574\n\uac00\uc7a5 \uacbd\uc81c\uc801\uc778 \uc8fc\uc720\uc18c \ucd94\ucc9c",
   },
 ];
 
@@ -132,7 +132,7 @@ const guideSteps = [
     step: "01",
     icon: CreditCard,
     title: "\ub0b4 \ud658\uacbd\uacfc \ucd94\ucc9c \uae30\uc900 \uc124\uc815",
-    description: "\uba3c\uc800 \ub098\uc758 \ud658\uacbd \ud0ed\uc5d0\uc11c \ucc28\ub7c9 \uc5f0\ube44\uc640 \ubcf4\uc720 \uce74\ub4dc \ud61c\ud0dd\uc744 \ub4f1\ub85d\ud558\uace0, \uc120\uc815 \ubc29\uc2dd \ud0ed\uc5d0\uc11c \uc6d0\ud558\ub294 \uc8fc\uc720\uc18c \ucd94\ucc9c \uae30\uc900\uc744 \uc124\uc815\ud569\ub2c8\ub2e4.",
+    description: "\ud0ed\uc5d0\uc11c \ucc28\ub7c9 \uc5f0\ube44\uc640 \ubcf4\uc720 \uce74\ub4dc \ud61c\ud0dd\uc744 \ub4f1\ub85d\ud558\uace0, 3\uac00\uc9c0 \ubc29\uc2dd \uc911 \ud558\ub098\ub97c \uace8\ub77c \uc8fc\uc720\uc18c \ucd94\ucc9c \uae30\uc900\uc744 \uc124\uc815\ud558\uc138\uc694.",
     previewTitle: "\ub098\uc758 \ud658\uacbd \u00b7 \uc120\uc815 \ubc29\uc2dd",
     previewRows: ["\ucc28\ub7c9 \uc5f0\ube44 \ub4f1\ub85d", "\uce74\ub4dc \ud61c\ud0dd \ucd94\uac00", "\ucd94\ucc9c \ubc29\uc2dd \uc120\ud0dd"],
   },
@@ -195,7 +195,7 @@ async function handleSignup() {
 
 <template>
   <main class="onboardingShell onboardingLanding">
-    <section class="landingHero" aria-labelledby="onboarding-title">
+    <section class="landingHero onboardingPage servicePage" aria-labelledby="onboarding-title">
       <nav class="landingNav" :aria-label="copy.navLabel">
         <div class="onboardingLogo">
           <span><Fuel :size="22" /></span>
@@ -223,56 +223,28 @@ async function handleSignup() {
           </div>
         </div>
 
-        <aside class="heroShowcase actualPreview" :aria-label="copy.heroA11y">
-          <div class="showcaseTopline">
-            <span>{{ copy.previewLabel }}</span>
-            <strong>{{ copy.previewTitle }}</strong>
-          </div>
+        <aside class="heroShowcase actualPreview phoneServicePreview" :aria-label="copy.heroA11y">
+          <div class="phoneMockup" aria-hidden="true">
+            <div class="phoneScreen">
+              <div class="phoneMapArea">
+                <span class="phoneMapDot muted"></span>
+                <span class="phoneRoad"></span>
+                <span class="phoneRoute"></span>
+                <span class="phoneStationPin"><MapPin :size="20" /></span>
+              </div>
 
-          <div class="actualPreviewFrame">
-            <div class="actualPreviewSidebar">
-              <div class="previewPanelTitle">
-                <span>{{ copy.conditionLabel }}</span>
-                <strong>{{ copy.conditionTitle }}</strong>
-              </div>
-              <div class="previewField active">
-                <MapPin :size="14" />
-                <span>{{ copy.currentLocation }}</span>
-              </div>
-              <div class="previewField">
-                <Fuel :size="14" />
-                <span>{{ copy.fuelAmount }}</span>
-              </div>
-              <div class="previewField">
-                <Car :size="14" />
-                <span>{{ copy.efficiency }}</span>
-              </div>
-              <div class="previewField">
-                <CreditCard :size="14" />
-                <span>{{ copy.cardApplied }}</span>
-              </div>
-            </div>
-
-            <div class="actualPreviewMap">
-              <div class="mapToolbar">
-                <span></span><span></span><span></span>
-              </div>
-              <span class="stationMarker best"><MapPin :size="16" /></span>
-              <span class="stationMarker candidate one"></span>
-              <span class="stationMarker candidate two"></span>
-              <div class="routeLine actual"></div>
-              <div class="mapResultCard">
-                <p>{{ copy.bestRecommendation }}</p>
+              <div class="phoneResultCard">
+                <span>{{ copy.bestRecommendation }}</span>
                 <strong>{{ copy.stationName }}</strong>
-                <span>{{ copy.recommendationReason }}</span>
+                <b>65,500&#xC6D0;</b>
+                <small>{{ copy.recommendationReason }}</small>
+              </div>
+
+              <div class="phoneCostRows">
+                <div><span>{{ copy.cardDiscount }}</span><strong>-3,000&#xC6D0;</strong></div>
+                <div><span>{{ copy.savingEffect }}</span><strong>2,400&#xC6D0;</strong></div>
               </div>
             </div>
-          </div>
-
-          <div class="costGrid actualCostGrid">
-            <div><span>{{ copy.totalCost }}</span><strong>65,500&#xC6D0;</strong></div>
-            <div><span>{{ copy.cardDiscount }}</span><strong>-3,000&#xC6D0;</strong></div>
-            <div><span>{{ copy.savingEffect }}</span><strong>2,400&#xC6D0;</strong></div>
           </div>
         </aside>
       </div>
@@ -285,7 +257,7 @@ async function handleSignup() {
       </div>
     </section>
 
-    <section class="landingSection" aria-labelledby="effects-title">
+    <section class="landingSection onboardingPage benefitPage" aria-labelledby="effects-title">
       <div class="sectionHeading centered">
         <h2 id="effects-title">{{ copy.effectsTitle }}</h2>
         <span>{{ copy.effectsDescription }}</span>
@@ -299,9 +271,12 @@ async function handleSignup() {
       </div>
     </section>
 
-    <section class="landingSection serviceIntro" aria-labelledby="service-title">
-      <div class="sectionHeading">
-        <h2 id="service-title">{{ copy.serviceTitle }}</h2>
+    <section class="landingSection serviceIntro onboardingPage featurePage" aria-labelledby="service-title">
+      <div class="sectionHeading centered">
+        <h2 id="service-title">
+          <span>{{ "SmartFuel\uc774 \uc81c\uacf5\ud558\ub294" }}</span>
+          <span>{{ "\uc138 \uac00\uc9c0 \ud575\uc2ec \uae30\ub2a5" }}</span>
+        </h2>
       </div>
       <div class="serviceGrid">
         <article v-for="item in serviceHighlights" :key="item.title" class="serviceCard">
@@ -312,7 +287,7 @@ async function handleSignup() {
       </div>
     </section>
 
-    <section class="landingSection guideSection" aria-labelledby="guide-title">
+    <section class="landingSection guideSection onboardingPage flowPage" aria-labelledby="guide-title">
       <div class="sectionHeading centered">
         <p class="eyebrow">{{ copy.guideEyebrow }}</p>
         <h2 id="guide-title">{{ copy.guideTitle }}</h2>
@@ -325,21 +300,12 @@ async function handleSignup() {
             <h3>{{ guide.title }}</h3>
             <p>{{ guide.description }}</p>
           </div>
-          <div class="guideIllustration" :class="`guideIllustrationStep${guide.step}`" aria-hidden="true">
-            <div class="guideOrb primary">
-              <component :is="guide.icon" :size="30" />
-            </div>
-            <span class="guideLine"></span>
-            <div class="guideOrb soft">
-              <Fuel :size="22" />
-            </div>
-            <div class="guideMiniLabel">{{ guide.previewTitle }}</div>
-          </div>
+
         </article>
       </div>
     </section>
 
-    <section id="onboarding-signup" class="signupLandingSection" aria-labelledby="signup-title">
+    <section id="onboarding-signup" class="signupLandingSection onboardingPage signupPage" aria-labelledby="signup-title">
       <div class="signupCopyPanel">
         <p class="eyebrow">{{ copy.signupEyebrow }}</p>
         <h2>

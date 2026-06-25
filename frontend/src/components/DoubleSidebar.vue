@@ -181,14 +181,14 @@ function isPastData(station) {
           <span>위치</span>
         </button>
 
-        <button type="button" class="tabItem" :class="{ active: activeTab === 'vehicle_card' && sidebarOpen }" @click="handleTabClick('vehicle_card')" aria-label="나의 환경" title="나의 환경">
+        <button type="button" class="tabItem" :class="{ active: activeTab === 'vehicle_card' && sidebarOpen }" @click="handleTabClick('vehicle_card')" aria-label="차량 · 카드" title="차량 · 카드">
           <ListChecks :size="20" aria-hidden="true" />
-          <span>나의 환경</span>
+          <span>차량 · 카드</span>
         </button>
 
-        <button type="button" class="tabItem" :class="{ active: activeTab === 'settings' && sidebarOpen }" @click="handleTabClick('settings')" aria-label="선정 방식" title="선정 방식">
+        <button type="button" class="tabItem" :class="{ active: activeTab === 'settings' && sidebarOpen }" @click="handleTabClick('settings')" aria-label="추천 기준" title="추천 기준">
           <Sliders :size="20" aria-hidden="true" />
-          <span>선정 방식</span>
+          <span>추천 기준</span>
         </button>
 
         <button type="button" class="tabItem" :class="{ active: activeTab === 'community' && sidebarOpen }" @click="handleTabClick('community')" aria-label="커뮤니티" title="커뮤니티">
