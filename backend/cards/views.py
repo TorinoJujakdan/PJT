@@ -13,9 +13,7 @@ from .serializers import (
     CardFromCatalogSerializer,
     CardPolicySerializer,
 )
-from .selenium_ingestion import discover_card_benefits, scrape_card_search_candidates
-from .ai_normalization import save_ai_normalized_candidates
-from .gemini_client import normalize_card_fuel_benefit
+
 
 
 
@@ -168,6 +166,10 @@ def run_background_ingestion(task_id, query):
 
         SOURCE_URL = "https://card-search.naver.com/list"
 
+        from .selenium_ingestion import scrape_card_search_candidates
+        from .ai_normalization import save_ai_normalized_candidates
+        from .gemini_client import normalize_card_fuel_benefit
+
         # 1. Selenium 수집 — 상세 페이지 방문으로 혜택 원문 전체 확보
         candidates = scrape_card_search_candidates(
             limit=10,
@@ -206,6 +208,8 @@ class CardDiscoveryAPIView(APIView):
         serializer = CardDiscoveryQuerySerializer(data=request.query_params)
         if not serializer.is_valid():
             return error_response("INVALID_CARD_DISCOVERY_QUERY", status.HTTP_400_BAD_REQUEST, serializer.errors)
+
+        from .selenium_ingestion import discover_card_benefits
 
         data = serializer.validated_data
         discovery = discover_card_benefits(
