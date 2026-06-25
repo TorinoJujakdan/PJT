@@ -153,8 +153,10 @@ class RecommendationQuoteAPIView(APIView):
             fuel_type=data["fuel_type"],
         )
 
-        saved_cards = self._get_saved_cards(request)
-        user_cards = list(saved_cards) + list(data["cards"])
+        if self._has_explicit_card_selection(request):
+            user_cards = list(data["cards"])
+        else:
+            user_cards = list(self._get_saved_cards(request))
         recommendations = quote_travel_cost_recommendations(
             location=data["location"],
             radius_km=data["radius_km"],
@@ -205,6 +207,9 @@ class RecommendationQuoteAPIView(APIView):
             },
         }
         return Response(response_data)
+
+    def _has_explicit_card_selection(self, request):
+        return isinstance(request.data, dict) and "cards" in request.data
 
     def _get_saved_cards(self, request):
         if not request.user or not request.user.is_authenticated:

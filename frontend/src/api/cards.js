@@ -1,4 +1,4 @@
-import { apiRequest } from "./client";
+import { apiRequest } from "./client.js";
 
 export function getMyCards() {
   return apiRequest("/me/cards/");

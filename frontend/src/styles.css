@@ -2470,6 +2470,96 @@ select:focus {
   height: 14px;
 }
 
+.selectedCardPicker {
+  display: grid;
+  gap: 12px;
+}
+
+.selectedCardPhotoPreview {
+  display: grid;
+  grid-template-columns: 108px minmax(0, 1fr);
+  align-items: center;
+  gap: 12px;
+  min-height: 88px;
+  padding: 12px;
+  border: 1px solid var(--primary);
+  border-radius: var(--radius-md);
+  background: var(--primary-light);
+  color: var(--slate-900);
+}
+
+.selectedCardPhotoPreview.muted {
+  border-color: var(--slate-200);
+  background: var(--slate-50);
+  color: var(--slate-700);
+}
+
+.selectedCardPhotoPreview .cardArtwork {
+  width: 108px;
+  height: 68px;
+  border-radius: var(--radius-sm);
+  background: #fff;
+  box-shadow: 0 8px 18px rgba(15, 23, 42, 0.08);
+}
+
+.selectedCardPhotoPreview .cardArtwork img {
+  max-width: 96px;
+  max-height: 58px;
+}
+
+.selectedCardNoPhoto {
+  display: grid;
+  place-items: center;
+  width: 108px;
+  height: 68px;
+  border-radius: var(--radius-sm);
+  background: #fff;
+  color: var(--slate-400);
+  border: 1px dashed var(--slate-300);
+}
+
+.selectedCardPhotoCopy {
+  display: grid;
+  gap: 5px;
+  min-width: 0;
+}
+
+.selectedCardPhotoCopy strong,
+.selectedCardPhotoCopy span {
+  min-width: 0;
+  overflow-wrap: anywhere;
+}
+
+.selectedCardPhotoCopy strong {
+  font-size: 15px;
+  font-weight: 900;
+  line-height: 1.35;
+}
+
+.selectedCardPhotoCopy span {
+  font-size: 12px;
+  font-weight: 700;
+  color: var(--slate-600);
+  line-height: 1.4;
+}
+
+@media (max-width: 520px) {
+  .selectedCardPhotoPreview {
+    grid-template-columns: 92px minmax(0, 1fr);
+  }
+
+  .selectedCardPhotoPreview .cardArtwork,
+  .selectedCardNoPhoto {
+    width: 92px;
+    height: 58px;
+  }
+
+  .selectedCardPhotoPreview .cardArtwork img {
+    max-width: 82px;
+    max-height: 50px;
+  }
+}
+
 /* Priority Option Selector */
 .prioritySelector {
   display: flex;

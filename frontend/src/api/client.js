@@ -1,4 +1,5 @@
-const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || "/api/v1";
+const viteEnv = import.meta.env || {};
+const API_BASE_URL = viteEnv.VITE_API_BASE_URL || "/api/v1";
 const CSRF_SAFE_METHODS = new Set(["GET", "HEAD", "OPTIONS", "TRACE"]);
 
 function getCookie(name) {

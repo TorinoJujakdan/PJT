@@ -649,6 +649,42 @@ class RecommendationQuoteAPITests(TestCase):
         self.assertIn("GS Saver", recommendation["reason"])
         self.assertIn("6000 KRW", recommendation["reason"])
 
+    def test_explicit_empty_card_selection_does_not_auto_apply_saved_cards(self):
+        user = get_user_model().objects.create_user(username="no-card-selection-user", password="pass12345")
+        CardPolicy.objects.create(
+            owner=user,
+            card_name="GS Saver",
+            issuer_name="Smart Bank",
+            discount_type=CardPolicy.DiscountType.PER_LITER,
+            discount_value=120,
+            brand_scope="GS",
+            max_discount_amount=6000,
+            monthly_remaining_discount=6000,
+        )
+        self.client.force_authenticate(user)
+
+        response = self.client.post(
+            "/api/v1/recommendations/quote/",
+            {
+                "location": {
+                    "latitude": 37.501,
+                    "longitude": 127.039,
+                },
+                "fuel_type": "gasoline",
+                "target_liters": 50,
+                "vehicle": {
+                    "fuel_efficiency_kmpl": 10,
+                },
+                "cards": [],
+            },
+            format="json",
+        )
+
+        self.assertEqual(response.status_code, 200)
+        recommendation = response.json()["recommendation"]
+        self.assertEqual(recommendation["cost_breakdown"]["card_discount_amount"], 0)
+        self.assertIsNone(recommendation["selected_card"])
+
     def test_catalog_card_without_spending_does_not_use_copied_policy_discount(self):
         user = get_user_model().objects.create_user(username="catalog-no-spending-user", password="pass12345")
         station = self._create_station_with_price(
