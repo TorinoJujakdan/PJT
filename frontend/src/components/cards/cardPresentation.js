@@ -164,6 +164,10 @@ export function catalogCardDraft(card) {
 }
 
 export function catalogCardPayload(draft) {
-  const { card_name, issuer_name, ...payload } = cardPayload(draft);
+  const {
+    card_name: _cardName,
+    issuer_name: _issuerName,
+    ...payload
+  } = cardPayload(draft);
   return { ...payload, catalog_card_id: draft.catalog_card_id };
 }

@@ -53,7 +53,6 @@ const {
   selectedVehicleId,
   location,
   fuel,
-  tempCard,
   priority,
   selectedStationId,
   showDetailCard,
@@ -121,7 +120,6 @@ onMounted(initializeSession);
       <DoubleSidebar
         v-model:location="location"
         v-model:fuel="fuel"
-        v-model:card="tempCard"
         v-model:selectedCardId="selectedCardId"
         v-model:selectedVehicleId="selectedVehicleId"
         v-model:priority="priority"

@@ -61,7 +61,7 @@ export function useStartLocation({ onStartLocationChanged } = {}) {
       const raw = window.localStorage.getItem(HOME_LOCATION_STORAGE_KEY);
       if (!raw) return false;
       return applyLocationPayload(JSON.parse(raw));
-    } catch (error) {
+    } catch (_error) {
       window.localStorage.removeItem(HOME_LOCATION_STORAGE_KEY);
       return false;
     }
@@ -102,7 +102,7 @@ export function useStartLocation({ onStartLocationChanged } = {}) {
     try {
       const permission = await navigator.permissions.query({ name: "geolocation" });
       return permission.state === "granted";
-    } catch (error) {
+    } catch (_error) {
       return false;
     }
   }
@@ -133,12 +133,12 @@ export function useStartLocation({ onStartLocationChanged } = {}) {
             accuracy_m: position.coords.accuracy,
           });
         }
-      } catch (error) {
+      } catch (_error) {
         // ?????? ??? ??? ????? ????? ??? ????? ??.
       }
 
       return applyLocationPayload(payload);
-    } catch (error) {
+    } catch (_error) {
       return false;
     }
   }
@@ -186,7 +186,7 @@ export function useStartLocation({ onStartLocationChanged } = {}) {
         source: coords.source || "map_click",
         accuracy_m: null,
       });
-    } catch (error) {
+    } catch (_error) {
       // ?? ?? ?????? ??? ??? ????? ????? ??? ????? ??.
     }
   }

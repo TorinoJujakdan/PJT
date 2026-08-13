@@ -1,6 +1,6 @@
 <script setup>
 import { computed } from "vue";
-import { CreditCard, Fuel, MapPin, Navigation, X } from "@lucide/vue";
+import { Fuel, MapPin, Navigation, X } from "@lucide/vue";
 
 const props = defineProps({
   recommendation: {

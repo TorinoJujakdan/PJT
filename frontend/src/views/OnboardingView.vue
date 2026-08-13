@@ -2,14 +2,12 @@
 import { computed, reactive, ref, watch } from "vue";
 import {
   ArrowRight,
-  Car,
   Check,
   CreditCard,
   Fuel,
   LogIn,
   MapPin,
   UserPlus,
-  Users,
 } from "@lucide/vue";
 
 import { checkUsernameAvailability, signupAndAuthenticate } from "../api/accounts";

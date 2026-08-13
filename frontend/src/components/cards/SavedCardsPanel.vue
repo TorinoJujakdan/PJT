@@ -8,7 +8,7 @@ import DeleteCardDialog from "./DeleteCardDialog.vue";
 import EditCardPanel from "./EditCardPanel.vue";
 import { brandLabel, discountLabel } from "./cardPresentation";
 
-const props = defineProps({
+defineProps({
   cards: { type: Array, default: () => [] },
 });
 const emit = defineEmits(["changed", "go-manual"]);

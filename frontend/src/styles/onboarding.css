@@ -1,0 +1,1482 @@
+/* Refined service intro layout override: clean centered heading + 3 balanced cards */
+.serviceIntro {
+  display: block;
+  padding-top: 92px;
+  padding-bottom: 92px;
+}
+
+.serviceIntro .sectionHeading {
+  position: static;
+  max-width: 780px;
+  margin: 0 auto 34px;
+  text-align: center;
+}
+
+.serviceIntro .sectionHeading h2 {
+  max-width: none;
+  margin-inline: auto;
+  font-size: clamp(34px, 4.8vw, 58px);
+  line-height: 1.04;
+  letter-spacing: -0.065em;
+}
+
+.serviceGrid {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 18px;
+  align-items: stretch;
+}
+
+.serviceCard {
+  position: relative;
+  overflow: hidden;
+  min-height: 280px;
+  padding: 30px 28px 28px;
+  border-radius: 30px;
+  background:
+    linear-gradient(180deg, rgba(255, 255, 255, 0.98), rgba(255, 255, 255, 0.9)),
+    radial-gradient(circle at 88% 8%, rgba(16, 185, 129, 0.12), transparent 30%);
+  border: 1px solid rgba(213, 226, 222, 0.95);
+  box-shadow: 0 22px 62px rgba(15, 23, 42, 0.075);
+  backdrop-filter: blur(16px);
+  transition: transform 0.22s ease, box-shadow 0.22s ease, border-color 0.22s ease;
+}
+
+.serviceCard::before {
+  content: "";
+  position: absolute;
+  inset: 0 0 auto;
+  height: 4px;
+  background: linear-gradient(90deg, var(--primary), var(--secondary));
+  opacity: 0.92;
+}
+
+.serviceCard::after {
+  content: "";
+  position: absolute;
+  right: 28px;
+  top: 30px;
+  width: 42px;
+  height: 42px;
+  border-radius: 16px;
+  background:
+    radial-gradient(circle at center, var(--primary) 0 4px, transparent 5px),
+    linear-gradient(135deg, rgba(230, 244, 238, 0.98), rgba(209, 250, 229, 0.8));
+  box-shadow: inset 0 0 0 1px rgba(15, 107, 79, 0.08);
+}
+
+.serviceCard:hover {
+  transform: translateY(-5px);
+  border-color: rgba(15, 107, 79, 0.18);
+  box-shadow: 0 30px 80px rgba(15, 107, 79, 0.13);
+}
+
+.serviceCard p {
+  max-width: calc(100% - 56px);
+  margin: 0 0 18px;
+  color: var(--primary);
+  font-size: 10px;
+  font-weight: 950;
+  letter-spacing: 0.16em;
+}
+
+.serviceCard h3 {
+  max-width: calc(100% - 34px);
+  margin: 0 0 14px;
+  color: var(--slate-950);
+  font-size: 22px;
+  line-height: 1.28;
+  font-weight: 950;
+  letter-spacing: -0.04em;
+  word-break: keep-all;
+}
+
+.serviceCard span {
+  display: block;
+  color: var(--slate-600);
+  font-size: 15px;
+  line-height: 1.72;
+  font-weight: 750;
+  word-break: keep-all;
+}
+
+@media (max-width: 1080px) {
+  .serviceGrid {
+    grid-template-columns: 1fr;
+  }
+
+  .serviceCard {
+    min-height: 0;
+  }
+}
+
+/* Minimal signup handoff: editorial text, no card-like left description, full-size form */
+.signupLandingSection {
+  position: relative;
+  grid-template-columns: minmax(0, 0.78fr) minmax(440px, 0.72fr);
+  align-items: center;
+  gap: clamp(42px, 7vw, 104px);
+  padding: clamp(62px, 8vw, 112px) 0 clamp(76px, 9vw, 124px);
+  border: 0;
+  border-radius: 0;
+  background: transparent;
+  box-shadow: none;
+}
+
+.signupLandingSection::before {
+  content: "";
+  position: absolute;
+  left: 0;
+  right: 0;
+  top: 0;
+  height: 1px;
+  background: linear-gradient(90deg, transparent, rgba(15, 107, 79, 0.18), transparent);
+}
+
+.signupCopyPanel {
+  position: relative;
+  min-height: auto;
+  padding: 0 0 0 26px;
+  border: 0;
+  border-radius: 0;
+  background: transparent;
+  box-shadow: none;
+  backdrop-filter: none;
+}
+
+.signupCopyPanel::before {
+  content: "";
+  display: block;
+  position: absolute;
+  left: 0;
+  top: 9px;
+  width: 3px;
+  height: 92px;
+  border-radius: 999px;
+  background: linear-gradient(180deg, var(--primary), rgba(16, 185, 129, 0.24));
+}
+
+.signupCopyPanel::after {
+  display: none;
+}
+
+.signupCopyPanel .eyebrow {
+  display: inline-flex;
+  margin: 0 0 18px;
+  padding: 0;
+  color: var(--primary);
+  font-size: 10px;
+  font-weight: 900;
+  letter-spacing: 0.18em;
+}
+
+.signupCopyPanel h2 {
+  display: grid;
+  gap: 6px;
+  max-width: 560px;
+  margin: 0;
+  color: var(--slate-950);
+  font-size: clamp(30px, 3.45vw, 46px);
+  line-height: 1.12;
+  letter-spacing: -0.05em;
+  font-weight: 930;
+  word-break: keep-all;
+}
+
+.signupCopyPanel h2 span {
+  display: block;
+}
+
+.signupCopyPanel p:not(.eyebrow),
+.signupChecklist {
+  display: none !important;
+}
+
+.signupPageCard.refined {
+  width: 100%;
+  max-width: 560px;
+  margin-left: auto;
+  padding: clamp(36px, 4.8vw, 52px);
+  border-radius: 32px;
+  border-color: rgba(213, 226, 222, 0.92);
+  background: rgba(255, 255, 255, 0.96);
+  box-shadow: 0 30px 80px rgba(15, 23, 42, 0.1);
+}
+
+.signupPageCard.refined .eyebrow {
+  margin-bottom: 10px;
+  font-size: 10px;
+  letter-spacing: 0.17em;
+}
+
+.signupPageCard.refined h2 {
+  margin-bottom: 26px;
+  font-size: clamp(32px, 3vw, 42px);
+  line-height: 1.12;
+  letter-spacing: -0.05em;
+  font-weight: 930;
+}
+
+.signupPageCard.refined label {
+  gap: 9px;
+}
+
+.signupPageCard.refined label span {
+  color: var(--slate-700);
+  font-size: 14px;
+  font-weight: 800;
+}
+
+.signupPageCard.refined input {
+  height: 58px;
+  border-radius: 15px;
+  background: rgba(248, 250, 252, 0.78);
+}
+
+.signupPageCard.refined .primaryButton.fullWidth {
+  height: 62px;
+  border-radius: 16px;
+  font-size: 16px;
+  box-shadow: 0 18px 42px rgba(15, 107, 79, 0.2);
+}
+
+.signupPageCard.refined .textButton {
+  min-height: 54px;
+  border-radius: 16px;
+  background: rgba(255, 255, 255, 0.78);
+}
+
+@media (max-width: 1080px) {
+  .signupLandingSection {
+    grid-template-columns: 1fr;
+    gap: 30px;
+    padding: 58px 0 76px;
+  }
+
+  .signupCopyPanel {
+    max-width: 620px;
+    margin-inline: auto;
+    text-align: left;
+  }
+
+  .signupPageCard.refined {
+    margin-inline: auto;
+  }
+}
+
+@media (max-width: 640px) {
+  .signupCopyPanel {
+    padding-left: 18px;
+  }
+
+  .signupCopyPanel::before {
+    height: 76px;
+  }
+
+  .signupCopyPanel h2 {
+    font-size: 27px;
+  }
+
+  .signupPageCard.refined {
+    max-width: none;
+    padding: 30px 22px;
+    border-radius: 26px;
+  }
+}
+
+/* Usage flow visual refresh: replace form mock cards with clean symbolic illustrations */
+.guideSection .guideGrid {
+  gap: 18px;
+}
+
+.guideSection .guideCard {
+  grid-template-columns: minmax(0, 1fr) 260px;
+  min-height: 220px;
+  padding: clamp(24px, 3.2vw, 34px);
+  border-radius: 28px;
+  background:
+    linear-gradient(135deg, rgba(255, 255, 255, 0.96), rgba(250, 253, 252, 0.9));
+  border-color: rgba(213, 226, 222, 0.88);
+  box-shadow: 0 22px 62px rgba(15, 23, 42, 0.065);
+}
+
+.guideSection .guideCopy {
+  max-width: 650px;
+}
+
+.guideSection .guideCopy > strong {
+  width: 44px;
+  height: 44px;
+  margin-bottom: 18px;
+  border-radius: 15px;
+  background: var(--primary);
+  box-shadow: 0 12px 26px rgba(15, 107, 79, 0.16);
+}
+
+.guideSection .guideCard h3 {
+  margin-bottom: 12px;
+  font-size: clamp(20px, 2vw, 24px);
+  letter-spacing: -0.04em;
+}
+
+.guideSection .guideCard p {
+  max-width: 720px;
+  color: var(--slate-600);
+  font-size: 15px;
+  line-height: 1.78;
+  font-weight: 720;
+}
+
+.guideIllustration {
+  position: relative;
+  justify-self: end;
+  width: 230px;
+  height: 150px;
+  display: grid;
+  place-items: center;
+  border-radius: 999px;
+  background:
+    radial-gradient(circle at 48% 42%, rgba(16, 185, 129, 0.13), transparent 34%),
+    radial-gradient(circle at 72% 60%, rgba(245, 158, 11, 0.11), transparent 28%);
+}
+
+.guideOrb {
+  position: absolute;
+  display: grid;
+  place-items: center;
+  border-radius: 24px;
+  color: var(--primary);
+}
+
+.guideOrb.primary {
+  left: 28px;
+  top: 36px;
+  width: 76px;
+  height: 76px;
+  color: white;
+  background: linear-gradient(135deg, var(--primary), var(--secondary));
+  box-shadow: 0 20px 42px rgba(15, 107, 79, 0.2);
+}
+
+.guideOrb.soft {
+  right: 28px;
+  top: 52px;
+  width: 58px;
+  height: 58px;
+  background: rgba(230, 244, 238, 0.95);
+  border: 1px solid rgba(15, 107, 79, 0.08);
+}
+
+.guideLine {
+  position: absolute;
+  left: 94px;
+  right: 74px;
+  top: 76px;
+  height: 2px;
+  border-radius: 999px;
+  background: linear-gradient(90deg, rgba(15, 107, 79, 0.26), rgba(16, 185, 129, 0.72));
+}
+
+.guideLine::after {
+  content: "";
+  position: absolute;
+  right: -2px;
+  top: 50%;
+  width: 8px;
+  height: 8px;
+  border-top: 2px solid rgba(16, 185, 129, 0.8);
+  border-right: 2px solid rgba(16, 185, 129, 0.8);
+  transform: translateY(-50%) rotate(45deg);
+}
+
+.guideMiniLabel {
+  position: absolute;
+  left: 50%;
+  bottom: 6px;
+  transform: translateX(-50%);
+  padding: 7px 12px;
+  border-radius: 999px;
+  color: var(--primary);
+  background: rgba(255, 255, 255, 0.82);
+  border: 1px solid rgba(213, 226, 222, 0.92);
+  font-size: 11px;
+  font-weight: 900;
+  white-space: nowrap;
+  box-shadow: 0 10px 24px rgba(15, 23, 42, 0.045);
+}
+
+.guideIllustrationStep02 .guideOrb.primary {
+  background: linear-gradient(135deg, #0f766e, var(--secondary));
+}
+
+.guideIllustrationStep03 .guideOrb.primary {
+  background: linear-gradient(135deg, var(--primary), #f59e0b);
+}
+
+@media (max-width: 1080px) {
+  .guideSection .guideCard {
+    grid-template-columns: 1fr;
+  }
+
+  .guideIllustration {
+    justify-self: start;
+    width: 210px;
+    height: 130px;
+  }
+}
+
+@media (max-width: 640px) {
+  .guideIllustration {
+    width: 100%;
+    max-width: 230px;
+  }
+}
+
+/* Apple-inspired onboarding full-page layout refresh */
+.onboardingLanding {
+  --onboard-blue: #0066cc;
+  --onboard-blue-focus: #0071e3;
+  --onboard-sky: #2997ff;
+  --onboard-ink: #1d1d1f;
+  --onboard-muted: #6e6e73;
+  --onboard-parchment: #f5f5f7;
+  --onboard-hairline: #e0e0e0;
+  --onboard-dark: #272729;
+  --onboard-dark-2: #2a2a2c;
+  --onboard-product-shadow: rgba(0, 0, 0, 0.22) 3px 5px 30px 0;
+  background: #ffffff;
+  color: var(--onboard-ink);
+  letter-spacing: -0.022em;
+}
+
+.landingHero,
+.landingSection,
+.signupLandingSection {
+  width: 100%;
+  max-width: none;
+  margin: 0;
+}
+
+.onboardingPage {
+  min-height: 100svh;
+  padding: clamp(54px, 8vw, 92px) clamp(18px, 4vw, 40px);
+  display: grid;
+  align-items: center;
+  overflow: hidden;
+}
+
+.servicePage {
+  background: var(--onboard-parchment);
+  padding-top: clamp(28px, 4vw, 40px);
+}
+
+.benefitPage {
+  background: #ffffff;
+}
+
+.featurePage {
+  background: var(--onboard-dark);
+  color: #ffffff;
+}
+
+.flowPage {
+  background: var(--onboard-parchment);
+}
+
+.signupPage {
+  background: var(--onboard-dark-2);
+  color: #ffffff;
+}
+
+.onboardingPage > .landingNav,
+.onboardingPage > .heroLayout,
+.onboardingPage > .heroMetricGrid,
+.onboardingPage > .sectionHeading,
+.onboardingPage > .effectGrid,
+.onboardingPage > .serviceGrid,
+.onboardingPage > .guideGrid,
+.onboardingPage > .signupCopyPanel,
+.onboardingPage > .signupPageCard {
+  width: min(1180px, 100%);
+  margin-left: auto;
+  margin-right: auto;
+}
+
+.landingHero.onboardingPage {
+  grid-template-rows: auto minmax(0, 1fr) auto;
+  gap: clamp(20px, 3vw, 34px);
+}
+
+.landingHero .landingNav {
+  padding: 0;
+}
+
+.heroLayout {
+  min-height: 0;
+  grid-template-columns: minmax(0, 0.96fr) minmax(340px, 0.84fr);
+}
+
+.heroCopy h1,
+.sectionHeading h2,
+.signupCopyPanel h2 {
+  color: inherit;
+  letter-spacing: -0.05em;
+}
+
+.heroCopy p,
+.sectionHeading span,
+.signupCopyPanel p:not(.eyebrow),
+.serviceCard span,
+.guideCard p,
+.effectCard p {
+  color: var(--onboard-muted);
+}
+
+.featurePage .sectionHeading span,
+.featurePage .serviceCard span,
+.featurePage .serviceCard p,
+.signupPage .signupCopyPanel p:not(.eyebrow) {
+  color: #d2d2d7;
+}
+
+.onboardingPrimary,
+.primaryButton.onboardingPrimary,
+.signupPageCard .primaryButton {
+  min-height: 44px;
+  border-radius: 999px;
+  background: var(--onboard-blue);
+  box-shadow: none;
+}
+
+.onboardingPrimary:active,
+.signupPageCard .primaryButton:active,
+.onboardingGhostButton:active {
+  transform: scale(0.95);
+}
+
+.onboardingGhostButton {
+  min-height: 44px;
+  border-radius: 999px;
+  background: transparent;
+  color: var(--onboard-blue);
+  border-color: var(--onboard-blue);
+  box-shadow: none;
+}
+
+.heroShowcase.phoneServicePreview {
+  overflow: visible;
+  min-height: clamp(560px, 72vh, 720px);
+  padding: 0;
+  border: 0;
+  border-radius: 0;
+  background: transparent;
+  box-shadow: none;
+  display: grid;
+  place-items: center;
+}
+
+.heroShowcase.phoneServicePreview::before,
+.heroShowcase.phoneServicePreview::after {
+  content: none;
+}
+
+.phoneMockup {
+  width: min(382px, 88vw);
+  aspect-ratio: 0.62;
+  border: clamp(10px, 2.2vw, 14px) solid #0b0b0c;
+  border-radius: clamp(38px, 8vw, 56px);
+  background: #0b0b0c;
+  box-shadow: var(--onboard-product-shadow);
+  transform: rotate(-2deg);
+  transform-origin: center;
+}
+
+.phoneScreen {
+  position: relative;
+  height: 100%;
+  overflow: hidden;
+  border-radius: clamp(28px, 6.4vw, 42px);
+  background: linear-gradient(180deg, #eef1f5 0%, #f7f7f9 72%, #ffffff 100%);
+  color: var(--onboard-ink);
+}
+
+.phoneMapArea {
+  position: relative;
+  height: 47%;
+  overflow: hidden;
+  background: #e6ebf1;
+}
+
+.phoneMapArea::before {
+  content: "";
+  position: absolute;
+  inset: 36% -18% auto -18%;
+  height: 58px;
+  background: #ffffff;
+  transform: rotate(-19deg);
+  box-shadow: 0 0 0 1px rgba(0, 0, 0, 0.035);
+}
+
+.phoneMapArea::after {
+  content: "";
+  position: absolute;
+  left: -18%;
+  right: -12%;
+  bottom: -6px;
+  height: 48px;
+  background: rgba(255, 255, 255, 0.36);
+}
+
+.phoneMapDot.muted {
+  position: absolute;
+  left: 26%;
+  top: 18%;
+  width: 28px;
+  height: 28px;
+  border-radius: 999px;
+  background: #a8adb5;
+  opacity: 0.86;
+}
+
+.phoneMapDot.muted::after {
+  content: "";
+  position: absolute;
+  right: -5px;
+  top: 7px;
+  width: 14px;
+  height: 14px;
+  border-radius: 999px;
+  background: #f9fbff;
+}
+
+.phoneRoute {
+  position: absolute;
+  left: 19%;
+  right: 20%;
+  top: 33%;
+  height: 5px;
+  border-radius: 999px;
+  background: #0066cc;
+  transform: rotate(-19deg);
+  z-index: 2;
+}
+
+.phoneStationPin {
+  position: absolute;
+  left: 62%;
+  top: 27%;
+  width: 48px;
+  height: 48px;
+  display: grid;
+  place-items: center;
+  border-radius: 999px 999px 999px 10px;
+  color: #ffffff;
+  background: #0066cc;
+  transform: rotate(-45deg);
+  z-index: 3;
+  box-shadow: 0 14px 24px rgba(0, 102, 204, 0.18);
+}
+
+.phoneStationPin svg {
+  transform: rotate(45deg);
+}
+
+.phoneResultCard {
+  position: relative;
+  width: calc(100% - 44px);
+  margin: -34px auto 0;
+  padding: clamp(20px, 4vw, 26px);
+  display: grid;
+  gap: 7px;
+  border-radius: 20px;
+  background: rgba(255, 255, 255, 0.94);
+  border: 1px solid rgba(0, 0, 0, 0.08);
+  box-shadow: 0 16px 38px rgba(0, 0, 0, 0.06);
+  z-index: 4;
+}
+
+.phoneResultCard span,
+.phoneResultCard small {
+  color: #6e6e73;
+  font-size: clamp(12px, 2vw, 14px);
+}
+
+.phoneResultCard strong {
+  color: #1d1d1f;
+  font-size: clamp(20px, 4vw, 27px);
+  line-height: 1.12;
+  letter-spacing: -0.05em;
+}
+
+.phoneResultCard b {
+  color: #1d1d1f;
+  font-size: clamp(34px, 7vw, 44px);
+  line-height: 1.05;
+  letter-spacing: -0.06em;
+}
+
+.phoneCostRows {
+  width: calc(100% - 50px);
+  margin: 20px auto 0;
+  display: grid;
+  gap: 10px;
+}
+
+.phoneCostRows div {
+  min-height: 44px;
+  padding: 0 16px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  border-radius: 999px;
+  background: rgba(255, 255, 255, 0.94);
+  border: 1px solid rgba(0, 0, 0, 0.08);
+  color: #1d1d1f;
+  font-size: 15px;
+}
+
+.heroMetricGrid {
+  margin-top: 0;
+}
+
+.heroMetric,
+.effectCard,
+.serviceCard,
+.guideCard,
+.signupPageCard {
+  border-radius: 18px;
+  box-shadow: none;
+}
+
+.effectCard,
+.guideCard,
+.signupPageCard {
+  background: #ffffff;
+  border: 1px solid var(--onboard-hairline);
+}
+
+.serviceCard {
+  background: rgba(255, 255, 255, 0.045);
+  border: 1px solid rgba(255, 255, 255, 0.12);
+  color: #ffffff;
+}
+
+.serviceGrid,
+.effectGrid {
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+}
+
+.guideSection .guideGrid {
+  width: min(980px, 100%);
+}
+
+.signupLandingSection.onboardingPage {
+  grid-template-columns: minmax(0, 0.78fr) minmax(360px, 0.64fr);
+  gap: clamp(28px, 6vw, 76px);
+}
+
+.signupPage .signupCopyPanel,
+.signupPage .signupPageCard {
+  width: 100%;
+}
+
+.signupPage .signupPageCard {
+  color: var(--onboard-ink);
+}
+
+@media (max-width: 1080px) {
+  .heroLayout,
+  .signupLandingSection.onboardingPage {
+    grid-template-columns: 1fr;
+  }
+
+  .heroShowcase.phoneServicePreview {
+    min-height: 560px;
+  }
+
+  .serviceGrid,
+  .effectGrid {
+    grid-template-columns: 1fr;
+  }
+}
+
+@media (max-width: 760px) {
+  .onboardingPage {
+    min-height: 100svh;
+    padding: 44px 16px;
+  }
+
+  .landingHero.onboardingPage {
+    min-height: 100svh;
+  }
+
+  .heroShowcase.phoneServicePreview {
+    min-height: 520px;
+  }
+
+  .phoneMockup {
+    width: min(336px, 88vw);
+  }
+
+  .heroMetricGrid {
+    grid-template-columns: 1fr;
+  }
+}
+
+@media (max-width: 520px) {
+  .phoneResultCard {
+    width: calc(100% - 34px);
+    margin-top: -26px;
+  }
+
+  .phoneCostRows {
+    width: calc(100% - 40px);
+  }
+}
+
+/* Equalize onboarding pages on desktop while keeping mobile scroll-safe */
+@media (min-width: 1081px) {
+  .onboardingPage {
+    height: 100svh;
+    min-height: 820px;
+    padding-top: clamp(34px, 4.4vw, 56px);
+    padding-bottom: clamp(34px, 4.4vw, 56px);
+  }
+
+  .landingHero.onboardingPage {
+    grid-template-rows: auto minmax(0, 1fr) auto;
+    gap: 18px;
+  }
+
+  .heroLayout {
+    gap: clamp(28px, 4vw, 56px);
+  }
+
+  .heroShowcase.phoneServicePreview {
+    min-height: 0;
+    height: min(64vh, 610px);
+  }
+
+  .phoneMockup {
+    width: min(340px, 24vw);
+  }
+
+  .heroMetricGrid {
+    gap: 12px;
+  }
+
+  .heroMetric {
+    padding: 16px 18px;
+  }
+
+  .guideSection.onboardingPage {
+    align-content: center;
+    gap: 30px;
+  }
+
+  .guideSection .guideGrid {
+    width: min(1180px, 100%);
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+  }
+
+  .guideSection .guideCard {
+    grid-template-columns: 1fr;
+    min-height: 420px;
+    align-content: start;
+  }
+
+  .guideSection .guideIllustration {
+    min-height: 140px;
+    margin-top: 18px;
+  }
+
+  .guideSection .guideCard p {
+    font-size: 14px;
+    line-height: 1.55;
+  }
+}
+
+/* User-requested onboarding detail refinements */
+.heroMetric {
+  display: grid;
+  place-items: center;
+  text-align: center;
+}
+
+.heroMetric strong,
+.heroMetric span {
+  width: 100%;
+  text-align: center;
+}
+
+.heroMetric span {
+  white-space: pre-line;
+}
+
+.benefitPage.onboardingPage {
+  align-content: center;
+  gap: clamp(28px, 5vw, 56px);
+}
+
+.benefitPage .sectionHeading {
+  margin-bottom: 0;
+}
+
+.benefitPage .effectGrid {
+  margin-top: 0;
+}
+
+.effectCard {
+  text-align: center;
+}
+
+.effectCard .featureIcon {
+  margin-left: auto;
+  margin-right: auto;
+}
+
+.featurePage.onboardingPage {
+  align-content: center;
+  gap: clamp(34px, 5vw, 64px);
+}
+
+.featurePage.serviceIntro {
+  display: grid;
+}
+
+.featurePage .sectionHeading {
+  max-width: 880px;
+  margin: 0 auto;
+  text-align: center;
+}
+
+.featurePage .sectionHeading h2 {
+  display: grid;
+  gap: 4px;
+  font-size: clamp(38px, 4.8vw, 64px);
+  line-height: 1.08;
+  white-space: normal;
+}
+
+.featurePage .sectionHeading h2 span {
+  display: block;
+  color: inherit;
+}
+
+.featurePage .sectionHeading > span {
+  display: block;
+  max-width: 760px;
+  margin: 12px auto 0;
+  color: #d2d2d7;
+}
+
+.featurePage .serviceGrid {
+  align-self: start;
+}
+
+.featurePage .serviceCard {
+  padding: clamp(24px, 3vw, 34px);
+  min-height: 250px;
+  border-top: 1px solid rgba(255, 255, 255, 0.12);
+}
+
+.featurePage .serviceCard::before,
+.featurePage .serviceCard::after {
+  content: none !important;
+  display: none !important;
+}
+
+.featurePage .serviceCard p,
+.featurePage .serviceCard h3 {
+  max-width: none;
+}
+
+.flowPage.onboardingPage {
+  align-content: center;
+  gap: clamp(28px, 4.5vw, 54px);
+}
+
+.flowPage .sectionHeading {
+  margin-bottom: 0;
+}
+
+.flowPage .guideGrid {
+  position: relative;
+  gap: 20px;
+}
+
+.flowPage .guideGrid::before {
+  content: "";
+  position: absolute;
+  left: 8%;
+  right: 8%;
+  top: 56px;
+  height: 2px;
+  background: linear-gradient(90deg, rgba(0, 102, 204, 0), rgba(0, 102, 204, 0.34), rgba(0, 102, 204, 0));
+  pointer-events: none;
+}
+
+.flowPage .guideCard {
+  position: relative;
+  overflow: visible;
+  min-height: 360px;
+  padding: clamp(28px, 3vw, 40px);
+  transition: transform 180ms ease, border-color 180ms ease, box-shadow 180ms ease;
+  transform-origin: center;
+}
+
+.flowPage .guideCard:hover {
+  transform: scale(1.035);
+  border-color: rgba(0, 102, 204, 0.28);
+  box-shadow: 0 26px 58px rgba(15, 23, 42, 0.12);
+  z-index: 2;
+}
+
+.flowPage .guideCopy > strong {
+  width: auto;
+  height: auto;
+  margin-bottom: 24px;
+  display: inline-flex;
+  align-items: baseline;
+  justify-content: flex-start;
+  border-radius: 0;
+  background: transparent;
+  color: rgba(0, 102, 204, 0.78);
+  box-shadow: none;
+  font-size: clamp(42px, 5vw, 64px);
+  line-height: 0.9;
+  letter-spacing: -0.08em;
+  opacity: 0.72;
+}
+
+.flowPage .guideCopy > strong::after {
+  content: "";
+  width: 42px;
+  height: 2px;
+  margin-left: 14px;
+  background: rgba(0, 102, 204, 0.36);
+  border-radius: 999px;
+}
+
+.flowPage .guideIllustration,
+.flowPage .guideOrb,
+.flowPage .guideLine,
+.flowPage .guideMiniLabel {
+  display: none !important;
+}
+
+.signupLandingSection.signupPage {
+  justify-content: center;
+  grid-template-columns: minmax(360px, 0.72fr) minmax(420px, 0.72fr);
+  width: min(1180px, 100%);
+  margin-inline: auto;
+  gap: clamp(34px, 4vw, 58px);
+}
+
+.signupPage .signupCopyPanel {
+  justify-self: end;
+  max-width: 560px;
+  padding-left: clamp(18px, 2vw, 34px);
+}
+
+.signupPage .signupPageCard {
+  justify-self: start;
+  max-width: 560px;
+}
+
+@media (min-width: 1081px) {
+  .benefitPage.onboardingPage,
+  .featurePage.onboardingPage,
+  .flowPage.onboardingPage {
+    height: 100svh;
+  }
+
+  .benefitPage .effectGrid {
+    transform: translateY(-8px);
+  }
+}
+
+@media (max-width: 1080px) {
+  .flowPage .guideGrid::before {
+    display: none;
+  }
+
+  .signupLandingSection.signupPage {
+    grid-template-columns: 1fr;
+    width: 100%;
+  }
+
+  .signupPage .signupCopyPanel,
+  .signupPage .signupPageCard {
+    justify-self: center;
+    max-width: 640px;
+  }
+}
+
+/* Final onboarding polish: stable feature and signup sections */
+.featurePage.serviceIntro.onboardingPage {
+  display: grid !important;
+  grid-template-columns: 1fr !important;
+  grid-template-rows: auto auto;
+  justify-items: center;
+  align-content: center;
+  row-gap: clamp(46px, 6vw, 76px);
+  padding-top: clamp(64px, 8vw, 96px);
+  padding-bottom: clamp(64px, 8vw, 96px);
+}
+
+.featurePage .sectionHeading.centered {
+  width: min(980px, 100%);
+  max-width: 980px;
+  margin: 0 auto;
+  text-align: center;
+}
+
+.featurePage .sectionHeading.centered h2 {
+  display: grid;
+  gap: 8px;
+  margin: 0;
+  color: #ffffff;
+  font-size: clamp(44px, 5.4vw, 72px);
+  line-height: 1.04;
+  font-weight: 800;
+  letter-spacing: -0.064em;
+}
+
+.featurePage .sectionHeading.centered h2 span {
+  display: block;
+  color: inherit !important;
+  font: inherit !important;
+  line-height: inherit !important;
+  letter-spacing: inherit !important;
+  margin: 0 !important;
+}
+
+.featurePage .sectionHeading.centered > span {
+  display: none !important;
+}
+
+.featurePage .serviceGrid {
+  width: min(1180px, 100%);
+  margin: 0 auto;
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 20px;
+}
+
+.featurePage .serviceCard {
+  min-height: 260px;
+  padding: clamp(28px, 3vw, 36px);
+  border: 1px solid rgba(255, 255, 255, 0.14) !important;
+  border-top: 1px solid rgba(255, 255, 255, 0.14) !important;
+  background: rgba(255, 255, 255, 0.045);
+  box-shadow: none;
+}
+
+.featurePage .serviceCard h3 {
+  font-size: clamp(25px, 1.7vw, 30px);
+  line-height: 1.25;
+  letter-spacing: -0.04em;
+}
+
+.signupLandingSection.signupPage.onboardingPage {
+  width: 100% !important;
+  max-width: none !important;
+  margin: 0 !important;
+  background: var(--onboard-dark-2) !important;
+  grid-template-columns: minmax(360px, 560px) minmax(420px, 560px);
+  justify-content: center;
+  column-gap: clamp(48px, 6vw, 92px);
+  padding-left: clamp(24px, 5vw, 72px);
+  padding-right: clamp(24px, 5vw, 72px);
+}
+
+.signupLandingSection.signupPage::before {
+  display: none !important;
+}
+
+.signupLandingSection.signupPage .signupCopyPanel {
+  justify-self: end;
+}
+
+.signupLandingSection.signupPage .signupPageCard {
+  justify-self: start;
+}
+
+@media (max-width: 1080px) {
+  .featurePage .serviceGrid,
+  .signupLandingSection.signupPage.onboardingPage {
+    grid-template-columns: 1fr;
+  }
+
+  .featurePage.serviceIntro.onboardingPage {
+    row-gap: 30px;
+  }
+
+  .signupLandingSection.signupPage .signupCopyPanel,
+  .signupLandingSection.signupPage .signupPageCard {
+    justify-self: center;
+  }
+}
+
+/* Modern mobile-app signup surface */
+.signupLandingSection.signupPage.onboardingPage {
+  --signup-blue: var(--primary);
+  --signup-blue-dark: var(--primary-hover);
+  --signup-blue-soft: var(--primary-light);
+  --signup-red: #ef4444;
+  --signup-red-soft: #fef2f2;
+  background: #ffffff !important;
+  color: var(--slate-900);
+}
+
+.signupLandingSection.signupPage .signupCopyPanel {
+  color: var(--slate-900);
+}
+
+.signupLandingSection.signupPage .signupCopyPanel .eyebrow,
+.modernSignupCard .eyebrow {
+  color: var(--signup-blue, #0284c7);
+  letter-spacing: 0;
+}
+
+.signupLandingSection.signupPage .signupCopyPanel h2 {
+  color: var(--slate-900);
+  letter-spacing: 0;
+}
+
+.signupStandaloneShell {
+  --signup-blue: var(--primary);
+  --signup-blue-dark: var(--primary-hover);
+  --signup-blue-soft: var(--primary-light);
+  --signup-red: #ef4444;
+  --signup-red-soft: #fef2f2;
+  margin-block: 24px;
+  padding-inline: 16px;
+}
+
+.signupPageCard.modernSignupCard {
+  display: grid;
+  gap: 22px;
+  width: min(100%, 520px);
+  padding: clamp(24px, 5vw, 34px);
+  border: 1px solid rgba(2, 132, 199, 0.16);
+  border-radius: 24px;
+  background: #ffffff;
+  box-shadow: 0 18px 50px rgba(15, 23, 42, 0.07);
+}
+
+.signupPageCard.modernSignupCard:hover {
+  box-shadow: 0 18px 50px rgba(15, 23, 42, 0.07);
+}
+
+.modernSignupCard h2 {
+  margin: 0;
+  color: var(--slate-900);
+  font-size: clamp(26px, 4vw, 34px);
+  line-height: 1.18;
+  letter-spacing: 0;
+}
+
+.modernSignupCard .fieldGrid {
+  gap: 18px;
+}
+
+.signupFieldCard {
+  display: grid;
+  gap: 16px;
+  padding: 18px;
+  border: 1px solid var(--slate-200);
+  border-radius: 16px;
+  background: #fbfdfc;
+  box-shadow: none;
+}
+
+.modernSignupCard label {
+  gap: 8px;
+  color: var(--slate-700);
+  font-size: 13px;
+  font-weight: 800;
+  letter-spacing: 0;
+  text-transform: none;
+}
+
+.modernSignupCard .signupField {
+  display: grid;
+  gap: 8px;
+}
+
+.modernSignupCard label span {
+  color: var(--slate-800);
+  font-size: 14px;
+  font-weight: 800;
+}
+
+.modernSignupCard input {
+  min-height: 54px;
+  padding: 0 16px;
+  border: 1px solid rgba(203, 213, 225, 0.9);
+  border-radius: 16px;
+  background: #ffffff;
+  color: var(--slate-900);
+  font-size: 15px;
+}
+
+.modernSignupCard input::placeholder {
+  color: var(--slate-400);
+}
+
+.modernSignupCard input:focus {
+  border-color: var(--signup-blue, #0284c7);
+  box-shadow: 0 0 0 4px rgba(2, 132, 199, 0.14);
+}
+
+.duplicateCheckRow {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  gap: 8px;
+}
+
+.duplicateCheckButton {
+  min-width: 94px;
+  min-height: 54px;
+  padding: 0 14px;
+  border: 1px solid rgba(2, 132, 199, 0.28);
+  border-radius: 16px;
+  background: var(--signup-blue-soft, #e0f2fe);
+  color: var(--signup-blue-dark, #0369a1);
+  cursor: pointer;
+  font-size: 13px;
+  font-weight: 900;
+  letter-spacing: 0;
+  white-space: nowrap;
+}
+
+.duplicateCheckButton:hover:not(:disabled) {
+  border-color: var(--signup-blue, #0284c7);
+  background: #dbeafe;
+}
+
+.duplicateCheckButton:disabled {
+  cursor: not-allowed;
+  opacity: 0.54;
+}
+
+.passwordRuleList {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 8px;
+  margin: -2px 0 0;
+  padding: 0;
+  list-style: none;
+}
+
+.passwordRuleList li {
+  display: inline-flex;
+  align-items: center;
+  gap: 7px;
+  min-width: 0;
+  color: var(--slate-500);
+  font-size: 12px;
+  font-weight: 800;
+  line-height: 1.35;
+}
+
+.passwordRuleList li span {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  flex: 0 0 18px;
+  width: 18px;
+  height: 18px;
+  border-radius: 999px;
+  background: var(--slate-100);
+  color: var(--slate-400);
+}
+
+.passwordRuleList li.passed {
+  color: var(--signup-blue-dark, #0369a1);
+}
+
+.passwordRuleList li.passed span {
+  background: var(--signup-blue, #0284c7);
+  color: #ffffff;
+}
+
+.signupStatusText {
+  margin: -8px 0 0;
+  font-size: 13px;
+  font-weight: 800;
+  line-height: 1.45;
+}
+
+.signupStatusText.success {
+  color: var(--signup-blue-dark, #0369a1);
+}
+
+.signupStatusText.danger {
+  color: var(--signup-red, #ef4444);
+}
+
+.signupStatusText.muted {
+  color: var(--slate-500);
+}
+
+.modernSignupCard .primaryButton.fullWidth {
+  min-height: 56px;
+  border-radius: 16px;
+  background: var(--signup-blue, #0284c7);
+  box-shadow: none;
+  font-size: 16px;
+  letter-spacing: 0;
+}
+
+.modernSignupCard .primaryButton.fullWidth:hover:not(:disabled) {
+  background: var(--signup-blue-dark, #0369a1);
+  box-shadow: none;
+  transform: translateY(-1px);
+}
+
+.modernSignupCard .primaryButton.fullWidth:disabled {
+  background: var(--slate-200);
+  color: var(--slate-500);
+  cursor: not-allowed;
+  opacity: 1;
+}
+
+.modernSignupCard .textButton {
+  min-height: 48px;
+  border: 0;
+  border-radius: 16px;
+  background: transparent;
+  color: var(--slate-500);
+  font-weight: 800;
+}
+
+.modernSignupCard .textButton:hover {
+  background: var(--signup-blue-soft, #e0f2fe);
+  color: var(--signup-blue-dark, #0369a1);
+}
+
+@media (max-width: 640px) {
+  .signupPageCard.modernSignupCard {
+    border-radius: 20px;
+    padding: 22px 18px;
+  }
+
+  .signupFieldCard {
+    padding: 16px;
+  }
+
+  .duplicateCheckRow {
+    grid-template-columns: 1fr;
+  }
+
+  .duplicateCheckButton {
+    width: 100%;
+  }
+
+  .passwordRuleList {
+    grid-template-columns: 1fr;
+  }
+}

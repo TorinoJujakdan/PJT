@@ -5,7 +5,7 @@ import {
   getVehicleFuelPriceUnit
 } from "./vehicles/vehiclePresentation";
 
-const props = defineProps({
+defineProps({
   isReadOnly: {
     type: Boolean,
     default: false

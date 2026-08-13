@@ -1,5 +1,5 @@
 <script setup>
-import { computed, ref, watch } from "vue";
+import { computed, ref } from "vue";
 import {
   ChevronDown,
   ChevronUp,
@@ -7,7 +7,6 @@ import {
   ListChecks,
   LogIn,
   LogOut,
-  MapPin,
   MessageSquare,
   Search,
   Sliders
@@ -37,10 +36,6 @@ const props = defineProps({
     required: true
   },
   fuel: {
-    type: Object,
-    required: true
-  },
-  card: {
     type: Object,
     required: true
   },
@@ -85,7 +80,6 @@ const props = defineProps({
 const emit = defineEmits([
   "update:location",
   "update:fuel",
-  "update:card",
   "update:selectedCardId",
   "update:selectedVehicleId",
   "update:priority",
@@ -116,11 +110,6 @@ const localLocation = computed({
 const localFuel = computed({
   get: () => props.fuel,
   set: (val) => emit("update:fuel", val)
-});
-
-const localCard = computed({
-  get: () => props.card,
-  set: (val) => emit("update:card", val)
 });
 
 const localSelectedCardId = computed({

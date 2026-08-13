@@ -1,6 +1,9 @@
 import { createApp } from "vue";
 import App from "./App.vue";
 import "./styles.css";
+import "./styles/unified-shell.css";
+import "./styles/dashboard.css";
+import "./styles/onboarding.css";
 
 const app = createApp(App);
 

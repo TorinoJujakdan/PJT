@@ -55,10 +55,6 @@ async function handleSignup() {
   }
 }
 
-function switchMode(newMode) {
-  mode.value = newMode;
-  error.value = null;
-}
 </script>
 
 <template>
