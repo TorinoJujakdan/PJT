@@ -55,7 +55,12 @@ for Local Search credentials when searching buildings or landmarks.
 ## Local Verification
 
 ```powershell
+npm.cmd ci
+npm.cmd run lint
+npm.cmd run typecheck
+npm.cmd test
 npm.cmd run build
+npm.cmd audit --audit-level=high
 ```
 
 ## Naver Map Submission Mapping

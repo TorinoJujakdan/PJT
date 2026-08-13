@@ -10,7 +10,9 @@ Expected apps:
 - `cards`: card discount policies
 - `stations`: station data, fuel prices, recommendation service
 
-The recommendation service contract is defined in `docs/03_recommendation_algorithm.md`.
+The API and recommendation contracts are defined in
+[`../docs/02_api_blueprint.json`](../docs/02_api_blueprint.json) and
+[`../docs/api_contracts/recommendations_quote.json`](../docs/api_contracts/recommendations_quote.json).
 
 ## API Surface
 
@@ -56,12 +58,15 @@ Local run commands:
 ```powershell
 cd backend
 ..\.venv\Scripts\python.exe manage.py runserver 127.0.0.1:8000
+..\.venv\Scripts\python.exe manage.py run_scheduler
 ..\.venv\Scripts\uvicorn.exe search_api.main:app --host 127.0.0.1 --port 8001 --reload
 ```
 
 ## Data Boundaries
 
-- Recommendation ranking and cost calculation stay in `stations/services.py`.
+- Recommendation orchestration stays in `stations/services.py`; candidate lookup,
+  directions, and card discount calculation live in `stations/station_candidates.py`,
+  `stations/directions.py`, and `stations/card_discounts.py`.
 - Vehicle names are required, trimmed, non-unique, and limited to 40 characters. `vehicle_type` accepts only `sedan`, `suv`, `rv_mpv`, `sports_coupe`, `hatchback`, `wagon`, `convertible`, `pickup`, or `micro_city`.
 - Migration `vehicles.0003_reset_profiles_add_name_vehicle_type` deletes only `VehicleProfile` rows. User accounts, cards, stations, and fuel-price rows are preserved.
 - Migration `vehicles.0004_vehicleprofile_vehicles_one_default_per_user` enforces one default vehicle at most per user; clients change it through the set-default endpoint.
@@ -72,6 +77,13 @@ cd backend
 
 ## Environment
 
+- `DJANGO_DEBUG`: use `true` only for local development. The safe default is `false`.
+- `DJANGO_SECRET_KEY`: required whenever `DJANGO_DEBUG=false`; use a long random value.
+- `DJANGO_ALLOWED_HOSTS`, `DJANGO_CSRF_TRUSTED_ORIGINS`, `DJANGO_CORS_ALLOWED_ORIGINS`:
+  comma-separated deployment hosts and frontend origins.
+- `DJANGO_SECURE_*`, `DJANGO_SESSION_COOKIE_SECURE`, `DJANGO_CSRF_COOKIE_SECURE`:
+  HTTPS/HSTS/cookie controls. Production defaults are enabled when debug is off.
+- `DJANGO_TRUST_PROXY_SSL_HEADER`: enable only behind a trusted TLS-terminating proxy.
 - `OPINET_API_KEY`: required only for Opinet synchronization commands.
 - `NAVER_GEOCODING_CLIENT_ID` / `NAVER_GEOCODING_CLIENT_SECRET`: server-side Naver Cloud Maps credentials shared by Geocoding, Reverse Geocoding, and Directions. Legacy `NAVER_CLIENT_ID` / `NAVER_CLIENT_SECRET` remain accepted for these Maps APIs.
 - `NAVER_LOCAL_CLIENT_ID` / `NAVER_LOCAL_CLIENT_SECRET`: optional NAVER Developers Search credentials for registered businesses, buildings, and landmarks. `NAVER_SEARCH_*` and `NAVER_OPENAPI_*` aliases are also accepted. Cloud Maps `NAVER_CLIENT_*` credentials are intentionally not used for Local Search.
@@ -130,5 +142,21 @@ cd backend
 ## Local Verification
 
 ```powershell
-& 'C:\Users\SSAFY\.cache\codex-runtimes\codex-primary-runtime\dependencies\python\python.exe' manage.py test
+cd backend
+..\.venv\Scripts\python.exe -m pip install -r requirements-dev.txt
+..\.venv\Scripts\ruff.exe check .
+..\.venv\Scripts\python.exe manage.py check
+..\.venv\Scripts\python.exe manage.py makemigrations --check --dry-run
+..\.venv\Scripts\python.exe manage.py test
+```
+
+## Scheduler Process
+
+`run_scheduler` is a dedicated process and must not be embedded in Django web
+workers. Run exactly one scheduler process per deployment after migrations:
+
+```powershell
+cd backend
+..\.venv\Scripts\python.exe manage.py migrate
+..\.venv\Scripts\python.exe manage.py run_scheduler
 ```

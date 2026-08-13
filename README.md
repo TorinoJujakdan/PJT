@@ -15,7 +15,7 @@ Naver 지도/경로와 유가 데이터를 기반으로 주유소와 카드 혜�
 ### 1. 사전 요구사항
 
 - Python 3.10+
-- Node.js 18+
+- Node.js 20.19+ 또는 22.12+
 - npm
 
 ### 2. 저장소 클론
@@ -55,6 +55,11 @@ copy frontend\.env.example frontend\.env
 
 | 변수 | 용도 | 비고 |
 |---|---|---|
+| `DJANGO_DEBUG` | Django 디버그 모드 | 로컬은 `true`, 운영은 반드시 `false` |
+| `DJANGO_SECRET_KEY` | Django 서명 키 | 운영에서는 50자 이상의 무작위 값 필수 |
+| `DJANGO_ALLOWED_HOSTS` | 허용 호스트 | 쉼표로 구분한 운영 도메인 |
+| `DJANGO_CSRF_TRUSTED_ORIGINS` / `DJANGO_CORS_ALLOWED_ORIGINS` | 허용 프론트엔드 origin | 스킴을 포함한 URL을 쉼표로 구분 |
+| `DJANGO_SECURE_*` / 보안 쿠키 변수 | HTTPS/HSTS/쿠키 보안 | 운영 기본값은 안전하게 활성화됨 |
 | `NAVER_CLIENT_ID` / `NAVER_CLIENT_SECRET` | Naver Cloud Maps, Geocoding, Directions | 주유소 위치/경로 계산 |
 | `NAVER_LOCAL_CLIENT_ID` / `NAVER_LOCAL_CLIENT_SECRET` | Naver OpenAPI Local Search | 지역 검색 |
 | `OPINET_API_KEY` | Opinet 유가 데이터 | 주유소 가격 조회 |
@@ -110,7 +115,8 @@ copy frontend\.env.example frontend\.env
 
 # 방법 2: 수동 실행
 .venv\Scripts\python backend\manage.py runserver 127.0.0.1:8000
-.venv\Scripts\uvicorn search_api.main:app --host 127.0.0.1 --port 8001 --reload
+.venv\Scripts\python backend\manage.py run_scheduler
+.venv\Scripts\uvicorn --app-dir backend search_api.main:app --host 127.0.0.1 --port 8001 --reload
 cd frontend
 npm run dev
 ```
@@ -151,11 +157,16 @@ PJT/
 │  ├─ vehicles/          # vehicle/fuel profile
 │  ├─ cards/             # card catalog and benefit normalization
 │  ├─ stations/          # fuel station data and recommendations
+│  │  ├─ services.py     # recommendation orchestration
+│  │  ├─ station_candidates.py  # nearby candidate lookup
+│  │  ├─ directions.py   # route lookup
+│  │  └─ card_discounts.py      # card benefit calculation
 │  └─ search_api/        # FastAPI search sidecar
 ├─ frontend/             # Vue 3 + Vite frontend
 │  ├─ .env.example       # frontend environment template
-│  └─ src/
+│  └─ src/styles/         # dashboard/onboarding style modules
 ├─ docs/                 # API contract JSON and retained project docs
+├─ .github/workflows/ci.yml  # backend/frontend CI
 ├─ start-smartfuel.bat   # Windows launcher
 └─ start-smartfuel.ps1   # launcher implementation
 ```
@@ -167,5 +178,32 @@ PJT/
 - `.env` 파일은 절대 Git에 커밋하지 않습니다.
 - 브라우저에 노출되는 `VITE_` 변수에는 secret key를 넣지 않습니다.
 - `GEMINI_API_KEY`, Naver secret, Opinet key는 모두 `backend/.env`에만 입력합니다.
+- 운영에서는 `DJANGO_DEBUG=false`와 강력한 `DJANGO_SECRET_KEY`를 반드시 설정합니다.
+- APScheduler는 Django 웹 워커 내부에서 시작하지 않습니다. 배포당 `run_scheduler` 프로세스를 정확히 하나 실행합니다.
 - `db.sqlite3`는 로컬 개발 DB입니다. 새 clone 후에는 `migrate`와 필요한 fixture load를 다시 실행합니다.
 - 카드 검색 프론트엔드는 기존 DB 카탈로그를 검색합니다. 네이버 재수집과 Gemini 정규화는 별도 관리 명령으로 실행합니다.
+
+---
+
+## 전체 검증
+
+```powershell
+# Backend
+.venv\Scripts\python -m pip install -r backend\requirements-dev.txt
+.venv\Scripts\ruff check backend
+$env:DJANGO_DEBUG="true"
+$env:DJANGO_SECRET_KEY="local-test-secret-key"
+cd backend
+..\.venv\Scripts\python manage.py check
+..\.venv\Scripts\python manage.py makemigrations --check --dry-run
+..\.venv\Scripts\python manage.py test
+
+# Frontend
+cd ..\frontend
+npm ci
+npm run lint
+npm run typecheck
+npm test
+npm run build
+npm audit --audit-level=high
+```
