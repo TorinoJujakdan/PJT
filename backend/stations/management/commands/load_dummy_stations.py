@@ -3,7 +3,6 @@ from django.utils import timezone
 
 from stations.models import FuelPrice, GasStation
 
-
 DUMMY_STATIONS = [
     {
         "external_station_id": "DUMMY-001",

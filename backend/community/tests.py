@@ -1,7 +1,8 @@
+from unittest.mock import patch
+
 from django.contrib.auth import get_user_model
 from django.test import TestCase, override_settings
 from rest_framework.test import APIClient
-from unittest.mock import patch
 
 from .models import CommunityPost, CommunityPostBookmark
 from .moderation import MODERATION_MESSAGE, ModerationResult

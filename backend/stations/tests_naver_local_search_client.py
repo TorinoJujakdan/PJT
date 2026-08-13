@@ -1,7 +1,7 @@
 from importlib import import_module
 from itertools import product
-from urllib.error import HTTPError
 from unittest.mock import patch
+from urllib.error import HTTPError
 
 from django.test import SimpleTestCase
 

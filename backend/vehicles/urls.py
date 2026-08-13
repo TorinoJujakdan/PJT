@@ -2,11 +2,10 @@ from django.urls import path
 
 from .views import (
     MyVehicleProfileAPIView,
-    MyVehicleProfilesAPIView,
     MyVehicleProfileDetailAPIView,
+    MyVehicleProfilesAPIView,
     SetDefaultVehicleAPIView,
 )
-
 
 urlpatterns = [
     path("me/vehicle/", MyVehicleProfileAPIView.as_view(), name="my-vehicle-profile"),

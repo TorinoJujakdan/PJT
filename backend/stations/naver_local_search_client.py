@@ -2,10 +2,9 @@ import json
 import logging
 import os
 import re
-from urllib.error import HTTPError, URLError
 import urllib.parse
 import urllib.request
-
+from urllib.error import HTTPError, URLError
 
 logger = logging.getLogger(__name__)
 

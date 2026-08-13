@@ -9,7 +9,6 @@ from .views import (
     MyCardPolicyListCreateAPIView,
 )
 
-
 urlpatterns = [
     path("me/cards/", MyCardPolicyListCreateAPIView.as_view(), name="my-card-policies"),
     path("me/cards/from-catalog/", MyCardPolicyFromCatalogAPIView.as_view(), name="my-card-policy-from-catalog"),

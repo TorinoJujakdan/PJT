@@ -1,10 +1,8 @@
+from cards.models import CardPolicy
 from rest_framework import status
 from rest_framework.response import Response
+from rest_framework.throttling import AnonRateThrottle
 from rest_framework.views import APIView
-from rest_framework.throttling import AnonRateThrottle
-from rest_framework.throttling import AnonRateThrottle
-
-from cards.models import CardPolicy
 from vehicles.models import VehicleProfile
 
 from .serializers import (
@@ -16,7 +14,6 @@ from .serializers import (
     serialize_station_candidate,
 )
 from .services import get_station_candidates, quote_baseline_without_card, quote_travel_cost_recommendations
-
 
 ERROR_MESSAGES = {
     "INVALID_LOCATION": "Latitude or longitude is invalid.",

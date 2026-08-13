@@ -4,10 +4,9 @@ import re
 from decimal import Decimal
 from urllib.parse import urljoin
 
-from cards.models import CardPolicy
-
 from .benefits import parse_fuel_discount
 from .domain import ScrapedCardCandidate
+
 
 def infer_issuer_name(card_name):
     issuer_patterns = {

@@ -1,11 +1,10 @@
 import json
 import logging
-from urllib.error import HTTPError, URLError
 import urllib.parse
 import urllib.request
+from urllib.error import HTTPError, URLError
 
 from .naver_maps_auth import get_naver_maps_credentials
-
 
 logger = logging.getLogger(__name__)
 

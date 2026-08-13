@@ -10,7 +10,8 @@ from urllib.request import HTTPRedirectHandler, Request, build_opener
 
 from django.core.files.base import ContentFile
 
-from .domain import MAX_CARD_IMAGE_BYTES, ALLOWED_IMAGE_CONTENT_TYPES
+from .domain import ALLOWED_IMAGE_CONTENT_TYPES, MAX_CARD_IMAGE_BYTES
+
 
 class NoRedirectHandler(HTTPRedirectHandler):
     def redirect_request(self, req, fp, code, msg, headers, newurl):
@@ -28,8 +29,8 @@ def build_card_image_filename(candidate, image_url, content_type=""):
 
 
 def is_safe_url(url):
-    import socket
     import ipaddress
+    import socket
     parsed = urlparse(url)
     hostname = parsed.hostname
     if not hostname:

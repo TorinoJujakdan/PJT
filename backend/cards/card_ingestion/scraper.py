@@ -17,6 +17,7 @@ from .domain import (
 )
 from .parsing import enrich_candidate_from_detail_text, extract_candidates_from_rows
 
+
 def should_visit_detail_url(url):
     if not url:
         return False

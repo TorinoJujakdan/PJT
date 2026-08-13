@@ -1,6 +1,5 @@
-from rest_framework import serializers
-
 from cards.models import CardPolicy
+from rest_framework import serializers
 
 from .models import FuelPrice
 

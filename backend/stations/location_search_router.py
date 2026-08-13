@@ -1,5 +1,4 @@
-from . import naver_geocoding_client
-from . import naver_local_search_client
+from . import naver_geocoding_client, naver_local_search_client
 
 
 def geocode_query_with_meta(

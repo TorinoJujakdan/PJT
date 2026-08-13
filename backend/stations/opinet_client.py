@@ -1,8 +1,9 @@
-import os
-import logging
 import json
+import logging
+import os
 import urllib.parse
 import urllib.request
+
 import pyproj
 from django.utils import timezone
 

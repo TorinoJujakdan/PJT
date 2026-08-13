@@ -7,8 +7,6 @@ from urllib.parse import urlparse
 
 from cards.models import CardPolicy
 
-
-
 DEFAULT_ALLOWED_DOMAINS = {"card-search.naver.com"}
 DEFAULT_CARD_SEARCH_URL = (
     "https://card-search.naver.com/list?"

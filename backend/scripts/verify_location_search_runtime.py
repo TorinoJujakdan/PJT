@@ -1,11 +1,10 @@
 import argparse
 import json
 import os
-from pathlib import Path
 import sys
 import urllib.parse
 import urllib.request
-
+from pathlib import Path
 
 QUERIES = {
     "롯데월드타워": "naver_local_search",

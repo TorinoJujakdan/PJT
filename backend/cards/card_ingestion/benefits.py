@@ -9,6 +9,7 @@ from cards.models import CardPolicy
 
 from .money import MONEY_PATTERN, extract_first_amount
 
+
 def infer_brand_scope(text):
     source_text = str(text or "")
     canonical_scope = normalize_brand_scope(source_text)

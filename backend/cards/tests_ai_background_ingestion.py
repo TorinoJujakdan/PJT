@@ -8,9 +8,9 @@ from django.test import TestCase
 
 from cards.gemini_client import GeminiRequestError
 from cards.models import CardCatalog, CardIngestionTask, CardPolicy
+from cards.selenium_ingestion import ScrapedCardCandidate
 from cards.tests_ai_normalization import _candidate, _valid_llm_payload
 from cards.views import run_background_ingestion
-from cards.selenium_ingestion import ScrapedCardCandidate
 
 
 class BackgroundIngestionTests(TestCase):

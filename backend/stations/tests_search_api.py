@@ -2,7 +2,6 @@ from unittest.mock import patch
 
 from django.test import SimpleTestCase
 from fastapi.testclient import TestClient
-
 from search_api.main import app
 
 

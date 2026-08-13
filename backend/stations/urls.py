@@ -2,7 +2,6 @@ from django.urls import path
 
 from .views import GeocodeAPIView, NearbyStationAPIView, RefreshNearbyStationsAPIView, ReverseGeocodeAPIView
 
-
 urlpatterns = [
     path("nearby/", NearbyStationAPIView.as_view(), name="stations-nearby"),
     path("geocode/", GeocodeAPIView.as_view(), name="locations-geocode"),

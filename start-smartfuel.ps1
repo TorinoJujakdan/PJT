@@ -51,6 +51,17 @@ function Test-PortListening {
     return $null -ne $Connection
 }
 
+function Test-SchedulerRunning {
+    $SchedulerProcess = Get-CimInstance Win32_Process -Filter "Name = 'python.exe'" -ErrorAction SilentlyContinue |
+        Where-Object {
+            $_.ExecutablePath -eq $PythonExe -and
+            $_.CommandLine -match "manage\.py\s+run_scheduler"
+        } |
+        Select-Object -First 1
+
+    return $null -ne $SchedulerProcess
+}
+
 try {
     Assert-PathExists -Path $BackendDir -Message "backend folder was not found."
     Assert-PathExists -Path $FrontendDir -Message "frontend folder was not found."
@@ -68,6 +79,16 @@ try {
             -Title "SmartFuel Backend - Django 8000" `
             -WorkingDirectory $BackendDir `
             -Command "& `"$PythonExe`" manage.py runserver 127.0.0.1:8000"
+    }
+
+    if (Test-SchedulerRunning) {
+        Write-Host "Scheduler is already running." -ForegroundColor Yellow
+    }
+    else {
+        Start-ServiceWindow `
+            -Title "SmartFuel Scheduler" `
+            -WorkingDirectory $BackendDir `
+            -Command "& `"$PythonExe`" manage.py run_scheduler"
     }
 
     if (Test-PortListening -Port 8001) {
@@ -98,6 +119,7 @@ try {
     Write-Host "Frontend:   http://127.0.0.1:5173"
     Write-Host "Backend:    http://127.0.0.1:8000"
     Write-Host "Search API: http://127.0.0.1:8001/search-api/health/"
+    Write-Host "Scheduler:  dedicated run_scheduler process"
     Write-Host ""
     Write-Host "Close each server window, or press Ctrl+C inside it, to stop that server."
 }

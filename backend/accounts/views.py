@@ -1,11 +1,11 @@
 from django.contrib.auth import authenticate, get_user_model, login, logout
-from django.views.decorators.csrf import ensure_csrf_cookie
 from django.utils.decorators import method_decorator
+from django.views.decorators.csrf import ensure_csrf_cookie
 from rest_framework import status
 from rest_framework.permissions import AllowAny, IsAuthenticated
 from rest_framework.response import Response
-from rest_framework.views import APIView
 from rest_framework.throttling import AnonRateThrottle
+from rest_framework.views import APIView
 
 from .serializers import LoginSerializer, SignupSerializer, UserSerializer
 

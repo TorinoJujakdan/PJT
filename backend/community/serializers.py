@@ -1,9 +1,8 @@
 from django.conf import settings
 from rest_framework import serializers
 
-from .moderation import NON_FIELD_ERROR_KEY, moderate_post_fields
 from .models import CommunityPost
-
+from .moderation import NON_FIELD_ERROR_KEY, moderate_post_fields
 
 MAX_CONTENT_LENGTH = 2000
 MAX_TAGS = 10

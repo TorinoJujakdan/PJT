@@ -4,9 +4,8 @@ from dataclasses import dataclass
 from typing import Any, Final
 
 import requests
-from django.conf import settings
-
 from cards.gemini_client import GEMINI_BASE_URL, GEMINI_GENERATE_CONTENT_PATH
+from django.conf import settings
 
 MODERATION_MESSAGE: Final = "\ubd80\uc801\uc808\ud55c \ud45c\ud604\uc774 \ud3ec\ud568\ub418\uc5b4 \uac8c\uc2dc\ud560 \uc218 \uc5c6\uc2b5\ub2c8\ub2e4."
 NON_FIELD_ERROR_KEY: Final = "non_field_errors"

@@ -1,6 +1,8 @@
 import logging
 
+from django.conf import settings
 from django.core.management import call_command
+from django.db import connection
 
 logger = logging.getLogger(__name__)
 
@@ -27,35 +29,19 @@ def register_scheduled_jobs(scheduler):
     )
 
 
-def start_scheduler():
-    # Django runs ready() twice when using the auto-reloader (RUN_MAIN is not set in the parent).
-    # We only want to run in the reloader's child process.
-    # In production/deployment, RUN_MAIN will not be set, so we also allow if RUN_MAIN is not set but we're not using the reloader.
-    # To handle both local dev and production:
-    # 1. If we are in dev server (which sets RUN_MAIN), make sure RUN_MAIN is true.
-    # 2. Prevent starting multiple schedulers in the same process using a function attribute guard.
-    if hasattr(start_scheduler, "_started") and start_scheduler._started:
-        return
-    start_scheduler._started = True
+def build_scheduler():
+    """Build the dedicated scheduler process after Django is fully initialized."""
+    from apscheduler.schedulers.blocking import BlockingScheduler
+    from django_apscheduler.jobstores import DjangoJobStore, register_events
 
-    try:
-        from apscheduler.schedulers.background import BackgroundScheduler
-        from django_apscheduler.jobstores import DjangoJobStore, register_events
-        from django.db import connection
+    table_names = connection.introspection.table_names()
+    if "django_apscheduler_djangojob" not in table_names:
+        raise RuntimeError(
+            "APScheduler tables are missing. Run `python manage.py migrate` first."
+        )
 
-        # Check if django-apscheduler database tables exist before trying to add jobs (resilience for initial migrations/tests)
-        table_names = connection.introspection.table_names()
-        if "django_apscheduler_djangojob" not in table_names:
-            logger.warning("APScheduler database tables not yet migrated. Skipping scheduler initialization.")
-            return
-
-        scheduler = BackgroundScheduler()
-        scheduler.add_jobstore(DjangoJobStore(), "default")
-
-        register_scheduled_jobs(scheduler)
-
-        register_events(scheduler)
-        scheduler.start()
-        logger.info("APScheduler initialized successfully. Opinet prices scheduled; card ingestion remains manual/review-gated.")
-    except Exception as e:
-        logger.error("Failed to start APScheduler: %s", e, exc_info=True)
+    scheduler = BlockingScheduler(timezone=settings.TIME_ZONE)
+    scheduler.add_jobstore(DjangoJobStore(), "default")
+    register_scheduled_jobs(scheduler)
+    register_events(scheduler)
+    return scheduler

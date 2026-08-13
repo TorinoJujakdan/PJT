@@ -1,15 +1,14 @@
 from decimal import Decimal
-from django.test import TestCase
-from rest_framework import status
-from rest_framework.test import APIClient
 from unittest.mock import Mock, patch
 
 from cards.models import CardCatalog, CardPolicy
-from stations.services import StationCandidate, calculate_card_discount
 from cards.selenium_ingestion import ScrapedCardCandidate, save_candidates
-from stations import geocoding_service
-from stations import naver_directions_client
+from django.test import TestCase
+from rest_framework.test import APIClient
+
+from stations import geocoding_service, naver_directions_client
 from stations.models import FuelPrice, GasStation
+from stations.services import StationCandidate, calculate_card_discount
 
 
 class GeocodeProxyAPITests(TestCase):

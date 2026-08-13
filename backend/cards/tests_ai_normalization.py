@@ -18,8 +18,8 @@ from cards.gemini_client import (
 )
 from cards.llm_fuel_extraction import build_line_numbered_document, validate_llm_fuel_payload
 from cards.models import CardBenefitTier, CardCatalog, CardPolicy
-from cards.serializers import CardCatalogSerializer
 from cards.selenium_ingestion import ScrapedCardCandidate, run_api_fallback_scraper
+from cards.serializers import CardCatalogSerializer
 
 
 class LlmFuelExtractionTests(TestCase):

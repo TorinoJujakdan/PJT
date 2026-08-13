@@ -3,7 +3,6 @@ from unittest.mock import patch
 
 from django.test import SimpleTestCase
 
-
 GEOCODE_RESULT = {
     "name": "Seoul Gangnam-gu Teheran-ro 152",
     "address": "Seoul Gangnam-gu Teheran-ro 152",

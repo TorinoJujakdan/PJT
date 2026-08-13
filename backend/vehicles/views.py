@@ -6,11 +6,10 @@ from rest_framework.permissions import IsAuthenticated
 from rest_framework.response import Response
 from rest_framework.views import APIView
 
-User = get_user_model()
-
 from .models import VehicleProfile
 from .serializers import VehicleProfileSerializer
 
+User = get_user_model()
 
 ERROR_MESSAGES = {
     "VEHICLE_PROFILE_NOT_FOUND": "저장된 차량 프로필이 없습니다.",

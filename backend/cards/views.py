@@ -1,15 +1,16 @@
+import atexit
+from concurrent.futures import ThreadPoolExecutor
+
+from django.db import close_old_connections, transaction
 from rest_framework import status
 from rest_framework.permissions import IsAuthenticated
 from rest_framework.response import Response
 from rest_framework.views import APIView
-import atexit
 
-from concurrent.futures import ThreadPoolExecutor
-from django.db import close_old_connections, transaction
 from .ai_normalization import save_ai_normalized_candidates
 from .gemini_client import normalize_card_fuel_benefit
+from .models import CardCatalog, CardIngestionTask, CardPolicy
 from .selenium_ingestion import scrape_card_search_candidates
-from .models import CardCatalog, CardPolicy, CardIngestionTask
 from .serializers import (
     CardCatalogSerializer,
     CardDiscoveryQuerySerializer,
@@ -17,9 +18,6 @@ from .serializers import (
     CardPolicySerializer,
     catalog_requires_manual_benefit_entry,
 )
-
-
-
 
 ERROR_MESSAGES = {
     "CARD_POLICY_NOT_FOUND": "카드 정책을 찾을 수 없습니다.",
@@ -282,8 +280,7 @@ class CardDiscoveryTaskStatusAPIView(APIView):
 
     def get(self, request, task_id):
         from django.shortcuts import get_object_or_404
-        # IDOR 방지: 현재 유저의 세션에서 생성된 태스크만 조회
-        # TODO: CardIngestionTask에 owner 필드를 추가하여 완전한 권한 검증 필요
+        # IDOR 방지: 현재 사용자가 생성한 태스크만 조회
         task = get_object_or_404(CardIngestionTask, id=task_id, owner=request.user)
         response_data = {
             "task_id": task.id,

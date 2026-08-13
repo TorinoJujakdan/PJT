@@ -1,27 +1,69 @@
-from pathlib import Path
 import os
+from pathlib import Path
 
-
-BASE_DIR = Path(__file__).resolve().parent.parent
+from django.core.exceptions import ImproperlyConfigured
 from dotenv import load_dotenv
-
 
 BASE_DIR = Path(__file__).resolve().parent.parent
 
 # Load local .env file if it exists (for secure API key management)
 load_dotenv(BASE_DIR / ".env")
 
-SECRET_KEY = os.environ.get("DJANGO_SECRET_KEY", "smartfuel-dev-secret-key-CHANGE-IN-PRODUCTION")
-DEBUG = os.environ.get("DJANGO_DEBUG", "true").lower() in ("true", "1", "yes")
-ALLOWED_HOSTS = os.environ.get("DJANGO_ALLOWED_HOSTS", "localhost,127.0.0.1,testserver").split(",")
-CSRF_TRUSTED_ORIGINS = [
+
+def env_bool(name, default=False):
+    value = os.environ.get(name)
+    if value is None:
+        return default
+    return value.strip().lower() in ("true", "1", "yes", "on")
+
+
+def env_list(name, default=()):
+    raw_value = os.environ.get(name)
+    if raw_value is None:
+        return list(default)
+    return [item.strip() for item in raw_value.split(",") if item.strip()]
+
+
+DEBUG = env_bool("DJANGO_DEBUG", False)
+SECRET_KEY = os.environ.get("DJANGO_SECRET_KEY", "").strip()
+if not SECRET_KEY:
+    if DEBUG:
+        SECRET_KEY = "django-insecure-smartfuel-local-development-only"
+    else:
+        raise ImproperlyConfigured(
+            "DJANGO_SECRET_KEY must be set when DJANGO_DEBUG is false. "
+            "Copy backend/.env.example to backend/.env and provide a strong key."
+        )
+
+LOCAL_HOSTS = ("localhost", "127.0.0.1", "testserver")
+LOCAL_FRONTEND_ORIGINS = (
     "http://localhost:5173",
-    "http://localhost:5174",
-    "http://localhost:5175",
     "http://127.0.0.1:5173",
-    "http://127.0.0.1:5174",
-    "http://127.0.0.1:5175",
-]
+)
+
+ALLOWED_HOSTS = env_list("DJANGO_ALLOWED_HOSTS", LOCAL_HOSTS if DEBUG else ())
+CSRF_TRUSTED_ORIGINS = env_list(
+    "DJANGO_CSRF_TRUSTED_ORIGINS",
+    LOCAL_FRONTEND_ORIGINS if DEBUG else (),
+)
+CORS_ALLOWED_ORIGINS = env_list(
+    "DJANGO_CORS_ALLOWED_ORIGINS",
+    LOCAL_FRONTEND_ORIGINS if DEBUG else (),
+)
+
+SECURE_SSL_REDIRECT = env_bool("DJANGO_SECURE_SSL_REDIRECT", not DEBUG)
+SESSION_COOKIE_SECURE = env_bool("DJANGO_SESSION_COOKIE_SECURE", not DEBUG)
+CSRF_COOKIE_SECURE = env_bool("DJANGO_CSRF_COOKIE_SECURE", not DEBUG)
+SECURE_HSTS_SECONDS = int(
+    os.environ.get("DJANGO_SECURE_HSTS_SECONDS", "0" if DEBUG else "31536000")
+)
+SECURE_HSTS_INCLUDE_SUBDOMAINS = env_bool(
+    "DJANGO_SECURE_HSTS_INCLUDE_SUBDOMAINS", not DEBUG
+)
+SECURE_HSTS_PRELOAD = env_bool("DJANGO_SECURE_HSTS_PRELOAD", not DEBUG)
+
+if env_bool("DJANGO_TRUST_PROXY_SSL_HEADER", False):
+    SECURE_PROXY_SSL_HEADER = ("HTTP_X_FORWARDED_PROTO", "https")
 
 INSTALLED_APPS = [
     "django.contrib.admin",

@@ -1,11 +1,9 @@
 from pathlib import Path
 
+from dotenv import load_dotenv
 from fastapi import FastAPI, Query
 from fastapi.middleware.cors import CORSMiddleware
 
-
-import os
-from dotenv import load_dotenv
 
 def _load_backend_env():
     """Load backend/.env for standalone uvicorn runs without leaking secrets."""
@@ -16,7 +14,6 @@ def _load_backend_env():
 _load_backend_env()
 
 from stations.geocoding_service import geocode_query_with_meta  # noqa: E402
-
 
 app = FastAPI(
     title="SmartFuel Search API",

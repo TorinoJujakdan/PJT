@@ -1,6 +1,5 @@
 from django.conf import settings
 from django.db import models
-
 from stations.models import FuelPrice
 
 

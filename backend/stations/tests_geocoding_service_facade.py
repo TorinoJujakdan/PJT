@@ -3,10 +3,9 @@ from unittest.mock import patch
 from django.test import TestCase
 from fastapi.testclient import TestClient
 from rest_framework.test import APIClient
-
 from search_api.main import app
-from stations import geocoding_service
 
+from stations import geocoding_service
 
 EXPECTED_EXPORTS = [
     "GEOCODING_URL",

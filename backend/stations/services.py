@@ -1,37 +1,13 @@
-import concurrent.futures
 from dataclasses import dataclass
-from decimal import Decimal
-from math import asin, cos, radians, sin, sqrt
 from typing import Any, Optional
 
+from .card_discounts import calculate_card_discount
+from .directions import fetch_directions_parallel
+from .station_candidates import StationCandidate, get_station_candidates
 
-from django.db.models import OuterRef, Subquery
-
-from cards.benefit_safety import decimal_or_zero, is_suspicious_fuel_discount
-from cards.brand_scope import normalize_brand_scope, normalize_station_brand
-from cards.models import CardPolicy
-
-from .models import FuelPrice, GasStation
-
-
-EARTH_RADIUS_KM = 6371.0
-DEFAULT_RADIUS_KM = 15.0
-MAX_RADIUS_KM = 30.0
 RECOMMENDATION_PRIORITY_OPTIMAL = "optimal"
 RECOMMENDATION_PRIORITY_PRICE = "price"
 RECOMMENDATION_PRIORITY_DISTANCE = "distance"
-CATALOG_ALL_FUEL_TYPE = "all"
-
-
-@dataclass(frozen=True)
-class StationCandidate:
-    station: GasStation
-    distance_km: float
-    fuel_type: str
-    fuel_price_per_liter: int
-    price_collected_at: Optional[Any] = None
-    price_source: Optional[str] = None
-
 
 @dataclass(frozen=True)
 class FuelPriceRecommendation:
@@ -52,91 +28,6 @@ class FuelPriceRecommendation:
 
 
 
-def haversine_distance_km(lat1, lon1, lat2, lon2):
-    lat1_rad = radians(float(lat1))
-    lon1_rad = radians(float(lon1))
-    lat2_rad = radians(float(lat2))
-    lon2_rad = radians(float(lon2))
-
-    delta_lat = lat2_rad - lat1_rad
-    delta_lon = lon2_rad - lon1_rad
-
-    a = sin(delta_lat / 2) ** 2 + cos(lat1_rad) * cos(lat2_rad) * sin(delta_lon / 2) ** 2
-    c = 2 * asin(sqrt(a))
-    return EARTH_RADIUS_KM * c
-
-
-def calculate_bounding_box(latitude, longitude, radius_km):
-    latitude = float(latitude)
-    longitude = float(longitude)
-    radius_km = float(radius_km)
-
-    lat_delta = radius_km / 111.0
-    lon_scale = cos(radians(latitude))
-    lon_delta = radius_km / (111.0 * lon_scale) if abs(lon_scale) > 0.000001 else 180.0
-
-    return {
-        "min_latitude": Decimal(str(latitude - lat_delta)),
-        "max_latitude": Decimal(str(latitude + lat_delta)),
-        "min_longitude": Decimal(str(longitude - lon_delta)),
-        "max_longitude": Decimal(str(longitude + lon_delta)),
-    }
-
-
-def normalize_radius_km(radius_km):
-    if radius_km is None:
-        return DEFAULT_RADIUS_KM
-
-    radius = float(radius_km)
-    if radius < 1 or radius > MAX_RADIUS_KM:
-        raise ValueError("INVALID_RADIUS")
-    return radius
-
-
-def get_station_candidates(location, radius_km, fuel_type):
-    radius = normalize_radius_km(radius_km)
-    latitude = float(location["latitude"])
-    longitude = float(location["longitude"])
-    bbox = calculate_bounding_box(latitude, longitude, radius)
-
-    latest_price_val = (
-        FuelPrice.objects.filter(station=OuterRef("pk"), fuel_type=fuel_type)
-        .order_by("-collected_at", "-id")
-    )
-
-    queryset = (
-        GasStation.objects.filter(
-            latitude__gte=bbox["min_latitude"],
-            latitude__lte=bbox["max_latitude"],
-            longitude__gte=bbox["min_longitude"],
-            longitude__lte=bbox["max_longitude"],
-        )
-        .annotate(
-            fuel_price_per_liter=Subquery(latest_price_val.values("price_per_liter")[:1]),
-            fuel_price_collected_at=Subquery(latest_price_val.values("collected_at")[:1]),
-            fuel_price_source=Subquery(latest_price_val.values("source")[:1]),
-        )
-        .exclude(fuel_price_per_liter__isnull=True)
-    )
-
-    candidates = []
-    for station in queryset:
-        distance_km = haversine_distance_km(latitude, longitude, station.latitude, station.longitude)
-        if distance_km <= radius:
-            candidates.append(
-                StationCandidate(
-                    station=station,
-                    distance_km=round(distance_km, 2),
-                    fuel_type=fuel_type,
-                    fuel_price_per_liter=int(station.fuel_price_per_liter),
-                    price_collected_at=station.fuel_price_collected_at,
-                    price_source=station.fuel_price_source,
-                )
-            )
-
-    return sorted(candidates, key=lambda item: (item.distance_km, item.fuel_price_per_liter, item.station.id))
-
-
 
 def calculate_refuel_cost(fuel_price_per_liter, target_liters):
     return round(int(fuel_price_per_liter) * float(target_liters))
@@ -148,237 +39,6 @@ def calculate_travel_cost(distance_km, fuel_efficiency_kmpl, fuel_price_per_lite
     travel_fuel_liters = travel_distance_km / float(fuel_efficiency_kmpl)
     return round(travel_fuel_liters * int(fuel_price_per_liter))
 
-
-def fetch_directions_parallel(start_lat, start_lng, candidates_to_route):
-    """
-    후보들에 대해 병렬로 Naver Directions API를 호출하여 도로 주행 정보(거리, 시간)를 구합니다.
-    """
-    from .geocoding_service import get_driving_route_with_path
-
-    results = {}
-    with concurrent.futures.ThreadPoolExecutor(max_workers=5) as executor:
-        future_to_candidate = {
-            executor.submit(
-                get_driving_route_with_path,
-                start_lat,
-                start_lng,
-                float(cand.station.latitude),
-                float(cand.station.longitude)
-            ): cand.station.id
-            for cand in candidates_to_route
-        }
-        for future in concurrent.futures.as_completed(future_to_candidate):
-            cand_id = future_to_candidate[future]
-            try:
-                distance_m, duration_ms, route_path, err = future.result()
-                if err is None and distance_m is not None:
-                    results[cand_id] = {
-                        "distance_km": round(distance_m / 1000.0, 2),
-                        "duration_min": round(duration_ms / 60000.0, 1),
-                        "distance_source": "naver_directions",
-                        "route_path": route_path,
-                    }
-                else:
-                    results[cand_id] = {
-                        "distance_km": None,
-                        "duration_min": None,
-                        "distance_source": "haversine",
-                        "route_path": [],
-                        "error": err
-                    }
-            except Exception as e:
-                results[cand_id] = {
-                    "distance_km": None,
-                    "duration_min": None,
-                    "distance_source": "haversine",
-                    "route_path": [],
-                    "error": str(e)
-                }
-    return results
-
-
-
-def get_card_value(card, field_name, default=None):
-    if isinstance(card, dict):
-        return card.get(field_name, default)
-    return getattr(card, field_name, default)
-
-
-def card_can_affect_recommendation(card):
-    verification_status = get_card_value(card, "verification_status", CardPolicy.VerificationStatus.USER_CONFIRMED)
-    return verification_status in {
-        CardPolicy.VerificationStatus.USER_CONFIRMED,
-        CardPolicy.VerificationStatus.ADMIN_VERIFIED,
-    }
-
-
-def brand_matches(brand_scope, station_brand):
-    normalized_scope = normalize_brand_scope(str(brand_scope or "")).scope
-    if normalized_scope == "all":
-        return True
-
-    normalized_station_brand = normalize_station_brand(str(station_brand or "")).lower()
-    scopes = [item.strip().lower() for item in normalized_scope.split(",")]
-    return normalized_station_brand in scopes
-
-
-def serialize_selected_card(card, calculated_discount_amount):
-    card_id = get_card_value(card, "id", None) or get_card_value(card, "card_id", None)
-    card_image_url = get_card_value(card, "card_image_url", None) or None
-    return {
-        "card_id": str(card_id) if card_id is not None else "",
-        "card_name": get_card_value(card, "card_name", ""),
-        "issuer_name": get_card_value(card, "issuer_name", ""),
-        "discount_type": get_card_value(card, "discount_type", ""),
-        "discount_value": float(get_card_value(card, "discount_value", 0)),
-        "calculated_discount_amount": calculated_discount_amount,
-        "card_image_url": card_image_url,
-        "source_type": get_card_value(card, "source_type", CardPolicy.SourceType.MANUAL),
-        "verification_status": get_card_value(
-            card,
-            "verification_status",
-            CardPolicy.VerificationStatus.USER_CONFIRMED,
-        ),
-    }
-
-
-def normalize_catalog_fuel_type(value):
-    return str(value or "").strip().lower()
-
-
-def catalog_tier_matches_fuel_type(tier, fuel_type):
-    tier_fuel_type = normalize_catalog_fuel_type(tier.fuel_type)
-    requested_fuel_type = normalize_catalog_fuel_type(fuel_type)
-    return tier_fuel_type in {CATALOG_ALL_FUEL_TYPE, requested_fuel_type}
-
-
-def catalog_tier_matches_performance(tier, previous_month_spending):
-    if previous_month_spending is None:
-        return False
-
-    spending = int(previous_month_spending)
-    if int(tier.min_performance_amount or 0) > spending:
-        return False
-    max_performance_amount = tier.max_performance_amount
-    return max_performance_amount is None or spending <= int(max_performance_amount)
-
-
-def get_catalog_benefit_tiers(card):
-    catalog = get_card_value(card, "linked_catalog", None)
-    if catalog is None:
-        return None
-
-    benefit_tiers = getattr(catalog, "benefit_tiers", None)
-    if benefit_tiers is None:
-        return None
-
-    return list(benefit_tiers.all())
-
-
-def resolve_catalog_benefit_tier(card, fuel_type, benefit_tiers):
-    previous_month_spending = get_card_value(card, "previous_month_spending", None)
-    requested_fuel_type = normalize_catalog_fuel_type(fuel_type)
-    matching_tiers = [
-        tier
-        for tier in benefit_tiers
-        if catalog_tier_matches_fuel_type(tier, requested_fuel_type)
-        and catalog_tier_matches_performance(tier, previous_month_spending)
-    ]
-    if not matching_tiers:
-        return None
-
-    return sorted(
-        matching_tiers,
-        key=lambda tier: (
-            normalize_catalog_fuel_type(tier.fuel_type) == requested_fuel_type,
-            int(tier.min_performance_amount or 0),
-            tier.id,
-        ),
-        reverse=True,
-    )[0]
-
-
-def build_effective_card_for_fuel_type(card, fuel_type):
-    benefit_tiers = get_catalog_benefit_tiers(card)
-    if benefit_tiers is None:
-        return card
-    if not benefit_tiers:
-        return card
-
-    tier = resolve_catalog_benefit_tier(card, fuel_type, benefit_tiers)
-    if tier is None:
-        return None
-
-    return {
-        "id": get_card_value(card, "id", None),
-        "card_id": get_card_value(card, "card_id", None),
-        "card_name": get_card_value(card, "card_name", ""),
-        "issuer_name": get_card_value(card, "issuer_name", ""),
-        "discount_type": tier.discount_type,
-        "discount_value": tier.discount_value,
-        "brand_scope": tier.brand_scope,
-        "min_payment_amount": tier.min_payment_amount,
-        "max_discount_amount": get_card_value(card, "max_discount_amount", None),
-        "monthly_discount_limit": tier.monthly_discount_limit,
-        "monthly_remaining_discount": get_card_value(card, "monthly_remaining_discount", None),
-        "source_type": get_card_value(card, "source_type", CardPolicy.SourceType.MANUAL),
-        "verification_status": get_card_value(
-            card,
-            "verification_status",
-            CardPolicy.VerificationStatus.USER_CONFIRMED,
-        ),
-        "card_image_url": get_card_value(card, "card_image_url", None),
-    }
-
-
-def calculate_card_discount(candidate, refuel_cost, target_liters, user_cards):
-    best_discount = 0
-    selected_card = None
-
-    for card in user_cards or []:
-        if not card_can_affect_recommendation(card):
-            continue
-        effective_card = build_effective_card_for_fuel_type(card, candidate.fuel_type)
-        if effective_card is None:
-            continue
-        if not brand_matches(get_card_value(effective_card, "brand_scope", "all"), candidate.station.brand):
-            continue
-
-        min_payment_amount = get_card_value(effective_card, "min_payment_amount", None)
-        if min_payment_amount is not None and int(min_payment_amount) > refuel_cost:
-            continue
-
-        discount_type = get_card_value(effective_card, "discount_type")
-        discount_decimal = decimal_or_zero(get_card_value(effective_card, "discount_value", 0))
-        if is_suspicious_fuel_discount(discount_type, discount_decimal):
-            continue
-        discount_value = float(discount_decimal)
-        if discount_type == CardPolicy.DiscountType.PER_LITER:
-            raw_discount = discount_value * float(target_liters)
-        elif discount_type == CardPolicy.DiscountType.PERCENTAGE:
-            raw_discount = refuel_cost * discount_value / 100
-        elif discount_type == CardPolicy.DiscountType.FIXED_AMOUNT:
-            raw_discount = discount_value
-        else:
-            raw_discount = 0
-
-        discount = round(raw_discount)
-        max_discount_amount = get_card_value(effective_card, "max_discount_amount", None)
-        monthly_discount_limit = get_card_value(effective_card, "monthly_discount_limit", None)
-        monthly_remaining_discount = get_card_value(effective_card, "monthly_remaining_discount", None)
-        if max_discount_amount is not None:
-            discount = min(discount, int(max_discount_amount))
-        if monthly_discount_limit is not None:
-            discount = min(discount, int(monthly_discount_limit))
-        if monthly_remaining_discount is not None:
-            discount = min(discount, int(monthly_remaining_discount))
-        discount = max(discount, 0)
-
-        if discount > best_discount:
-            best_discount = discount
-            selected_card = serialize_selected_card(effective_card, discount)
-
-    return best_discount, selected_card
 
 
 def build_recommendation_reason(
@@ -572,26 +232,29 @@ def quote_travel_cost_recommendations(
 
     # 6단계: 최종 정렬 및 각 추천 사유(reason) 빌드
     if recommendation_priority == RECOMMENDATION_PRIORITY_PRICE:
-        sort_key = lambda item: (
-            item.candidate.fuel_price_per_liter,
-            item.candidate.distance_km,
-            item.effective_total_cost,
-            item.candidate.station.id,
-        )
+        def sort_key(item):
+            return (
+                item.candidate.fuel_price_per_liter,
+                item.candidate.distance_km,
+                item.effective_total_cost,
+                item.candidate.station.id,
+            )
     elif recommendation_priority == RECOMMENDATION_PRIORITY_DISTANCE:
-        sort_key = lambda item: (
-            item.candidate.distance_km,
-            item.candidate.fuel_price_per_liter,
-            item.effective_total_cost,
-            item.candidate.station.id,
-        )
+        def sort_key(item):
+            return (
+                item.candidate.distance_km,
+                item.candidate.fuel_price_per_liter,
+                item.effective_total_cost,
+                item.candidate.station.id,
+            )
     else:
-        sort_key = lambda item: (
-            item.effective_total_cost,
-            item.candidate.distance_km,
-            item.candidate.fuel_price_per_liter,
-            item.candidate.station.id,
-        )
+        def sort_key(item):
+            return (
+                item.effective_total_cost,
+                item.candidate.distance_km,
+                item.candidate.fuel_price_per_liter,
+                item.candidate.station.id,
+            )
 
     sorted_finals = sorted(final_recommendations, key=sort_key)
 

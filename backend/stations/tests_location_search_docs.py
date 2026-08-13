@@ -3,7 +3,6 @@ from pathlib import Path
 
 from django.test import SimpleTestCase
 
-
 PROJECT_ROOT = Path(__file__).resolve().parents[2]
 CONTRACT_PATH = PROJECT_ROOT / "docs/api_contracts/locations_geocode.json"
 BLUEPRINT_PATH = PROJECT_ROOT / "docs/02_api_blueprint.json"

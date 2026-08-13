@@ -1,17 +1,18 @@
+from io import StringIO
+from unittest.mock import Mock, patch
+
 from django.core.management import call_command
 from django.core.management.base import CommandError
 from django.test import SimpleTestCase
-from io import StringIO
-from unittest.mock import Mock, patch
 
 from .models import FuelPrice, GasStation
 from .opinet_client import (
     OpinetClient,
     OpinetConfigurationError,
     OpinetMappingError,
-    opinet_product_codes_for_fuel_type,
     normalize_opinet_price_row,
     normalize_opinet_station_row,
+    opinet_product_codes_for_fuel_type,
     wgs84_to_katec,
 )
 

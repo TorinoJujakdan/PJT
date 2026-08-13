@@ -1,10 +1,9 @@
 from decimal import Decimal
 from io import StringIO
-
-from django.core.management import call_command
 from tempfile import TemporaryDirectory
 from unittest.mock import patch
 
+from django.core.management import call_command
 from django.test import TestCase, override_settings
 from django.utils import timezone
 
@@ -13,8 +12,8 @@ from .selenium_ingestion import (
     CardIngestionError,
     ScrapedCardCandidate,
     enrich_candidate_from_detail_text,
-    extract_candidates_from_text,
     extract_candidates_from_rows,
+    extract_candidates_from_text,
     infer_brand_scope,
     infer_fuel_type,
     parse_benefit_constraints,

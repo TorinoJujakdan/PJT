@@ -1,15 +1,15 @@
 from unittest.mock import Mock, patch
 
+from cards.models import CardBenefitTier, CardCatalog, CardPolicy
 from django.contrib.auth import get_user_model
 from django.core.management import call_command
 from django.test import TestCase
 from django.utils import timezone
 from rest_framework.test import APIClient
+from vehicles.models import VehicleProfile
 
-from cards.models import CardBenefitTier, CardCatalog, CardPolicy
 from stations.models import FuelPrice, GasStation
 from stations.services import calculate_travel_cost
-from vehicles.models import VehicleProfile
 
 
 class NearbyStationAPITests(TestCase):

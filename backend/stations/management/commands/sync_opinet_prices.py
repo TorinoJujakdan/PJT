@@ -1,10 +1,10 @@
 from django.core.management.base import BaseCommand, CommandError
 
 from stations.opinet_client import (
+    OPINET_MAX_RADIUS_KM,
     OpinetClient,
     OpinetConfigurationError,
     OpinetMappingError,
-    OPINET_MAX_RADIUS_KM,
     save_opinet_price_rows,
 )
 

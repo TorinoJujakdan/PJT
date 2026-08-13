@@ -6,7 +6,6 @@ from rest_framework.views import APIView
 from .models import CommunityPost, CommunityPostBookmark
 from .serializers import CommunityPostSerializer, CommunityPostWriteSerializer
 
-
 DEFAULT_LIST_LIMIT = 50
 MAX_LIST_LIMIT = 100
 
